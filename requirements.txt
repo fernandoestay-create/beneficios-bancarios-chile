@@ -1,0 +1,23 @@
+# Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.2
+lxml>=4.9.3
+playwright>=1.40.0
+
+# API REST
+fastapi>=0.104.1
+uvicorn>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Bot WhatsApp
+twilio>=8.10.0
+flask>=3.0.0
+python-dotenv>=1.0.0
+
+# RAG / IA
+openai>=1.3.6
+pinecone>=3.0.0
+
+# Deployment
+gunicorn>=21.2.0

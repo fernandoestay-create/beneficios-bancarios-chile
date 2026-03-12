@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "/Users/fernandoestayperez/Programación/Claude_code/01.Scraping y bot descuentos/beneficios-bancarios-chile/venv/bin/python3",
+      "runtimeArgs": ["api.py"],
+      "port": 8000
+    },
+    {
+      "name": "bot",
+      "runtimeExecutable": "/Users/fernandoestayperez/Programación/Claude_code/01.Scraping y bot descuentos/beneficios-bancarios-chile/venv/bin/python3",
+      "runtimeArgs": ["whatsapp_bot.py"],
+      "port": 5000
+    }
+  ]
+}

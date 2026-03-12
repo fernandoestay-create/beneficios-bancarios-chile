@@ -1,0 +1,47 @@
+name: Scraping Diario de Beneficios
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # 5 AM UTC = 2 AM Chile
+  workflow_dispatch:  # Permite ejecución manual
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml playwright openai pinecone python-dotenv
+          playwright install chromium
+
+      - name: Run scrapers
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_HOST: ${{ secrets.PINECONE_HOST }}
+          PINECONE_INDEX: api-rag-mvp
+        run: python scrapers.py
+
+      - name: Upload to Pinecone
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_HOST: ${{ secrets.PINECONE_HOST }}
+          PINECONE_INDEX: api-rag-mvp
+        run: python upload_pinecone.py
+
+      - name: Commit updated data
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add beneficios.json beneficios.csv
+          git diff --staged --quiet || git commit -m "Actualizar beneficios $(date +%Y-%m-%d)"
+          git push
