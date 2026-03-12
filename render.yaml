@@ -12,9 +12,9 @@ services:
       - key: PINECONE_ENV
         value: us-east-1
       - key: PINECONE_INDEX
-        value: api-rag-mvp
+        value: beneficios-bancarios
       - key: PINECONE_HOST
-        value: api-rag-mvp-96gaajy.svc.aped-4627-b74a.pinecone.io
+        value: beneficios-bancarios-96gaajy.svc.aped-4627-b74a.pinecone.io
 
   - type: web
     name: whatsapp-bot-beneficios

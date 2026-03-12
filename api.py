@@ -151,7 +151,7 @@ def get_openai_client():
 def get_pinecone_index():
     api_key = os.getenv("PINECONE_API_KEY")
     host = os.getenv("PINECONE_HOST")
-    index_name = os.getenv("PINECONE_INDEX", "api-rag-mvp")
+    index_name = os.getenv("PINECONE_INDEX", "beneficios-bancarios")
     if not api_key or not host:
         return None
     from pinecone import Pinecone
