@@ -42,6 +42,9 @@ class Beneficio:
     presencial: bool = True
     fecha_scrape: str = ""
     url_fuente: str = ""
+    imagen_url: str = ""
+    logo_url: str = ""
+    direccion: str = ""
     activo: bool = True
     tags: List[str] = field(default_factory=list)
     descripcion: str = ""
@@ -133,10 +136,19 @@ class ScraperBancoChile:
 
             # Extraer ubicación de sucursales
             sucursales_html = fields.get('Sucursales', '')
-            locales, regiones = self._parsear_sucursales(sucursales_html)
+            locales, regiones, direcciones = self._parsear_sucursales(sucursales_html)
 
             # Extraer región de tags
             ubicacion = self._extraer_region(tags) or (regiones[0] if regiones else '')
+
+            # Dirección del local
+            direccion = direcciones[0] if direcciones else ''
+
+            # Imágenes
+            logo_data = fields.get('Logo', {})
+            portada_data = fields.get('Portada', {})
+            logo_url = logo_data.get('url', '') if isinstance(logo_data, dict) else ''
+            imagen_url = portada_data.get('url', '') if isinstance(portada_data, dict) else ''
 
             # Vigencia
             vigencia = fields.get('Vigencia', '')
@@ -177,6 +189,9 @@ class ScraperBancoChile:
                 presencial=presencial,
                 online=online_flag,
                 url_fuente=url,
+                imagen_url=imagen_url,
+                logo_url=logo_url,
+                direccion=direccion,
                 tags=tags,
                 activo=True,
             )
@@ -222,19 +237,25 @@ class ScraperBancoChile:
         return ''
 
     def _parsear_sucursales(self, html: str) -> tuple:
-        """Extrae locales y regiones del HTML de sucursales"""
+        """Extrae locales, regiones y direcciones del HTML de sucursales"""
         if not html:
-            return [], []
+            return [], [], []
         locales = []
         regiones = []
+        direcciones = []
         items = re.findall(r'<li>(.*?)</li>', html)
         for item in items:
             parts = [p.strip() for p in item.split(';') if p.strip() and p.strip() != 'VACIO']
+            if len(parts) >= 1:
+                # parts[0] puede ser dirección si solo hay un campo útil
+                direccion = parts[0] if parts[0] != 'VACIO' else ''
+                if direccion:
+                    direcciones.append(direccion)
             if len(parts) >= 2:
                 locales.append(parts[1] if len(parts) > 1 else parts[0])
                 if len(parts) > 2:
                     regiones.append(parts[2])
-        return locales, regiones
+        return locales, regiones, direcciones
 
     def _parsear_vigencia(self, texto: str) -> tuple:
         """Extrae fechas de vigencia"""
@@ -329,6 +350,19 @@ class ScraperBancoFalabella:
                 print(f"   ❌ No se capturaron datos de Contentful")
                 return []
 
+            # Construir mapa de assets (id → URL de imagen)
+            assets = raw_data.get('includes', {}).get('Asset', [])
+            asset_map = {}
+            for a in assets:
+                aid = a.get('sys', {}).get('id', '')
+                file_info = a.get('fields', {}).get('file', {})
+                url = file_info.get('url', '')
+                if url and not url.startswith('http'):
+                    url = 'https:' + url
+                if aid and url:
+                    asset_map[aid] = url
+            print(f"   Assets mapeados: {len(asset_map)}")
+
             entries = raw_data.get('includes', {}).get('Entry', [])
             print(f"   Total entries capturadas: {len(entries)}")
 
@@ -343,7 +377,7 @@ class ScraperBancoFalabella:
                     # Filtrar solo restaurantes
                     categories = fields.get('relatedCategory', [])
                     if 'Restaurantes' in categories:
-                        beneficio = self._parsear_new_benefit(entry)
+                        beneficio = self._parsear_new_benefit(entry, asset_map)
                         if beneficio:
                             self.beneficios.append(beneficio)
                             count_new += 1
@@ -352,7 +386,7 @@ class ScraperBancoFalabella:
                     # Filtrar solo restaurantes
                     categories = fields.get('categoriaV2', [])
                     if 'Restaurantes' in categories:
-                        beneficio = self._parsear_descuento_legacy(entry)
+                        beneficio = self._parsear_descuento_legacy(entry, asset_map)
                         if beneficio:
                             self.beneficios.append(beneficio)
                             count_legacy += 1
@@ -372,11 +406,12 @@ class ScraperBancoFalabella:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
             return self.beneficios
 
-    def _parsear_new_benefit(self, entry: dict) -> Optional[Beneficio]:
+    def _parsear_new_benefit(self, entry: dict, asset_map: dict = None) -> Optional[Beneficio]:
         """Parsea un newBenefits entry"""
         try:
             fields = entry.get('fields', {})
             sys_data = entry.get('sys', {})
+            asset_map = asset_map or {}
 
             nombre = fields.get('commerceName', fields.get('benefitTitle', 'Desconocido'))
             descuento_valor = fields.get('discount', 0) or 0
@@ -418,6 +453,12 @@ class ScraperBancoFalabella:
             # Legal
             legal = fields.get('legalText', '')
 
+            # Imágenes (resolver asset IDs)
+            card_img_ref = fields.get('cardImage', {}).get('sys', {}).get('id', '')
+            card_logo_ref = fields.get('cardLogo', {}).get('sys', {}).get('id', '')
+            imagen_url = asset_map.get(card_img_ref, '')
+            logo_url = asset_map.get(card_logo_ref, '')
+
             entry_id = sys_data.get('id', nombre.lower().replace(' ', '_'))
 
             return Beneficio(
@@ -436,17 +477,20 @@ class ScraperBancoFalabella:
                 presencial=presencial,
                 online=online,
                 url_fuente=url,
+                imagen_url=imagen_url,
+                logo_url=logo_url,
                 activo=True,
                 descripcion=descripcion,
             )
         except Exception as e:
             return None
 
-    def _parsear_descuento_legacy(self, entry: dict) -> Optional[Beneficio]:
+    def _parsear_descuento_legacy(self, entry: dict, asset_map: dict = None) -> Optional[Beneficio]:
         """Parsea un descuentos (legacy) entry"""
         try:
             fields = entry.get('fields', {})
             sys_data = entry.get('sys', {})
+            asset_map = asset_map or {}
 
             nombre = fields.get('empresaBeneficioV2', fields.get('nombreBeneficio', 'Desconocido'))
             subtitulo = fields.get('subtituloCajaV2', '')
@@ -480,6 +524,12 @@ class ScraperBancoFalabella:
             # Tipo beneficio
             tipo = fields.get('tipoBeneficio', [])
 
+            # Imágenes legacy
+            img_ref = fields.get('imagenCajaV2', {}).get('sys', {}).get('id', '')
+            logo_ref = fields.get('logoCajaV2', {}).get('sys', {}).get('id', '')
+            imagen_url = asset_map.get(img_ref, '')
+            logo_url = asset_map.get(logo_ref, '')
+
             entry_id = sys_data.get('id', nombre.lower().replace(' ', '_'))
 
             return Beneficio(
@@ -498,6 +548,8 @@ class ScraperBancoFalabella:
                 presencial=True,
                 online=False,
                 url_fuente=url,
+                imagen_url=imagen_url,
+                logo_url=logo_url,
                 activo=True,
             )
         except Exception as e:

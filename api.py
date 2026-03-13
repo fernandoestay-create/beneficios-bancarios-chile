@@ -44,6 +44,9 @@ class BeneficioResponse(BaseModel):
     valido_desde: str = ""
     valido_hasta: str = ""
     url_fuente: str = ""
+    imagen_url: str = ""
+    logo_url: str = ""
+    direccion: str = ""
 
     class Config:
         from_attributes = True
@@ -447,153 +450,269 @@ async def ver_resultados(
     banco: Optional[str] = Query(None, description="Nombre del banco"),
     q: Optional[str] = Query(None, description="Búsqueda libre"),
 ):
-    """Genera una tabla HTML con todos los beneficios filtrados"""
-    resultados = buscar_beneficios(
-        dia=dia,
-        banco=banco,
-        restaurante=q,
-    )
+    """Genera página HTML con cards de beneficios, filtros interactivos e imágenes"""
+    import html as html_lib
 
-    # Si no hay filtros, mostrar todos
-    if not dia and not banco and not q:
-        resultados = beneficios_db
+    all_data = beneficios_db
+    # Serializar a JSON para filtros en JS
+    deals_json = json.dumps([
+        {
+            "banco": b.banco,
+            "restaurante": b.restaurante,
+            "descuento_valor": b.descuento_valor,
+            "descuento_texto": b.descuento_texto,
+            "dias_validos": b.dias_validos,
+            "ubicacion": b.ubicacion,
+            "direccion": getattr(b, 'direccion', ''),
+            "presencial": b.presencial,
+            "online": b.online,
+            "url_fuente": b.url_fuente,
+            "imagen_url": getattr(b, 'imagen_url', ''),
+            "logo_url": getattr(b, 'logo_url', ''),
+            "valido_hasta": b.valido_hasta,
+            "descripcion": getattr(b, 'descripcion', ''),
+            "tarjeta": b.tarjeta,
+        }
+        for b in all_data
+    ], ensure_ascii=False)
 
-    # Agrupar por banco
-    por_banco = {}
-    for b in resultados:
-        if b.banco not in por_banco:
-            por_banco[b.banco] = []
-        por_banco[b.banco].append(b)
+    bancos_list = sorted(set(b.banco for b in all_data))
+    regiones_list = sorted(set(b.ubicacion for b in all_data if b.ubicacion))
+    banco_options = "".join(f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>' for b in bancos_list)
+    region_options = "".join(f'<option value="{html_lib.escape(r)}">{html_lib.escape(r)}</option>' for r in regiones_list)
 
-    # Título dinámico
-    filtros = []
-    if dia:
-        filtros.append(f"📅 {dia.capitalize()}")
-    if banco:
-        filtros.append(f"🏦 {banco}")
-    if q:
-        filtros.append(f"🔍 {q}")
-    titulo_filtro = " | ".join(filtros) if filtros else "Todos los descuentos"
+    # Pre-selección de filtros desde URL
+    init_dia = f'"{dia}"' if dia else 'null'
+    init_banco = f'"{banco}"' if banco else 'null'
+    init_q = f'"{q}"' if q else 'null'
 
-    # Generar filas de la tabla
-    filas_html = ""
-    for banco_nombre in sorted(por_banco.keys()):
-        beneficios = sorted(por_banco[banco_nombre], key=lambda x: x.descuento_valor, reverse=True)
-        for i, b in enumerate(beneficios):
-            dias_str = ", ".join(b.dias_validos) if b.dias_validos else "Consultar"
-            link = f'<a href="{b.url_fuente}" target="_blank">🔗 Ver</a>' if b.url_fuente else "-"
-            modalidad = []
-            if b.presencial:
-                modalidad.append("🏪")
-            if b.online:
-                modalidad.append("💻")
-            mod_str = " ".join(modalidad) if modalidad else "-"
+    total = len(all_data)
+    total_bancos = len(bancos_list)
+    total_rest = len(set(b.restaurante for b in all_data))
+    vals = [b.descuento_valor for b in all_data if b.descuento_valor > 0]
+    max_desc = max(vals) if vals else 0
 
-            # Banco solo en primera fila del grupo
-            banco_cell = f'<td rowspan="{len(beneficios)}" class="banco">{banco_nombre}</td>' if i == 0 else ""
-
-            filas_html += f"""<tr>
-                {banco_cell}
-                <td><strong>{b.restaurante}</strong></td>
-                <td class="descuento">{b.descuento_texto}</td>
-                <td>{dias_str}</td>
-                <td>{b.ubicacion or '-'}</td>
-                <td>{mod_str}</td>
-                <td>{link}</td>
-            </tr>\n"""
-
-    html = f"""<!DOCTYPE html>
+    page_html = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beneficios Bancarios Chile</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f172a; color: #e2e8f0;
-            padding: 12px; font-size: 14px;
-        }}
-        .header {{
-            text-align: center; padding: 16px 8px;
-            background: linear-gradient(135deg, #1e293b, #334155);
-            border-radius: 12px; margin-bottom: 16px;
-        }}
-        .header h1 {{ font-size: 1.3em; color: #38bdf8; }}
-        .header p {{ color: #94a3b8; font-size: 0.85em; margin-top: 4px; }}
-        .stats {{
-            display: flex; gap: 8px; justify-content: center;
-            flex-wrap: wrap; margin: 12px 0;
-        }}
-        .stat {{
-            background: #1e293b; padding: 8px 14px;
-            border-radius: 8px; text-align: center; font-size: 0.8em;
-        }}
-        .stat strong {{ color: #38bdf8; font-size: 1.3em; display: block; }}
-        .table-wrap {{ overflow-x: auto; border-radius: 8px; }}
-        table {{
-            width: 100%; border-collapse: collapse;
-            background: #1e293b; font-size: 0.85em;
-        }}
-        th {{
-            background: #334155; color: #38bdf8;
-            padding: 10px 8px; text-align: left;
-            position: sticky; top: 0; z-index: 10;
-        }}
-        td {{ padding: 8px; border-bottom: 1px solid #334155; }}
-        tr:hover td {{ background: #263049; }}
-        .banco {{
-            background: #1a2744; font-weight: bold;
-            color: #facc15; vertical-align: top; min-width: 120px;
-        }}
-        .descuento {{ color: #4ade80; font-weight: bold; white-space: nowrap; }}
-        a {{ color: #38bdf8; text-decoration: none; }}
-        a:hover {{ text-decoration: underline; }}
-        .footer {{
-            text-align: center; margin-top: 16px;
-            color: #64748b; font-size: 0.75em;
-        }}
-        @media (max-width: 600px) {{
-            table {{ font-size: 0.75em; }}
-            td, th {{ padding: 6px 4px; }}
-        }}
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Descuentos Bancarios Chile</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{{--bg:#f8f7f4;--panel:#fff;--panel2:#f3f1ed;--text:#1a1a2e;--muted:#6b7280;--line:#e5e2da;
+--primary:#4f46e5;--primary2:#7c3aed;--ok:#16a34a;--warn:#ea580c;--radius:16px;
+--shadow:0 4px 20px rgba(0,0,0,.06);}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);}}
+.container{{width:min(1260px,calc(100% - 24px));margin:0 auto;padding:20px 0 60px}}
+.hero{{display:grid;grid-template-columns:1.4fr .8fr;gap:16px;margin-bottom:20px}}
+.card{{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}}
+.hero-main{{padding:28px;background:linear-gradient(135deg,#faf5ff,#eff6ff)}}
+.eyebrow{{display:inline-flex;align-items:center;gap:6px;background:rgba(79,70,229,.08);
+border:1px solid rgba(79,70,229,.15);color:var(--primary);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600}}
+h1{{margin:12px 0 6px;font-size:clamp(24px,4vw,38px);line-height:1.1;font-weight:800;
+background:linear-gradient(135deg,var(--primary),var(--primary2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
+.sub{{color:var(--muted);font-size:14px;line-height:1.6}}
+.stats-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px}}
+.stat{{background:var(--panel2);border-radius:14px;padding:16px;text-align:center}}
+.stat .val{{font-size:28px;font-weight:800;color:var(--primary)}}
+.stat .lbl{{color:var(--muted);font-size:12px;margin-top:2px}}
+.layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
+.filters{{position:sticky;top:12px;padding:18px}}
+.filters h2{{font-size:16px;margin-bottom:14px;font-weight:700}}
+.group{{margin-bottom:14px}}
+.group label{{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}}
+.input,select{{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+color:var(--text);font-size:13px;outline:none;transition:border .2s}}
+.input:focus,select:focus{{border-color:var(--primary)}}
+.chips{{display:flex;flex-wrap:wrap;gap:6px}}
+.chip{{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:6px 11px;border-radius:999px;
+font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}}
+.chip:hover{{border-color:var(--primary);background:#f5f3ff}}
+.chip.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
+input[type=range]{{accent-color:var(--primary)}}
+.btns{{display:flex;gap:8px;margin-top:10px}}
+button{{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}}
+.btn-primary{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;flex:1}}
+.btn-secondary{{background:var(--panel2);color:var(--text);border:1px solid var(--line)}}
+.results{{padding:18px}}
+.toolbar{{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}}
+.pill{{padding:6px 12px;border-radius:999px;background:rgba(22,163,74,.08);color:var(--ok);
+border:1px solid rgba(22,163,74,.15);font-size:12px;font-weight:600}}
+.grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}}
+.deal{{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+display:flex;flex-direction:column;transition:box-shadow .2s,transform .15s}}
+.deal:hover{{box-shadow:0 8px 30px rgba(0,0,0,.1);transform:translateY(-2px)}}
+.deal-img{{height:160px;background:#f3f1ed;position:relative;overflow:hidden}}
+.deal-img img{{width:100%;height:100%;object-fit:cover}}
+.deal-img .badge{{position:absolute;top:10px;right:10px;background:linear-gradient(135deg,var(--primary),var(--primary2));
+color:#fff;padding:6px 12px;border-radius:10px;font-weight:800;font-size:14px}}
+.deal-img .bank-badge{{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.92);
+backdrop-filter:blur(6px);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;color:var(--text)}}
+.deal-body{{padding:14px;flex:1;display:flex;flex-direction:column;gap:8px}}
+.deal-title{{font-size:16px;font-weight:700}}
+.deal-desc{{color:var(--muted);font-size:13px;line-height:1.5}}
+.meta{{display:flex;flex-wrap:wrap;gap:5px}}
+.tag{{background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 9px;font-size:11px}}
+.cta-row{{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;
+border-top:1px solid var(--line)}}
+.validity{{color:var(--muted);font-size:12px}}
+.link{{color:#fff;text-decoration:none;background:linear-gradient(135deg,var(--primary),var(--primary2));
+padding:8px 14px;border-radius:10px;font-weight:700;font-size:13px;transition:opacity .2s}}
+.link:hover{{opacity:.85}}
+.empty{{display:none;text-align:center;padding:40px;color:var(--muted);border:2px dashed var(--line);border-radius:var(--radius)}}
+.no-img{{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3f1ed,#e8e5de);font-size:40px}}
+.footer{{text-align:center;margin-top:24px;color:var(--muted);font-size:12px}}
+@media(max-width:980px){{.hero,.layout,.grid{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
+.filters{{position:static}}.deal-img{{height:140px}}}}
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1>🇨🇱 Beneficios Bancarios Chile</h1>
-        <p>{titulo_filtro}</p>
-    </div>
-    <div class="stats">
-        <div class="stat"><strong>{len(resultados)}</strong>Descuentos</div>
-        <div class="stat"><strong>{len(por_banco)}</strong>Bancos</div>
-        <div class="stat"><strong>{len(set(b.restaurante for b in resultados))}</strong>Restaurantes</div>
-    </div>
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>Banco</th>
-                    <th>Restaurante</th>
-                    <th>Descuento</th>
-                    <th>Días</th>
-                    <th>Ubicación</th>
-                    <th>Mod.</th>
-                    <th>Link</th>
-                </tr>
-            </thead>
-            <tbody>
-                {filas_html}
-            </tbody>
-        </table>
-    </div>
-    <div class="footer">
-        Actualizado: {timestamp_ultimo_scrape or 'N/A'} | Beneficios Bancarios Chile
-    </div>
-</body>
-</html>"""
-    return HTMLResponse(content=html)
+<div class="container">
+<section class="hero">
+<div class="card hero-main">
+<div class="eyebrow">🍽️ Desde tu bot de WhatsApp</div>
+<h1>Descuentos bancarios en restaurantes de Chile</h1>
+<p class="sub">Todos los beneficios de Banco de Chile, Banco Falabella y más, actualizados.
+Filtra por banco, día, zona y descuento mínimo.</p>
+</div>
+<div class="card stats-grid">
+<div class="stat"><div class="val">{total}</div><div class="lbl">Descuentos activos</div></div>
+<div class="stat"><div class="val">{total_bancos}</div><div class="lbl">Bancos</div></div>
+<div class="stat"><div class="val">{int(max_desc)}%</div><div class="lbl">Mejor descuento</div></div>
+</div>
+</section>
+<section class="layout">
+<aside class="card filters">
+<h2>Filtros</h2>
+<div class="group"><label>Buscar</label>
+<input id="search" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
+<div class="group"><label>Banco</label>
+<select id="bankFilter"><option value="all">Todos los bancos</option>{banco_options}</select></div>
+<div class="group"><label>Día</label>
+<div class="chips" id="dayChips">
+<button class="chip active" data-day="all">Todos</button>
+<button class="chip" data-day="lunes">Lun</button>
+<button class="chip" data-day="martes">Mar</button>
+<button class="chip" data-day="miercoles">Mié</button>
+<button class="chip" data-day="jueves">Jue</button>
+<button class="chip" data-day="viernes">Vie</button>
+<button class="chip" data-day="sabado">Sáb</button>
+<button class="chip" data-day="domingo">Dom</button>
+</div></div>
+<div class="group"><label>Zona</label>
+<select id="regionFilter"><option value="all">Todas</option>{region_options}</select></div>
+<div class="group"><label>Ordenar</label>
+<select id="sortFilter">
+<option value="desc-desc">Mayor descuento</option>
+<option value="desc-asc">Menor descuento</option>
+<option value="name">Nombre A-Z</option>
+<option value="bank">Banco A-Z</option>
+</select></div>
+<div class="group"><label>Descuento mínimo</label>
+<div class="range-row"><input id="minDisc" type="range" min="0" max="50" step="5" value="0">
+<strong id="minDiscVal">0%</strong></div></div>
+<div class="group"><label>Modalidad</label>
+<div class="chips" id="modeChips">
+<button class="chip active" data-mode="all">Todas</button>
+<button class="chip" data-mode="presencial">🏪 Presencial</button>
+<button class="chip" data-mode="online">💻 Online</button>
+</div></div>
+<div class="btns">
+<button class="btn-primary" id="applyBtn">Aplicar</button>
+<button class="btn-secondary" id="resetBtn">Limpiar</button>
+</div>
+</aside>
+<main class="card results">
+<div class="toolbar">
+<h2>Resultados</h2>
+<span class="pill" id="count">0</span>
+</div>
+<div class="grid" id="grid"></div>
+<div class="empty" id="empty">No hay descuentos con esos filtros 🤷</div>
+</main>
+</section>
+<div class="footer">Actualizado: {timestamp_ultimo_scrape or 'N/A'} · Beneficios Bancarios Chile 🇨🇱</div>
+</div>
+<script>
+const deals={deals_json};
+const grid=document.getElementById('grid'),empty=document.getElementById('empty'),
+countEl=document.getElementById('count'),search=document.getElementById('search'),
+bankF=document.getElementById('bankFilter'),regionF=document.getElementById('regionFilter'),
+sortF=document.getElementById('sortFilter'),minD=document.getElementById('minDisc'),
+minDV=document.getElementById('minDiscVal');
+
+function chipVal(id,attr){{const a=document.querySelector('#'+id+' .chip.active');return a?a.dataset[attr]:'all'}}
+function initChips(id,attr){{document.getElementById(id).addEventListener('click',e=>{{
+const c=e.target.closest('.chip');if(!c)return;
+document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('active'));c.classList.add('active')}})}}
+initChips('dayChips','day');initChips('modeChips','mode');
+minD.addEventListener('input',()=>{{minDV.textContent=minD.value+'%'}});
+
+function render(){{
+const q=search.value.trim().toLowerCase(),bank=bankF.value,region=regionF.value,
+sort=sortF.value,min=+minD.value,day=chipVal('dayChips','day'),mode=chipVal('modeChips','mode');
+let f=deals.filter(d=>{{
+const mS=!q||[d.restaurante,d.banco,d.descripcion,d.ubicacion,d.direccion].join(' ').toLowerCase().includes(q);
+const mB=bank==='all'||d.banco===bank;
+const mR=region==='all'||d.ubicacion===region;
+const mD=d.descuento_valor>=min;
+const mDay=day==='all'||d.dias_validos.includes(day)||d.dias_validos.includes('todos');
+const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
+return mS&&mB&&mR&&mD&&mDay&&mMode}});
+f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
+case'name':return a.restaurante.localeCompare(b.restaurante);
+case'bank':return a.banco.localeCompare(b.banco);
+default:return b.descuento_valor-a.descuento_valor}}}});
+grid.innerHTML='';
+if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
+empty.style.display='none';countEl.textContent=f.length+' encontrados';
+f.forEach(d=>{{
+const imgSrc=d.imagen_url||d.logo_url;
+const imgHtml=imgSrc?`<img src="${{imgSrc}}" alt="${{d.restaurante}}" loading="lazy">`
+:`<div class="no-img">🍽️</div>`;
+const dias=d.dias_validos.join(', ');
+const addr=d.direccion?`<span class="tag">📍 ${{d.direccion}}</span>`:'';
+const mods=[];if(d.presencial)mods.push('🏪');if(d.online)mods.push('💻');
+const linkHtml=d.url_fuente?`<a class="link" href="${{d.url_fuente}}" target="_blank">Ver detalle</a>`:'';
+const el=document.createElement('article');el.className='deal';
+el.innerHTML=`<div class="deal-img">${{imgHtml}}
+<div class="badge">${{d.descuento_texto||d.descuento_valor+'%'}}</div>
+<div class="bank-badge">${{d.banco}}</div></div>
+<div class="deal-body"><div class="deal-title">${{d.restaurante}}</div>
+${{d.descripcion?`<div class="deal-desc">${{d.descripcion.slice(0,100)}}</div>`:''}}
+<div class="meta"><span class="tag">📅 ${{dias}}</span>
+<span class="tag">📍 ${{d.ubicacion||'Chile'}}</span>
+${{addr}}<span class="tag">${{mods.join(' ')||'🏪'}}</span></div>
+<div class="cta-row"><div class="validity">${{d.valido_hasta?'Hasta '+d.valido_hasta:''}}</div>
+${{linkHtml}}</div></div>`;
+grid.appendChild(el)}})}}
+
+document.getElementById('applyBtn').addEventListener('click',render);
+document.getElementById('resetBtn').addEventListener('click',()=>{{
+search.value='';bankF.value='all';regionF.value='all';sortF.value='desc-desc';
+minD.value=0;minDV.textContent='0%';
+document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+document.querySelector('#dayChips .chip[data-day="all"]').classList.add('active');
+document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');render()}});
+
+// Auto-aplicar filtros desde URL
+const initDia={init_dia},initBanco={init_banco},initQ={init_q};
+if(initQ)search.value=initQ;
+if(initBanco)bankF.value=initBanco;
+if(initDia){{document.querySelectorAll('#dayChips .chip').forEach(c=>{{c.classList.remove('active');
+if(c.dataset.day===initDia)c.classList.add('active')}})}}
+render();
+// Live filters
+search.addEventListener('input',render);bankF.addEventListener('change',render);
+regionF.addEventListener('change',render);sortF.addEventListener('change',render);
+minD.addEventListener('input',render);
+document.getElementById('dayChips').addEventListener('click',()=>setTimeout(render,10));
+document.getElementById('modeChips').addEventListener('click',()=>setTimeout(render,10));
+</script>
+</body></html>"""
+    return HTMLResponse(content=page_html)
 
 
 # ============================================
