@@ -4,7 +4,7 @@ API REST - BENEFICIOS BANCARIOS
 FastAPI + OpenAI RAG
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -433,6 +433,113 @@ async def scrape_status():
         "ultimo_scrape": timestamp_ultimo_scrape,
         "estado": "activo" if beneficios_db else "sin datos",
     }
+
+
+# ============================================
+# WHATSAPP WEBHOOK (Twilio Sandbox)
+# ============================================
+
+def procesar_comando_whatsapp(texto: str) -> str:
+    """Procesa comandos de WhatsApp y retorna respuesta"""
+    texto = texto.strip().lower()
+
+    if texto in ['/', 'hola', 'hi', 'help', 'menu', 'inicio']:
+        return """*Beneficios Bancarios Chile* 🇨🇱
+
+Comandos:
+/restaurante [nombre] - Buscar restaurante
+/banco [banco] - Descuentos de un banco
+/dia [dia] - Descuentos para un dia
+/top - Top 5 restaurantes
+/stats - Estadisticas
+
+Ejemplo: /restaurante pizza"""
+
+    if texto.startswith('/restaurante '):
+        nombre = texto.replace('/restaurante ', '').strip()
+        resultados = buscar_beneficios(restaurante=nombre)
+        return _formatear_wa(resultados)
+
+    if texto.startswith('/banco '):
+        nombre = texto.replace('/banco ', '').strip()
+        resultados = buscar_beneficios(banco=nombre)
+        return _formatear_wa(resultados, 5)
+
+    if texto.startswith('/dia '):
+        dia = texto.replace('/dia ', '').strip()
+        resultados = buscar_beneficios(dia=dia)
+        return _formatear_wa(resultados, 5)
+
+    if texto == '/top':
+        rest_max = {}
+        for b in beneficios_db:
+            if b.restaurante not in rest_max or b.descuento_valor > rest_max[b.restaurante]:
+                rest_max[b.restaurante] = b.descuento_valor
+        top = sorted(rest_max.items(), key=lambda x: x[1], reverse=True)[:5]
+        resultado = "*Top 5 Restaurantes*\n\n"
+        for i, (rest, desc) in enumerate(top, 1):
+            resultado += f"{i}. {rest} ({desc}% dto)\n"
+        return resultado
+
+    if texto == '/stats':
+        total_bancos = len(set(b.banco for b in beneficios_db))
+        total_rest = len(set(b.restaurante for b in beneficios_db))
+        vals = [b.descuento_valor for b in beneficios_db if b.descuento_valor > 0]
+        promedio = sum(vals) / len(vals) if vals else 0
+        return f"""*Estadisticas*
+
+Total Beneficios: {len(beneficios_db)}
+Bancos: {total_bancos}
+Restaurantes: {total_rest}
+Descuento Promedio: {promedio:.1f}%
+Descuento Maximo: {max(vals) if vals else 0}%"""
+
+    # Busqueda libre
+    if len(texto) > 2:
+        resultados = buscar_beneficios(restaurante=texto)
+        if resultados:
+            return _formatear_wa(resultados)
+
+    return "No entiendo el comando.\nEscribe */* para ver el menu."
+
+
+def _formatear_wa(beneficios, max_items=3):
+    """Formatea beneficios para WhatsApp"""
+    if not beneficios:
+        return "No encontre beneficios. Intenta con otro nombre."
+    texto = f"*{len(beneficios)} resultados:*\n\n"
+    for i, b in enumerate(beneficios[:max_items], 1):
+        dias = ", ".join(b.dias_validos) if b.dias_validos else "Consultar"
+        texto += f"{i}. *{b.restaurante}*\n"
+        texto += f"   {b.banco} - {b.descuento_texto}\n"
+        texto += f"   Dias: {dias}\n"
+        if b.ubicacion:
+            texto += f"   {b.ubicacion}\n"
+        texto += "\n"
+    if len(beneficios) > max_items:
+        texto += f"... y {len(beneficios) - max_items} mas."
+    return texto[:1500]
+
+
+@app.post("/webhook")
+async def webhook_whatsapp(From: str = Form(""), Body: str = Form("")):
+    """Webhook para Twilio WhatsApp Sandbox"""
+    from twilio.twiml.messaging_response import MessagingResponse
+
+    usuario = From.replace("whatsapp:", "")
+    print(f"  WhatsApp de {usuario}: {Body}")
+
+    respuesta = procesar_comando_whatsapp(Body)
+
+    resp = MessagingResponse()
+    resp.message(respuesta)
+
+    return Response(content=str(resp), media_type="application/xml")
+
+
+@app.get("/webhook")
+async def webhook_verify():
+    return {"status": "ok", "webhook": "activo"}
 
 
 # ============================================
