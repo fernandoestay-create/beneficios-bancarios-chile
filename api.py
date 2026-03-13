@@ -478,7 +478,12 @@ async def ver_resultados(
     ], ensure_ascii=False)
 
     bancos_list = sorted(set(b.banco for b in all_data))
-    regiones_list = sorted(set(b.ubicacion for b in all_data if b.ubicacion))
+    REGIONES_VALIDAS = {
+        'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
+        'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble', 'Biobío',
+        'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
+    }
+    regiones_list = sorted(r for r in set(b.ubicacion for b in all_data if b.ubicacion) if r in REGIONES_VALIDAS)
     comunas_list = sorted(set(b.comuna for b in all_data if b.comuna))
     banco_options = "".join(f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>' for b in bancos_list)
     region_options = "".join(f'<option value="{html_lib.escape(r)}">{html_lib.escape(r)}</option>' for r in regiones_list)
@@ -977,10 +982,21 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
 
         # ── Detectar si piden por banco específico ──
         banco_filtro = None
-        if 'falabella' in texto:
-            banco_filtro = 'Falabella'
-        elif 'banco de chile' in texto or ('chile' in texto and 'banco' in texto):
+        BANCOS_WA = {
+            'falabella': 'Falabella', 'bci': 'BCI', 'itau': 'Itaú', 'itaú': 'Itaú',
+            'scotiabank': 'Scotiabank', 'scotia': 'Scotiabank',
+            'santander': 'Santander', 'security': 'Banco Security',
+            'ripley': 'Banco Ripley', 'consorcio': 'Banco Consorcio',
+            'bancoestado': 'BancoEstado', 'banco estado': 'BancoEstado',
+            'entel': 'Entel',
+        }
+        if 'banco de chile' in texto or ('chile' in texto and 'banco' in texto):
             banco_filtro = 'Banco de Chile'
+        else:
+            for clave, nombre in BANCOS_WA.items():
+                if clave in texto:
+                    banco_filtro = nombre
+                    break
 
         # ── Extraer término de búsqueda para el link ──
         q_busqueda = None
@@ -988,17 +1004,38 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                          'con', 'que', 'hay', 'hoy', 'los', 'las', 'del', 'donde',
                          'comer', 'tiene', 'tiene', 'mejor', 'mejores', 'mas', 'más',
                          'banco', 'chile', 'falabella', 'de', 'en', 'el', 'la', 'un',
-                         'una', 'quiero', 'dame', 'ver', 'todos', 'todas', 'puedo'}
+                         'una', 'quiero', 'dame', 'ver', 'todos', 'todas', 'puedo',
+                         'bci', 'itau', 'itaú', 'scotiabank', 'scotia', 'santander',
+                         'security', 'ripley', 'consorcio', 'bancoestado', 'estado',
+                         'entel'}
         palabras_utiles = [p for p in texto.split() if p not in palabras_skip and len(p) > 2]
         if palabras_utiles:
             q_busqueda = " ".join(palabras_utiles[:3])
 
         # ── Armar contexto según tipo de consulta ──
         if dia_filtro or ('todos' in texto and ('descuento' in texto or 'beneficio' in texto)):
-            # CONSULTA POR DÍA → Buscar TODOS de la base de datos, agrupados por banco
+            # CONSULTA POR DÍA → Buscar beneficios del día, limitando contexto
             resultados = buscar_beneficios(dia=dia_filtro, banco=banco_filtro)
             if not resultados and dia_filtro:
                 resultados = buscar_beneficios(dia=dia_filtro)
+
+            # Si hay keyword específico (ej: "sushi", "pizza"), filtrar
+            keyword = None
+            if palabras_utiles:
+                # Excluir días de la búsqueda keyword
+                dias_palabras = set(DIAS_MAP.keys()) | {'hoy', 'mañana'}
+                keyword_words = [w for w in palabras_utiles if w not in dias_palabras]
+                if keyword_words:
+                    keyword = " ".join(keyword_words[:2])
+
+            if keyword:
+                # Filtrar por keyword en restaurante o descripcion
+                kw_lower = keyword.lower()
+                filtrados = [b for b in resultados
+                             if kw_lower in b.restaurante.lower()
+                             or kw_lower in b.descripcion.lower()]
+                if filtrados:
+                    resultados = filtrados
 
             # Agrupar por banco
             por_banco = {}
@@ -1007,14 +1044,19 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                     por_banco[b.banco] = []
                 por_banco[b.banco].append(b)
 
+            # Limitar contexto: top 2 por banco + conteo total
+            TOP_PER_BANK = 2
             contexto_partes = []
             for banco, beneficios in sorted(por_banco.items()):
+                beneficios_sorted = sorted(beneficios, key=lambda x: x.descuento_valor, reverse=True)
                 contexto_partes.append(f"\n=== {banco} ({len(beneficios)} descuentos) ===")
-                for b in sorted(beneficios, key=lambda x: x.descuento_valor, reverse=True):
+                for b in beneficios_sorted[:TOP_PER_BANK]:
                     contexto_partes.append(
-                        f"- {b.restaurante}: {b.descuento_texto} | "
-                        f"Días: {', '.join(b.dias_validos)} | {b.ubicacion}"
+                        f"- {b.restaurante}: {b.descuento_texto} | {b.ubicacion}"
                     )
+                resto = len(beneficios) - TOP_PER_BANK
+                if resto > 0:
+                    contexto_partes.append(f"  ...y {resto} más")
             contexto = "\n".join(contexto_partes)
             total_encontrados = len(resultados)
         else:
@@ -1080,15 +1122,15 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                         "en restaurantes de Chile. Hoy es " + dia_hoy + ".\n\n"
                         "REGLAS IMPORTANTES:\n"
                         "- Responde SOLO con los datos proporcionados, no inventes\n"
-                        "- Agrupa por banco con esta jerarquía:\n"
-                        "  *🏦 Banco* (X dctos)\n"
+                        "- Agrupa por banco:\n"
+                        "  *🏦 Banco* (X dctos hoy)\n"
                         "  • Restaurante - descuento\n"
-                        "- Muestra los TOP 3-5 mejores descuentos por banco (los de mayor %)\n"
-                        "- Si hay más, indica cuántos más hay por banco\n"
+                        "- Muestra los 1-2 mejores por banco (mayor %) que ya vienen en los datos\n"
+                        "- Indica cuántos descuentos tiene cada banco en total\n"
                         "- Formato WhatsApp: *negrita* para bancos\n"
-                        "- ⚠️ MÁXIMO 1100 caracteres en total (LÍMITE ESTRICTO)\n"
-                        "- Sé MUY conciso, no uses ubicaciones ni días si no preguntan\n"
-                        "- NO incluyas link, se agrega automáticamente al final\n"
+                        "- ⚠️ MÁXIMO 900 caracteres (LÍMITE ESTRICTO)\n"
+                        "- Sé MUY conciso\n"
+                        "- NO incluyas link, se agrega automáticamente\n"
                         "- Español chileno casual con emojis"
                     )
                 },
