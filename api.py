@@ -512,10 +512,10 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
 
         # ── Detectar si piden por banco específico ──
         banco_filtro = None
-        for banco_nombre in ['falabella', 'banco de chile', 'chile']:
-            if banco_nombre in texto:
-                banco_filtro = 'Falabella' if 'falabella' in banco_nombre else 'Banco de Chile'
-                break
+        if 'falabella' in texto:
+            banco_filtro = 'Falabella'
+        elif 'banco de chile' in texto or ('chile' in texto and 'banco' in texto):
+            banco_filtro = 'Banco de Chile'
 
         # ── Armar contexto según tipo de consulta ──
         if dia_filtro or ('todos' in texto and ('descuento' in texto or 'beneficio' in texto)):
@@ -593,15 +593,16 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                         "en restaurantes de Chile. Hoy es " + dia_hoy + ".\n\n"
                         "REGLAS IMPORTANTES:\n"
                         "- Responde SOLO con los datos proporcionados, no inventes\n"
-                        "- SIEMPRE agrupa los resultados por banco con esta jerarquía:\n"
-                        "  *🏦 Nombre del Banco* (X descuentos)\n"
-                        "  • Restaurante - descuento - ubicación\n"
-                        "- Incluye TODOS los restaurantes del contexto, no omitas ninguno\n"
-                        "- Usa formato WhatsApp: *negrita* para bancos y restaurantes\n"
-                        "- Máximo 3800 caracteres\n"
-                        "- Si hay muchos resultados, lista todos pero de forma compacta\n"
-                        "- Termina con un resumen del total\n"
-                        "- Responde en español chileno casual con emojis"
+                        "- Agrupa por banco con esta jerarquía:\n"
+                        "  *🏦 Banco* (X dctos)\n"
+                        "  • Restaurante - descuento\n"
+                        "- Muestra los TOP 3-5 mejores descuentos por banco (los de mayor %)\n"
+                        "- Si hay más, indica cuántos más hay por banco\n"
+                        "- Formato WhatsApp: *negrita* para bancos\n"
+                        "- ⚠️ MÁXIMO 1400 caracteres en total (LÍMITE ESTRICTO)\n"
+                        "- Sé MUY conciso, no uses ubicaciones ni días si no preguntan\n"
+                        "- Termina con total de descuentos encontrados\n"
+                        "- Español chileno casual con emojis"
                     )
                 },
                 {
@@ -614,10 +615,10 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                 }
             ],
             temperature=0.3,
-            max_tokens=1000,
+            max_tokens=450,
         )
         respuesta = response.choices[0].message.content
-        return respuesta[:4000]  # WhatsApp soporta hasta 4096 chars
+        return respuesta[:1500]  # Twilio WhatsApp limit: 1600 chars
 
     except Exception as e:
         print(f"  Error RAG WhatsApp: {e}")
