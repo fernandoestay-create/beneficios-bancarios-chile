@@ -563,14 +563,24 @@ backdrop-filter:blur(6px);padding:5px 10px;border-radius:8px;display:flex;align-
 .deal-body{{padding:14px;flex:1;display:flex;flex-direction:column;gap:8px}}
 .deal-title{{font-size:16px;font-weight:700}}
 .deal-desc{{color:var(--muted);font-size:13px;line-height:1.5}}
-.meta{{display:flex;flex-wrap:wrap;gap:5px}}
-.tag{{background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 9px;font-size:11px}}
-.cta-row{{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;
-border-top:1px solid var(--line)}}
-.validity{{color:var(--muted);font-size:12px}}
+.day-bar{{display:flex;align-items:center;gap:6px;background:#f5f3ff;border:1px solid var(--line);border-radius:10px;padding:8px 10px}}
+.day-circles{{display:flex;gap:4px;flex:1}}
+.day-circle{{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:11px;font-weight:700;border:2px solid #e0dce8;color:#bbb;background:#fff;transition:all .2s}}
+.day-circle.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.mode-badge{{font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}}
+.mode-badge.presencial{{background:#e8f5e9;color:#2e7d32}}
+.mode-badge.online{{background:#e3f2fd;color:#1565c0}}
+.deal-info{{display:flex;flex-direction:column;gap:4px}}
+.deal-info-row{{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}}
+.deal-info-row svg,.deal-info-row .info-icon{{width:14px;flex-shrink:0}}
+.cta-row{{display:flex;justify-content:center;padding-top:8px}}
 .link{{color:#fff;text-decoration:none;background:linear-gradient(135deg,var(--primary),var(--primary2));
-padding:8px 14px;border-radius:10px;font-weight:700;font-size:13px;transition:opacity .2s}}
+padding:8px 20px;border-radius:10px;font-weight:700;font-size:13px;transition:opacity .2s}}
 .link:hover{{opacity:.85}}
+.deal-footer{{background:#f8f7f5;border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:3px}}
+.deal-footer .validity{{color:var(--muted);font-size:11px}}
+.deal-footer .disclaimer{{color:#aaa;font-size:10px;font-style:italic}}
 .empty{{display:none;text-align:center;padding:40px;color:var(--muted);border:2px dashed var(--line);border-radius:var(--radius)}}
 .no-img{{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3f1ed,#e8e5de);font-size:40px}}
 .footer{{text-align:center;margin-top:24px;color:var(--muted);font-size:12px}}
@@ -586,7 +596,8 @@ padding:8px 14px;border-radius:10px;font-weight:700;font-size:13px;transition:op
 .popup-desc{{color:var(--muted);margin:4px 0}}
 .popup-link{{display:inline-block;background:var(--primary);color:#fff;padding:4px 10px;border-radius:6px;text-decoration:none;font-weight:600;font-size:12px;margin-top:4px}}
 @media(max-width:980px){{.hero,.layout,.grid,.map-layout{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
-.filters{{position:static}}.deal-img{{height:140px}}#map{{height:60vh}}}}
+.filters{{position:static}}.deal-img{{height:140px}}#map{{height:60vh}}
+.day-circle{{width:24px;height:24px;font-size:10px}}.day-bar{{gap:4px;padding:6px 8px}}}}
 </style>
 </head>
 <body>
@@ -743,9 +754,12 @@ f.forEach(d=>{{
 const imgSrc=d.imagen_url||d.logo_url;
 const imgHtml=imgSrc?`<img src="${{imgSrc}}" alt="${{d.restaurante}}" loading="lazy">`
 :`<div class="no-img">🍽️</div>`;
-const dias=d.dias_validos.join(', ');
-const addr=d.direccion?`<span class="tag">📍 ${{d.direccion}}</span>`:'';
-const mods=[];if(d.presencial)mods.push('🏪');if(d.online)mods.push('💻');
+const DAY_MAP=[['lunes','L'],['martes','M'],['miercoles','X'],['jueves','J'],['viernes','V'],['sabado','S'],['domingo','D']];
+const dayCircles=DAY_MAP.map(([k,l])=>{{
+const on=d.dias_validos.includes(k)||d.dias_validos.includes('todos');
+return `<div class="day-circle${{on?' active':''}}">${{l}}</div>`}}).join('');
+const modeBadge=d.presencial?'<span class="mode-badge presencial">🏪 Pres.</span>'
+:(d.online?'<span class="mode-badge online">💻 Online</span>':'');
 const linkHtml=d.url_fuente?`<a class="link" href="${{d.url_fuente}}" target="_blank">Ver detalle</a>`:'';
 const el=document.createElement('article');el.className='deal';
 el.innerHTML=`<div class="deal-img">${{imgHtml}}
@@ -753,11 +767,15 @@ el.innerHTML=`<div class="deal-img">${{imgHtml}}
 <div class="bank-badge">${{bankBadgeHtml(d.banco)}}</div></div>
 <div class="deal-body"><div class="deal-title">${{d.restaurante}}</div>
 ${{d.descripcion?`<div class="deal-desc">${{d.descripcion.slice(0,100)}}</div>`:''}}
-<div class="meta"><span class="tag">📅 ${{dias}}</span>
-<span class="tag">📍 ${{d.ubicacion||'Chile'}}</span>
-${{addr}}<span class="tag">${{mods.join(' ')||'🏪'}}</span></div>
-<div class="cta-row"><div class="validity">${{d.valido_hasta?'Hasta '+d.valido_hasta:''}}</div>
-${{linkHtml}}</div></div>`;
+<div class="day-bar"><div class="day-circles">${{dayCircles}}</div>${{modeBadge}}</div>
+<div class="deal-info">
+<div class="deal-info-row"><span class="info-icon">📍</span>${{d.ubicacion||'Chile'}}</div>
+${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${{d.direccion}}</div>`:''}}
+</div>
+<div class="cta-row">${{linkHtml}}</div></div>
+<div class="deal-footer">
+<div class="validity">⏳ Vigencia: ${{d.valido_hasta?'hasta '+d.valido_hasta:'Sin fecha'}}</div>
+<div class="disclaimer">⚠️ Siempre revisar condiciones especiales en el banco</div></div>`;
 grid.appendChild(el)}})}}
 
 document.getElementById('applyBtn').addEventListener('click',render);
