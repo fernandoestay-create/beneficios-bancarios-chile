@@ -451,7 +451,7 @@ async def procesar_comando_whatsapp(texto: str) -> str:
     texto = texto_original.lower()
 
     # ── Comandos rápidos (atajos) ──
-    if texto in ['/', 'help', 'menu', 'comandos']:
+    if texto in ['/', 'hola', 'hi', 'hello', 'help', 'menu', 'comandos', 'inicio']:
         return """*Beneficios Bancarios Chile* 🇨🇱
 
 Puedes escribirme lo que quieras, por ejemplo:
