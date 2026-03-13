@@ -766,16 +766,12 @@ class ScraperItau:
             cards = soup.select('a.beneficio__item')
             print(f"   Tarjetas encontradas: {len(cards)}")
 
-            seen = set()
             for card in cards:
                 beneficio = self._parsear_card(card)
                 if beneficio:
-                    key = beneficio.restaurante.lower().strip()
-                    if key not in seen:
-                        seen.add(key)
-                        self.beneficios.append(beneficio)
+                    self.beneficios.append(beneficio)
 
-            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos (deduplicados)")
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
             return self.beneficios
 
         except ImportError:
@@ -841,10 +837,11 @@ class ScraperItau:
                 if bg_match:
                     imagen_url = bg_match.group(1).strip('"').strip("'")
 
+            tarjeta_key = re.sub(r'[^a-z0-9]', '', tarjeta.lower())
             beneficio_id = re.sub(r'[^a-z0-9]', '_', nombre.lower())
 
             return Beneficio(
-                id=f"itau_{beneficio_id}",
+                id=f"itau_{beneficio_id}_{tarjeta_key}",
                 banco=self.BANCO,
                 tarjeta=tarjeta,
                 restaurante=nombre,
