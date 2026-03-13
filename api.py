@@ -769,7 +769,7 @@ el.innerHTML=`<div class="deal-img">${{imgHtml}}
 ${{d.descripcion?`<div class="deal-desc">${{d.descripcion.slice(0,100)}}</div>`:''}}
 <div class="day-bar"><div class="day-circles">${{dayCircles}}</div>${{modeBadge}}</div>
 <div class="deal-info">
-<div class="deal-info-row"><span class="info-icon">📍</span>${{(d.ubicacion||'Chile').replace(/\\b\\w/g,c=>c.toUpperCase())}}</div>
+<div class="deal-info-row" style="text-transform:capitalize"><span class="info-icon">📍</span>${{d.ubicacion||'Chile'}}</div>
 ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${{d.direccion}}</div>`:''}}
 </div>
 <div class="cta-row">${{linkHtml}}</div></div>
