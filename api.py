@@ -5,7 +5,9 @@ FastAPI + OpenAI RAG
 """
 
 from fastapi import FastAPI, HTTPException, Query, Form, Response
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from urllib.parse import quote_plus
 from pydantic import BaseModel
 from typing import List, Optional
 import json
@@ -436,6 +438,165 @@ async def scrape_status():
 
 
 # ============================================
+# PÁGINA WEB - TABLA COMPLETA DE RESULTADOS
+# ============================================
+
+@app.get("/ver", response_class=HTMLResponse)
+async def ver_resultados(
+    dia: Optional[str] = Query(None, description="Día de la semana"),
+    banco: Optional[str] = Query(None, description="Nombre del banco"),
+    q: Optional[str] = Query(None, description="Búsqueda libre"),
+):
+    """Genera una tabla HTML con todos los beneficios filtrados"""
+    resultados = buscar_beneficios(
+        dia=dia,
+        banco=banco,
+        restaurante=q,
+    )
+
+    # Si no hay filtros, mostrar todos
+    if not dia and not banco and not q:
+        resultados = beneficios_db
+
+    # Agrupar por banco
+    por_banco = {}
+    for b in resultados:
+        if b.banco not in por_banco:
+            por_banco[b.banco] = []
+        por_banco[b.banco].append(b)
+
+    # Título dinámico
+    filtros = []
+    if dia:
+        filtros.append(f"📅 {dia.capitalize()}")
+    if banco:
+        filtros.append(f"🏦 {banco}")
+    if q:
+        filtros.append(f"🔍 {q}")
+    titulo_filtro = " | ".join(filtros) if filtros else "Todos los descuentos"
+
+    # Generar filas de la tabla
+    filas_html = ""
+    for banco_nombre in sorted(por_banco.keys()):
+        beneficios = sorted(por_banco[banco_nombre], key=lambda x: x.descuento_valor, reverse=True)
+        for i, b in enumerate(beneficios):
+            dias_str = ", ".join(b.dias_validos) if b.dias_validos else "Consultar"
+            link = f'<a href="{b.url_fuente}" target="_blank">🔗 Ver</a>' if b.url_fuente else "-"
+            modalidad = []
+            if b.presencial:
+                modalidad.append("🏪")
+            if b.online:
+                modalidad.append("💻")
+            mod_str = " ".join(modalidad) if modalidad else "-"
+
+            # Banco solo en primera fila del grupo
+            banco_cell = f'<td rowspan="{len(beneficios)}" class="banco">{banco_nombre}</td>' if i == 0 else ""
+
+            filas_html += f"""<tr>
+                {banco_cell}
+                <td><strong>{b.restaurante}</strong></td>
+                <td class="descuento">{b.descuento_texto}</td>
+                <td>{dias_str}</td>
+                <td>{b.ubicacion or '-'}</td>
+                <td>{mod_str}</td>
+                <td>{link}</td>
+            </tr>\n"""
+
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beneficios Bancarios Chile</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a; color: #e2e8f0;
+            padding: 12px; font-size: 14px;
+        }}
+        .header {{
+            text-align: center; padding: 16px 8px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-radius: 12px; margin-bottom: 16px;
+        }}
+        .header h1 {{ font-size: 1.3em; color: #38bdf8; }}
+        .header p {{ color: #94a3b8; font-size: 0.85em; margin-top: 4px; }}
+        .stats {{
+            display: flex; gap: 8px; justify-content: center;
+            flex-wrap: wrap; margin: 12px 0;
+        }}
+        .stat {{
+            background: #1e293b; padding: 8px 14px;
+            border-radius: 8px; text-align: center; font-size: 0.8em;
+        }}
+        .stat strong {{ color: #38bdf8; font-size: 1.3em; display: block; }}
+        .table-wrap {{ overflow-x: auto; border-radius: 8px; }}
+        table {{
+            width: 100%; border-collapse: collapse;
+            background: #1e293b; font-size: 0.85em;
+        }}
+        th {{
+            background: #334155; color: #38bdf8;
+            padding: 10px 8px; text-align: left;
+            position: sticky; top: 0; z-index: 10;
+        }}
+        td {{ padding: 8px; border-bottom: 1px solid #334155; }}
+        tr:hover td {{ background: #263049; }}
+        .banco {{
+            background: #1a2744; font-weight: bold;
+            color: #facc15; vertical-align: top; min-width: 120px;
+        }}
+        .descuento {{ color: #4ade80; font-weight: bold; white-space: nowrap; }}
+        a {{ color: #38bdf8; text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
+        .footer {{
+            text-align: center; margin-top: 16px;
+            color: #64748b; font-size: 0.75em;
+        }}
+        @media (max-width: 600px) {{
+            table {{ font-size: 0.75em; }}
+            td, th {{ padding: 6px 4px; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🇨🇱 Beneficios Bancarios Chile</h1>
+        <p>{titulo_filtro}</p>
+    </div>
+    <div class="stats">
+        <div class="stat"><strong>{len(resultados)}</strong>Descuentos</div>
+        <div class="stat"><strong>{len(por_banco)}</strong>Bancos</div>
+        <div class="stat"><strong>{len(set(b.restaurante for b in resultados))}</strong>Restaurantes</div>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Banco</th>
+                    <th>Restaurante</th>
+                    <th>Descuento</th>
+                    <th>Días</th>
+                    <th>Ubicación</th>
+                    <th>Mod.</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {filas_html}
+            </tbody>
+        </table>
+    </div>
+    <div class="footer">
+        Actualizado: {timestamp_ultimo_scrape or 'N/A'} | Beneficios Bancarios Chile
+    </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
+
+
+# ============================================
 # WHATSAPP WEBHOOK (Twilio Sandbox)
 # ============================================
 
@@ -517,6 +678,17 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
         elif 'banco de chile' in texto or ('chile' in texto and 'banco' in texto):
             banco_filtro = 'Banco de Chile'
 
+        # ── Extraer término de búsqueda para el link ──
+        q_busqueda = None
+        palabras_skip = {'descuento', 'descuentos', 'beneficio', 'beneficios', 'para',
+                         'con', 'que', 'hay', 'hoy', 'los', 'las', 'del', 'donde',
+                         'comer', 'tiene', 'tiene', 'mejor', 'mejores', 'mas', 'más',
+                         'banco', 'chile', 'falabella', 'de', 'en', 'el', 'la', 'un',
+                         'una', 'quiero', 'dame', 'ver', 'todos', 'todas', 'puedo'}
+        palabras_utiles = [p for p in texto.split() if p not in palabras_skip and len(p) > 2]
+        if palabras_utiles:
+            q_busqueda = " ".join(palabras_utiles[:3])
+
         # ── Armar contexto según tipo de consulta ──
         if dia_filtro or ('todos' in texto and ('descuento' in texto or 'beneficio' in texto)):
             # CONSULTA POR DÍA → Buscar TODOS de la base de datos, agrupados por banco
@@ -578,6 +750,17 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                 ])
             total_encontrados = len(resultados_semanticos) if resultados_semanticos else len(resultados)
 
+        # ── Generar link a tabla completa ──
+        BASE_URL = "https://api-beneficios-chile.onrender.com/ver"
+        params = []
+        if dia_filtro:
+            params.append(f"dia={quote_plus(dia_filtro)}")
+        if banco_filtro:
+            params.append(f"banco={quote_plus(banco_filtro)}")
+        if not dia_filtro and not banco_filtro and q_busqueda:
+            params.append(f"q={quote_plus(q_busqueda)}")
+        link_tabla = BASE_URL + ("?" + "&".join(params) if params else "")
+
         # ── Consultar OpenAI ──
         openai_client = get_openai_client()
         if not openai_client:
@@ -599,9 +782,9 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                         "- Muestra los TOP 3-5 mejores descuentos por banco (los de mayor %)\n"
                         "- Si hay más, indica cuántos más hay por banco\n"
                         "- Formato WhatsApp: *negrita* para bancos\n"
-                        "- ⚠️ MÁXIMO 1400 caracteres en total (LÍMITE ESTRICTO)\n"
+                        "- ⚠️ MÁXIMO 1100 caracteres en total (LÍMITE ESTRICTO)\n"
                         "- Sé MUY conciso, no uses ubicaciones ni días si no preguntan\n"
-                        "- Termina con total de descuentos encontrados\n"
+                        "- NO incluyas link, se agrega automáticamente al final\n"
                         "- Español chileno casual con emojis"
                     )
                 },
@@ -615,10 +798,14 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                 }
             ],
             temperature=0.3,
-            max_tokens=450,
+            max_tokens=350,
         )
         respuesta = response.choices[0].message.content
-        return respuesta[:1500]  # Twilio WhatsApp limit: 1600 chars
+
+        # Agregar link a la tabla completa
+        sufijo = f"\n\n📋 *Ver tabla completa con links:*\n{link_tabla}"
+        max_texto = 1500 - len(sufijo)
+        return respuesta[:max_texto] + sufijo
 
     except Exception as e:
         print(f"  Error RAG WhatsApp: {e}")
