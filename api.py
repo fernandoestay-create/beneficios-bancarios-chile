@@ -472,14 +472,17 @@ async def ver_resultados(
             "valido_hasta": b.valido_hasta,
             "descripcion": getattr(b, 'descripcion', ''),
             "tarjeta": b.tarjeta,
+            "comuna": getattr(b, 'comuna', ''),
         }
         for b in all_data
     ], ensure_ascii=False)
 
     bancos_list = sorted(set(b.banco for b in all_data))
     regiones_list = sorted(set(b.ubicacion for b in all_data if b.ubicacion))
+    comunas_list = sorted(set(b.comuna for b in all_data if b.comuna))
     banco_options = "".join(f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>' for b in bancos_list)
     region_options = "".join(f'<option value="{html_lib.escape(r)}">{html_lib.escape(r)}</option>' for r in regiones_list)
+    comuna_options = "".join(f'<option value="{html_lib.escape(c)}">{html_lib.escape(c)}</option>' for c in comunas_list)
 
     # Pre-selección de filtros desde URL
     init_dia = f'"{dia}"' if dia else 'null'
@@ -640,6 +643,8 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 </div></div>
 <div class="group"><label>Zona</label>
 <select id="regionFilter"><option value="all">Todas</option>{region_options}</select></div>
+<div class="group" id="comunaGroup" style="display:none"><label>Comuna</label>
+<select id="comunaFilter"><option value="all">Todas</option>{comuna_options}</select></div>
 <div class="group"><label>Ordenar</label>
 <select id="sortFilter">
 <option value="desc-desc">Mayor descuento</option>
@@ -704,11 +709,19 @@ const BANK_LOGOS={{
 'Banco Falabella':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Logotipo_Banco_Falabella.svg/200px-Logotipo_Banco_Falabella.svg.png',
 'BCI':'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Bci_Logotype.svg/200px-Bci_Logotype.svg.png',
 'Banco Itaú':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Ita%C3%BA_Unibanco_logo_2023.svg/200px-Ita%C3%BA_Unibanco_logo_2023.svg.png',
-'Scotiabank':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Scotiabank_logo.svg/200px-Scotiabank_logo.svg.png'
+'Scotiabank':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Scotiabank_logo.svg/200px-Scotiabank_logo.svg.png',
+'Santander':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Banco_Santander_Logotipo.svg/200px-Banco_Santander_Logotipo.svg.png',
+'Banco Consorcio':'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Logo_Banco_Consorcio.svg/200px-Logo_Banco_Consorcio.svg.png',
+'BancoEstado':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/BancoEstado_logo.svg/200px-BancoEstado_logo.svg.png',
+'Banco Security':'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banco_Security_logo.svg/200px-Banco_Security_logo.svg.png',
+'Banco Ripley':'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Banco_Ripley_Logo.svg/200px-Banco_Ripley_Logo.svg.png',
+'Entel':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Entel_logo.svg/200px-Entel_logo.svg.png'
 }};
 const BANK_COLORS={{
 'Banco de Chile':'#003DA5','Banco Falabella':'#00B140',
-'BCI':'#E31837','Banco Itaú':'#003399','Scotiabank':'#EC111A'
+'BCI':'#E31837','Banco Itaú':'#003399','Scotiabank':'#EC111A',
+'Santander':'#EC0000','Banco Consorcio':'#003366','BancoEstado':'#00A651',
+'Banco Security':'#1B3A5C','Banco Ripley':'#7B2D8E','Entel':'#FF6B00'
 }};
 function bankBadgeHtml(banco){{
 const logo=BANK_LOGOS[banco];
@@ -729,8 +742,15 @@ if(btn.dataset.tab==='mapa')initMap();
 const grid=document.getElementById('grid'),empty=document.getElementById('empty'),
 countEl=document.getElementById('count'),search=document.getElementById('search'),
 bankF=document.getElementById('bankFilter'),regionF=document.getElementById('regionFilter'),
+comunaF=document.getElementById('comunaFilter'),comunaG=document.getElementById('comunaGroup'),
 sortF=document.getElementById('sortFilter'),minD=document.getElementById('minDisc'),
 minDV=document.getElementById('minDiscVal');
+const RM_KEYS=['metropolitana','region metropolitana','región metropolitana de santiago','rm'];
+function isRM(v){{return RM_KEYS.some(k=>v.toLowerCase().includes(k))}}
+regionF.addEventListener('change',()=>{{
+if(regionF.value!=='all'&&isRM(regionF.value)){{comunaG.style.display='block'}}
+else{{comunaG.style.display='none';comunaF.value='all'}}
+}});
 
 function chipVal(id,attr){{const a=document.querySelector('#'+id+' .chip.active');return a?a.dataset[attr]:'all'}}
 function initChips(id,attr){{document.getElementById(id).addEventListener('click',e=>{{
@@ -741,15 +761,16 @@ minD.addEventListener('input',()=>{{minDV.textContent=minD.value+'%'}});
 
 function render(){{
 const q=search.value.trim().toLowerCase(),bank=bankF.value,region=regionF.value,
-sort=sortF.value,min=+minD.value,day=chipVal('dayChips','day'),mode=chipVal('modeChips','mode');
+comuna=comunaF.value,sort=sortF.value,min=+minD.value,day=chipVal('dayChips','day'),mode=chipVal('modeChips','mode');
 let f=deals.filter(d=>{{
 const mS=!q||[d.restaurante,d.banco,d.descripcion,d.ubicacion,d.direccion].join(' ').toLowerCase().includes(q);
 const mB=bank==='all'||d.banco===bank;
 const mR=region==='all'||d.ubicacion===region;
+const mC=comuna==='all'||d.comuna===comuna;
 const mD=d.descuento_valor>=min;
 const mDay=day==='all'||d.dias_validos.includes(day)||d.dias_validos.includes('todos');
 const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
-return mS&&mB&&mR&&mD&&mDay&&mMode}});
+return mS&&mB&&mR&&mC&&mD&&mDay&&mMode}});
 f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
 case'name':return a.restaurante.localeCompare(b.restaurante);
 case'bank':return a.banco.localeCompare(b.banco);
@@ -776,7 +797,7 @@ el.innerHTML=`<div class="deal-img">${{imgHtml}}
 ${{d.descripcion?`<div class="deal-desc">${{d.descripcion.slice(0,100)}}</div>`:''}}
 <div class="day-bar"><div class="day-circles">${{dayCircles}}</div>${{modeBadge}}</div>
 <div class="deal-info">
-<div class="deal-info-row" style="text-transform:capitalize"><span class="info-icon">📍</span>${{d.ubicacion||'Chile'}}</div>
+<div class="deal-info-row" style="text-transform:capitalize"><span class="info-icon">📍</span>${{d.comuna?d.comuna+', ':''}}${{d.ubicacion||'Chile'}}</div>
 ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${{d.direccion}}</div>`:''}}
 </div>
 <div class="cta-row">${{linkHtml}}</div></div>
@@ -787,8 +808,8 @@ grid.appendChild(el)}})}}
 
 document.getElementById('applyBtn').addEventListener('click',render);
 document.getElementById('resetBtn').addEventListener('click',()=>{{
-search.value='';bankF.value='all';regionF.value='all';sortF.value='desc-desc';
-minD.value=0;minDV.textContent='0%';
+search.value='';bankF.value='all';regionF.value='all';comunaF.value='all';comunaG.style.display='none';
+sortF.value='desc-desc';minD.value=0;minDV.textContent='0%';
 document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
 document.querySelector('#dayChips .chip[data-day="all"]').classList.add('active');
 document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');render()}});
@@ -800,7 +821,7 @@ if(initDia){{document.querySelectorAll('#dayChips .chip').forEach(c=>{{c.classLi
 if(c.dataset.day===initDia)c.classList.add('active')}})}}
 render();
 search.addEventListener('input',render);bankF.addEventListener('change',render);
-regionF.addEventListener('change',render);sortF.addEventListener('change',render);
+regionF.addEventListener('change',render);comunaF.addEventListener('change',render);sortF.addEventListener('change',render);
 minD.addEventListener('input',render);
 document.getElementById('dayChips').addEventListener('click',()=>setTimeout(render,10));
 document.getElementById('modeChips').addEventListener('click',()=>setTimeout(render,10));

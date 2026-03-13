@@ -22,9 +22,12 @@ BATCH_SIZE = 50
 def beneficio_to_text(b: dict) -> str:
     """Convierte un beneficio a texto para embedding"""
     dias = ", ".join(b.get("dias_validos", []))
+    comuna = b.get("comuna", "")
+    ubicacion = b.get("ubicacion", "")
+    lugar = f"{comuna}, {ubicacion}" if comuna else ubicacion
     return (
         f"{b['restaurante']} - {b['banco']} - {b['descuento_texto']} - "
-        f"Días: {dias} - {b.get('ubicacion', '')} - "
+        f"Días: {dias} - {lugar} - "
         f"{b.get('restricciones_texto', '')}"
     ).strip()
 
@@ -70,7 +73,7 @@ def main():
         for j, (b, emb) in enumerate(zip(batch, response.data)):
             vectors.append(
                 {
-                    "id": b["id"],
+                    "id": b["id"].encode("ascii", errors="ignore").decode("ascii"),
                     "values": emb.embedding,
                     "metadata": {
                         "restaurante": b["restaurante"],
@@ -79,6 +82,7 @@ def main():
                         "descuento_valor": b.get("descuento_valor", 0),
                         "dias_validos": ", ".join(b.get("dias_validos", [])),
                         "ubicacion": b.get("ubicacion", ""),
+                        "comuna": b.get("comuna", ""),
                         "restricciones_texto": b.get("restricciones_texto", ""),
                         "presencial": b.get("presencial", True),
                     },

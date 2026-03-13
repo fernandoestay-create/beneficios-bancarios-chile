@@ -34,6 +34,7 @@ class Beneficio:
     valido_hasta: str = ""
     ubicacion: str = ""
     ciudad: str = ""
+    comuna: str = ""
     locales: List[str] = field(default_factory=list)
     compra_minima: int = 0
     tope_descuento: int = 0
@@ -1018,7 +1019,7 @@ class ScraperScotiabank:
                 direccion=direccion,
                 presencial=True,
                 online=False,
-                url_fuente=web or self.PAGE_URL,
+                url_fuente=self.PAGE_URL,
                 imagen_url=imagen_url,
                 restricciones_texto=condiciones[:300] if condiciones else '',
                 activo=True,
@@ -1077,17 +1078,1090 @@ class ScraperScotiabank:
 
 
 # ============================================
+# SCRAPER SANTANDER (HTML SSR, Modyo CMS)
+# ============================================
+
+class ScraperSantander:
+    """Scraper de Santander via HTML estático (SSR)"""
+
+    BASE_URL = "https://banco.santander.cl/beneficios/promociones"
+    DETAIL_BASE = "https://banco.santander.cl"
+    BANCO = "Santander"
+    MAX_PAGES = 25
+
+    RESTAURANT_KEYWORDS = [
+        'restaurante', 'restaurant', 'comida', 'gastronomía', 'gastronom',
+        'pizza', 'sushi', 'burger', 'café', 'cafe', 'bar ', 'pub ',
+        'parrilla', 'grill', 'cocina', 'menú', 'menu', 'delivery',
+        'cena', 'almuerzo', 'brunch', 'food', 'gourmet', 'sabores',
+        'starbucks', 'mcdonald', 'papa john', 'domino', 'subway',
+        'juan maestro', 'doggis', 'tarragona', 'bravissimo', 'telepizza',
+        'cencosud', 'rappi', 'uber eats', 'pedidosya', 'ifood',
+    ]
+
+    def __init__(self):
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de restaurantes de Santander (Playwright para bypass 403)"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (Playwright)...")
+            from playwright.sync_api import sync_playwright
+            from bs4 import BeautifulSoup
+
+            total_items = 0
+
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                context = browser.new_context(
+                    user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                )
+                page = context.new_page()
+
+                for page_num in range(1, self.MAX_PAGES + 1):
+                    url = f"{self.BASE_URL}?page={page_num}"
+                    try:
+                        page.goto(url, wait_until='domcontentloaded', timeout=15000)
+                        page.wait_for_timeout(1500)
+                    except Exception:
+                        break
+
+                    html = page.content()
+                    soup = BeautifulSoup(html, 'html.parser')
+                    items = soup.select('li.item')
+
+                    if not items:
+                        break
+
+                    for item in items:
+                        total_items += 1
+                        beneficio = self._parsear_item(item)
+                        if beneficio:
+                            self.beneficios.append(beneficio)
+
+                    if page_num % 5 == 0 or page_num == 1:
+                        print(f"   Página {page_num}: {len(self.beneficios)} restaurantes de {total_items} items")
+
+                browser.close()
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios de {total_items} total")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _parsear_item(self, item) -> Optional[Beneficio]:
+        """Parsea un item HTML a Beneficio si es restaurante"""
+        try:
+            title_el = item.select_one('h4 a') or item.select_one('h3 a') or item.select_one('a')
+            if not title_el:
+                return None
+            nombre = title_el.get_text(strip=True)
+            href = title_el.get('href', '')
+            slug = href.rstrip('/').split('/')[-1] if href else ''
+            url = f"{self.DETAIL_BASE}{href}" if href and href.startswith('/') else href
+
+            desc_el = item.select_one('p') or item.select_one('.description')
+            descripcion = desc_el.get_text(strip=True) if desc_el else ''
+
+            img_el = item.select_one('img')
+            imagen_url = ''
+            if img_el:
+                src = img_el.get('src', '') or img_el.get('data-src', '')
+                if src:
+                    imagen_url = src if src.startswith('http') else f"{self.DETAIL_BASE}{src}"
+
+            texto_buscar = f"{nombre} {descripcion}".lower()
+            es_restaurante = any(kw in texto_buscar for kw in self.RESTAURANT_KEYWORDS)
+            if not es_restaurante:
+                return None
+
+            descuento_valor = 0
+            match = re.search(r'(\d+)\s*%', f"{nombre} {descripcion}")
+            if match:
+                descuento_valor = int(match.group(1))
+            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else descripcion[:100]
+
+            beneficio_id = f"santander_{slug or re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40])}"
+
+            return Beneficio(
+                id=beneficio_id,
+                banco=self.BANCO,
+                tarjeta="Tarjetas Santander",
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=['todos'],
+                ubicacion='',
+                presencial=True,
+                online=False,
+                url_fuente=url,
+                imagen_url=imagen_url,
+                descripcion=descripcion[:200],
+                activo=True,
+            )
+        except Exception:
+            return None
+
+
+# ============================================
+# SCRAPER CONSORCIO (API Modyo CMS)
+# ============================================
+
+class ScraperConsorcio:
+    """Scraper de Banco Consorcio via API Modyo CMS"""
+
+    API_URL = "https://sitio.consorcio.cl/api/content/spaces/grupo-consorcio-cim/types/tab-card-credit-card/entries"
+    BANCO = "Banco Consorcio"
+
+    RESTAURANT_KEYWORDS = [
+        'restaurante', 'restaurant', 'comida', 'gastronomía', 'gastronom',
+        'pizza', 'sushi', 'burger', 'café', 'cafe', 'bar',
+        'parrilla', 'grill', 'cocina', 'food', 'gourmet',
+        'casacostanera', 'casa costanera', 'sabores', 'cena',
+        'almuerzo', 'delivery', 'comer',
+    ]
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            'Accept': 'application/json',
+        })
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de restaurantes de Consorcio"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (API Modyo CMS)...")
+
+            params = {'per_page': 100}
+            response = self.session.get(self.API_URL, params=params, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+
+            entries = data.get('entries', [])
+            print(f"   Total entries: {len(entries)}")
+
+            for entry in entries:
+                beneficio = self._parsear_entry(entry)
+                if beneficio:
+                    self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _parsear_entry(self, entry: dict) -> Optional[Beneficio]:
+        """Parsea una entry del CMS a Beneficio si es restaurante"""
+        try:
+            fields = entry.get('fields', {})
+            meta = entry.get('meta', {})
+
+            nombre = fields.get('title_card', 'Desconocido')
+            subtitulo = fields.get('subtitle_card', '')
+            complemento = fields.get('complement_card', '')
+            activa = fields.get('active_card', True)
+            body_html = fields.get('card_body', '')
+
+            if not activa:
+                return None
+
+            texto = f"{nombre} {subtitulo} {complemento} {body_html}".lower()
+            es_restaurante = any(kw in texto for kw in self.RESTAURANT_KEYWORDS)
+            if not es_restaurante:
+                return None
+
+            descuento_valor = 0
+            match = re.search(r'(\d+)\s*%', f"{nombre} {subtitulo}")
+            if match:
+                descuento_valor = int(match.group(1))
+            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else subtitulo[:100]
+
+            descripcion = re.sub(r'<[^>]+>', ' ', body_html).strip()[:200] if body_html else ''
+
+            img_data = fields.get('image_desktop', {})
+            imagen_url = ''
+            if isinstance(img_data, dict):
+                imagen_url = img_data.get('url', '')
+            elif isinstance(img_data, str):
+                imagen_url = img_data
+
+            entry_id = meta.get('uuid', re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40]))
+
+            return Beneficio(
+                id=f"consorcio_{entry_id}",
+                banco=self.BANCO,
+                tarjeta="Tarjetas Consorcio",
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "cashback",
+                descuento_texto=descuento_texto,
+                dias_validos=['todos'],
+                ubicacion=complemento or '',
+                presencial=True,
+                online=False,
+                url_fuente="https://sitio.consorcio.cl/beneficios",
+                imagen_url=imagen_url,
+                descripcion=descripcion,
+                activo=True,
+            )
+        except Exception:
+            return None
+
+
+# ============================================
+# SCRAPER BANCO ESTADO (Playwright + Akamai)
+# ============================================
+
+class ScraperBancoEstado:
+    """Scraper de BancoEstado via Playwright + Stealth (Akamai WAF)"""
+
+    PAGE_URL = "https://www.bancoestado.cl/content/bancoestado-public/cl/es/home/home/todosuma---bancoestado-personas/un-mes-de-sabores---bancoestado-personas.html"
+    BANCO = "BancoEstado"
+
+    def __init__(self):
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de Un Mes de Sabores BancoEstado"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (Playwright + Stealth)...")
+
+            from playwright.sync_api import sync_playwright
+            from playwright_stealth import Stealth
+            from bs4 import BeautifulSoup
+
+            stealth = Stealth()
+
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=False,
+                    args=['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+                )
+                context = browser.new_context(
+                    user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                    viewport={'width': 1920, 'height': 1080},
+                    locale='es-CL',
+                )
+                page = context.new_page()
+                stealth.apply_stealth_sync(page)
+                page.goto(self.PAGE_URL, wait_until='domcontentloaded', timeout=30000)
+                page.wait_for_timeout(10000)
+                html = page.content()
+                browser.close()
+
+            soup = BeautifulSoup(html, 'html.parser')
+            cards = soup.select('div[data-card-id]')
+            print(f"   Cards encontradas: {len(cards)}")
+
+            for card in cards:
+                beneficio = self._parsear_card(card)
+                if beneficio:
+                    self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _parsear_card(self, card) -> Optional[Beneficio]:
+        """Parsea una card con data-attributes a Beneficio"""
+        try:
+            card_id = card.get('data-card-id', '')
+            nombre = card.get('data-name', 'Desconocido')
+            tarjeta_raw = card.get('data-tarjeta', '')
+            oferta_raw = card.get('data-oferta', '')
+
+            subfiltros_raw = card.get('data-subfiltros', '{}')
+            subfiltros = {}
+            try:
+                subfiltros = json.loads(subfiltros_raw) if subfiltros_raw else {}
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+            # Days from subfiltros
+            dias_raw = subfiltros.get('dia', [])
+            if isinstance(dias_raw, str):
+                dias_raw = [dias_raw]
+            dias_validos = self._normalizar_dias(dias_raw) if dias_raw else ['todos']
+
+            # Zone from subfiltros
+            zonas = subfiltros.get('zona', [])
+            if isinstance(zonas, str):
+                zonas = [zonas]
+            ubicacion = zonas[0] if zonas else ''
+
+            # Discount: can be in data-oferta or data-tarjeta
+            # data-tarjeta might be "50% dto." or card type like "Menú Priceless"
+            descuento_valor = 0
+            descuento_texto = ''
+            tarjeta = 'Tarjetas BancoEstado'
+
+            # Check data-tarjeta for discount
+            match_t = re.search(r'(\d+)\s*%', tarjeta_raw)
+            match_o = re.search(r'(\d+)\s*%', oferta_raw)
+
+            if match_t and 'dto' in tarjeta_raw.lower():
+                descuento_valor = int(match_t.group(1))
+                descuento_texto = tarjeta_raw.strip()
+                tarjeta = 'Tarjetas BancoEstado'
+            elif match_o:
+                descuento_valor = int(match_o.group(1))
+                descuento_texto = oferta_raw.strip()
+                tarjeta = tarjeta_raw if tarjeta_raw else 'Tarjetas BancoEstado'
+            elif tarjeta_raw:
+                descuento_texto = tarjeta_raw.strip()
+                tarjeta = 'Tarjetas BancoEstado'
+            else:
+                descuento_texto = oferta_raw.strip() or 'Ver detalle'
+
+            # Image
+            img_el = card.select_one('img')
+            imagen_url = ''
+            if img_el:
+                src = img_el.get('src', '') or img_el.get('data-src', '')
+                if src and not src.startswith('http'):
+                    src = f"https://www.bancoestado.cl{src}"
+                imagen_url = src
+
+            return Beneficio(
+                id=f"bancoestado_{card_id or re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40])}",
+                banco=self.BANCO,
+                tarjeta=tarjeta,
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=dias_validos,
+                ubicacion=ubicacion,
+                presencial=True,
+                online=False,
+                url_fuente=self.PAGE_URL,
+                imagen_url=imagen_url,
+                activo=True,
+            )
+        except Exception:
+            return None
+
+    def _normalizar_dias(self, dias_raw: list) -> List[str]:
+        """Normaliza nombres de días"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sabado': 'sabado', 'domingo': 'domingo',
+            'todos los días': 'todos',
+        }
+        dias = []
+        for d in dias_raw:
+            d_lower = d.lower().strip()
+            if d_lower in dias_map:
+                mapped = dias_map[d_lower]
+                if mapped == 'todos':
+                    return ['todos']
+                dias.append(mapped)
+        return dias if dias else ['todos']
+
+
+# ============================================
+# SCRAPER BANCO SECURITY (Drupal JSON:API)
+# ============================================
+
+class ScraperBancoSecurity:
+    """Scraper de Banco Security via Drupal JSON:API"""
+
+    API_URL = "https://personas.bancosecurity.cl/jsonapi/node/beneficio"
+    BANCO = "Banco Security"
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            'Accept': 'application/vnd.api+json',
+        })
+        self.beneficios: List[Beneficio] = []
+
+    # Categorías de comida: Gourmet=116, Restaurantes=121, Comida Rápida=206
+    FOOD_TIDS = [116, 121, 206]
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de comida de Banco Security (3 categorías)"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (Drupal JSON:API)...")
+
+            seen_ids = set()
+            total_fetched = 0
+
+            for tid in self.FOOD_TIDS:
+                offset = 0
+                limit = 50
+                while True:
+                    params = {
+                        'filter[status][value]': '1',
+                        'filter[field_categorias_beneficio.drupal_internal__tid]': str(tid),
+                        'include': 'field_categorias_beneficio,field_dias_de_aplicacion',
+                        'page[limit]': str(limit),
+                        'page[offset]': str(offset),
+                    }
+
+                    response = self.session.get(self.API_URL, params=params, timeout=20)
+                    response.raise_for_status()
+                    data = response.json()
+
+                    items = data.get('data', [])
+                    included = data.get('included', [])
+
+                    if not items:
+                        break
+
+                    # Build included map
+                    included_map = {}
+                    for inc in included:
+                        inc_id = inc.get('id', '')
+                        if inc_id:
+                            included_map[inc_id] = inc
+
+                    for item in items:
+                        item_id = item.get('id', '')
+                        if item_id in seen_ids:
+                            continue
+                        seen_ids.add(item_id)
+                        beneficio = self._parsear_item(item, included_map)
+                        if beneficio:
+                            self.beneficios.append(beneficio)
+
+                    total_fetched += len(items)
+
+                    if len(items) < limit:
+                        break
+                    offset += limit
+
+                print(f"   tid={tid}: {len(self.beneficios)} beneficios acumulados")
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios de {total_fetched} total")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _parsear_item(self, item: dict, included_map: dict) -> Optional[Beneficio]:
+        """Parsea un item JSON:API a Beneficio"""
+        try:
+            attrs = item.get('attributes', {})
+            rels = item.get('relationships', {})
+
+            nombre = attrs.get('field_nombre_marca', attrs.get('title', 'Desconocido'))
+
+            # Discount
+            descuento_valor = attrs.get('field_porcentaje_descuento', 0) or 0
+            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else ''
+
+            # Card type
+            tarjeta = attrs.get('field_tipo_de_tarjeta', '') or 'Tarjetas Security'
+
+            # Vigencia — puede ser dict {'value': '2025-08-01', 'end_value': '2025-08-31'} o string
+            vigencia_raw = attrs.get('field_vigencia_beneficio', '') or ''
+            valido_desde = ''
+            valido_hasta = ''
+            restricciones_vig = ''
+            if isinstance(vigencia_raw, dict):
+                valido_desde = vigencia_raw.get('value', '')
+                valido_hasta = vigencia_raw.get('end_value', '')
+            elif isinstance(vigencia_raw, str) and vigencia_raw:
+                restricciones_vig = vigencia_raw
+                fechas = re.findall(r'(\d{1,2}\s+de\s+\w+(?:\s+de\s+\d{4})?)', vigencia_raw)
+                if len(fechas) >= 2:
+                    valido_desde = fechas[0]
+                    valido_hasta = fechas[-1]
+                elif len(fechas) == 1:
+                    valido_hasta = fechas[0]
+
+            # Address and location
+            direccion = attrs.get('field_direccion_establecimiento_', '') or ''
+            ubicacion_caluga = attrs.get('field_ubicacion_caluga', '') or ''
+
+            # Days from relationship
+            dias_validos = ['todos']
+            dias_rel = rels.get('field_dias_de_aplicacion', {}).get('data', [])
+            if isinstance(dias_rel, list) and dias_rel:
+                dias = []
+                for d_ref in dias_rel:
+                    d_id = d_ref.get('id', '')
+                    if d_id in included_map:
+                        d_name = included_map[d_id].get('attributes', {}).get('name', '')
+                        dia = self._normalizar_dia(d_name)
+                        if dia:
+                            dias.append(dia)
+                if dias:
+                    dias_validos = dias
+
+            # URL from path alias
+            path_info = attrs.get('path', {})
+            path_alias = path_info.get('alias', '') if isinstance(path_info, dict) else ''
+            url = f"https://personas.bancosecurity.cl{path_alias}" if path_alias else 'https://personas.bancosecurity.cl/beneficios'
+
+            item_id = item.get('id', re.sub(r'[^a-z0-9]', '_', nombre.lower()[:30]))
+
+            return Beneficio(
+                id=f"security_{item_id[:50]}",
+                banco=self.BANCO,
+                tarjeta=tarjeta,
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=dias_validos,
+                valido_desde=valido_desde,
+                valido_hasta=valido_hasta,
+                ubicacion=ubicacion_caluga,
+                direccion=direccion,
+                presencial=True,
+                online=False,
+                url_fuente=url,
+                restricciones_texto=restricciones_vig[:200] if restricciones_vig else '',
+                activo=True,
+            )
+        except Exception:
+            return None
+
+    def _normalizar_dia(self, nombre: str) -> str:
+        """Normaliza un día de la semana"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sabado': 'sabado', 'domingo': 'domingo',
+        }
+        return dias_map.get(nombre.lower().strip(), '')
+
+
+# ============================================
+# SCRAPER BANCO RIPLEY (API interna)
+# ============================================
+
+class ScraperBancoRipley:
+    """Scraper de Banco Ripley via API interna (Angular + Firebase)"""
+
+    API_URL = "https://www.bancoripley.cl/api/call-sp-api"
+    BANCO = "Banco Ripley"
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Origin': 'https://www.bancoripley.cl',
+            'Referer': 'https://www.bancoripley.cl/beneficios-y-promociones',
+        })
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de restaurantes de Banco Ripley"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (API interna)...")
+
+            headers = {
+                **dict(self.session.headers),
+                'x-path-api': '/api/sp/beneficios/get-activeBox-beneficio',
+                'x-method-api': 'POST',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+
+            response = self.session.post(
+                self.API_URL,
+                headers=headers,
+                data='idSection=restofans',
+                timeout=15,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            # Navigate response structure
+            items = self._extract_items(data)
+            print(f"   Items encontrados: {len(items)}")
+
+            for item in items:
+                beneficio = self._parsear_item(item)
+                if beneficio:
+                    self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error API directa {self.BANCO}: {e}")
+            print(f"   🔄 Intentando fallback con Playwright...")
+            return self._scrape_playwright_fallback()
+
+    def _extract_items(self, data) -> list:
+        """Navega la estructura de respuesta: {success, haveData, data: [{config, items: [...]}]}"""
+        if isinstance(data, dict):
+            # Ripley structure: data[0]['items']
+            data_list = data.get('data')
+            if isinstance(data_list, list):
+                for entry in data_list:
+                    if isinstance(entry, dict) and 'items' in entry:
+                        items = entry['items']
+                        if isinstance(items, list):
+                            return items
+                return data_list
+            # Fallback: try other keys
+            for key in ['result', 'items', 'beneficios', 'body']:
+                val = data.get(key)
+                if isinstance(val, list):
+                    return val
+                if isinstance(val, dict):
+                    return self._extract_items(val)
+        if isinstance(data, list):
+            return data
+        return []
+
+    def _scrape_playwright_fallback(self) -> List[Beneficio]:
+        """Fallback usando Playwright para interceptar API"""
+        try:
+            from playwright.sync_api import sync_playwright
+
+            captured_data = []
+
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+
+                def capture(response):
+                    if 'call-sp-api' in response.url and response.status == 200:
+                        try:
+                            captured_data.append(response.json())
+                        except Exception:
+                            pass
+
+                page.on('response', capture)
+                page.goto('https://www.bancoripley.cl/beneficios-y-promociones',
+                          wait_until='domcontentloaded', timeout=30000)
+                page.wait_for_timeout(8000)
+
+                # Try clicking restaurant tab
+                try:
+                    page.click('text=Restaurantes', timeout=3000)
+                    page.wait_for_timeout(3000)
+                except Exception:
+                    pass
+
+                browser.close()
+
+            for data in captured_data:
+                items = self._extract_items(data)
+                for item in items:
+                    beneficio = self._parsear_item(item)
+                    if beneficio:
+                        self.beneficios.append(beneficio)
+
+            print(f"   Playwright fallback: {len(self.beneficios)} beneficios")
+            return self.beneficios
+        except Exception as e:
+            print(f"   ❌ Fallback también falló: {e}")
+            return self.beneficios
+
+    @staticmethod
+    def _val(param):
+        """Extrae value de un param dict {'nombre': '...', 'value': X} o retorna string directo"""
+        if isinstance(param, dict):
+            return str(param.get('value', '')).strip()
+        return str(param).strip() if param else ''
+
+    def _parsear_item(self, item: dict) -> Optional[Beneficio]:
+        """Parsea un item de la API de Ripley a Beneficio
+        Estructura: {config, nombre, params: {txtNameComercio: {nombre, value}, ...}}
+        """
+        try:
+            params = item.get('params', {})
+
+            # Name
+            nombre = self._val(params.get('txtNameComercio'))
+            if not nombre:
+                return None
+
+            # Discount
+            descuento_raw = self._val(params.get('txtDescuento'))
+            descuento_valor = 0
+            match = re.search(r'(\d+)', descuento_raw)
+            if match:
+                descuento_valor = int(match.group(1))
+
+            # Location from txtDetalleCard (e.g. "R.M. (Vitacura)")
+            ubicacion = self._val(params.get('txtDetalleCard'))
+
+            # Days from txtValidezBeneficio (e.g. "Jueves", "Lunes a Viernes")
+            validez_dias = self._val(params.get('txtValidezBeneficio'))
+            dias_validos = self._parsear_dias_ripley(validez_dias) if validez_dias else ['todos']
+
+            # Vigencia from details.arrVigencia or txtVigenciaDetalle
+            vigencia = self._val(params.get('txtVigenciaDetalle'))
+            if not vigencia:
+                vigencia = self._val(params.get('txtVigenciaCard'))
+            # Try to get vigencia from details
+            details = params.get('details', {})
+            if isinstance(details, dict):
+                arr_vig = details.get('arrVigencia', {})
+                if isinstance(arr_vig, dict):
+                    arr = arr_vig.get('array', [])
+                    if arr and isinstance(arr, list):
+                        vigencia = self._val(arr[0].get('txtItem', '')) or vigencia
+
+            # Address from details.arrDireccion
+            direccion = ''
+            if isinstance(details, dict):
+                arr_dir = details.get('arrDireccion', {})
+                if isinstance(arr_dir, dict):
+                    arr = arr_dir.get('array', [])
+                    if arr and isinstance(arr, list):
+                        direccion = self._val(arr[0].get('txtItem', ''))
+
+            # Subtitle (type of restaurant)
+            subtitulo = self._val(params.get('txtSubtitulo'))
+
+            # Tarjeta
+            tarjeta_card = self._val(params.get('txtVigenciaCard'))  # e.g. "Exclusivo Black"
+            tarjeta = f"Tarjeta Ripley {tarjeta_card}".strip() if tarjeta_card and 'exclusivo' in tarjeta_card.lower() else "Tarjeta Ripley"
+
+            # Images
+            imagen = self._val(params.get('imgBackground')) or self._val(params.get('imgLogo'))
+            logo = self._val(params.get('imgLogo'))
+
+            # Link — always point to bank's benefits page, not restaurant website
+            url = "https://www.bancoripley.cl/beneficios-y-promociones"
+
+            item_id = str(item.get('id', item.get('idBeneficio',
+                          re.sub(r'[^a-z0-9]', '_', nombre.lower()[:30]))))
+
+            return Beneficio(
+                id=f"ripley_{item_id}",
+                banco=self.BANCO,
+                tarjeta=tarjeta,
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=f"{descuento_valor}% dcto." if descuento_valor > 0 else descuento_raw[:100],
+                dias_validos=dias_validos,
+                valido_hasta=vigencia,
+                ubicacion=ubicacion,
+                direccion=direccion,
+                descripcion=subtitulo[:200],
+                presencial=True,
+                online=False,
+                url_fuente=url,
+                imagen_url=imagen,
+                logo_url=logo,
+                restricciones_texto='',
+                activo=True,
+            )
+        except Exception:
+            return None
+
+    def _parsear_dias_ripley(self, texto: str) -> List[str]:
+        """Parsea días de validez de Ripley (ej: 'Jueves', 'Lunes a Viernes')"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sabado': 'sabado', 'domingo': 'domingo',
+        }
+        texto_lower = texto.lower().strip()
+        # "Lunes a Viernes"
+        match = re.match(r'(\w+)\s+a\s+(\w+)', texto_lower)
+        if match:
+            start, end = match.group(1), match.group(2)
+            all_days = list(dias_map.keys())
+            try:
+                s_idx = next(i for i, d in enumerate(all_days) if d == start)
+                e_idx = next(i for i, d in enumerate(all_days) if d == end)
+                if e_idx >= s_idx:
+                    return [dias_map[all_days[i]] for i in range(s_idx, e_idx + 1)]
+            except (StopIteration, IndexError):
+                pass
+        # Single day or comma-separated
+        found = [dias_map[d.strip()] for d in texto_lower.replace(',', ' ').split() if d.strip() in dias_map]
+        return found if found else ['todos']
+
+
+# ============================================
+# SCRAPER ENTEL (HTML + Lit Web Components)
+# ============================================
+
+class ScraperEntel:
+    """Scraper de Entel via HTML con Lit Web Components"""
+
+    PAGE_URL = "https://www.entel.cl/beneficios"
+    BANCO = "Entel"
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+        })
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de comida de Entel (tab 'Comida' con id tab-comida-2)"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (HTML + Lit Components)...")
+            from bs4 import BeautifulSoup
+
+            response = self.session.get(self.PAGE_URL, timeout=15)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Buscar el container del tab Comida (segundo set, listado completo)
+            comida_tab = soup.find(id='tab-comida-2')
+            if comida_tab:
+                cards = comida_tab.select('andino-card-general[eds-card]')
+                print(f"   Tab 'Comida' (tab-comida-2): {len(cards)} cards")
+            else:
+                # Fallback: buscar highlight swiper de Comida (primer swiper-container)
+                cards = []
+                for section in soup.select('section'):
+                    headings = section.find_all('h3')
+                    for h in headings:
+                        if h.get_text(strip=True).lower() == 'comida':
+                            swiper = h.find_next('swiper-container')
+                            if swiper:
+                                cards = swiper.select('andino-card-general[eds-card]')
+                            break
+                    if cards:
+                        break
+                print(f"   Fallback Comida swiper: {len(cards)} cards")
+
+            for card in cards:
+                beneficio = self._parsear_card(card)
+                if beneficio:
+                    self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _parsear_card(self, card) -> Optional[Beneficio]:
+        """Parsea una card con eds-card JSON a Beneficio (ya filtrada por sección Comida)"""
+        try:
+            eds_card_raw = card.get('eds-card', '[]')
+            try:
+                card_data_list = json.loads(eds_card_raw)
+            except (json.JSONDecodeError, TypeError):
+                return None
+
+            if not card_data_list or not isinstance(card_data_list, list):
+                return None
+
+            data = card_data_list[0] if isinstance(card_data_list[0], dict) else {}
+
+            # Card structure: {header: {image: {sources: [{src}]}}, title, text, href, data: {market, segment}}
+            nombre = data.get('title', data.get('name', ''))
+            if not nombre:
+                return None
+            descripcion = data.get('text', data.get('description', ''))
+
+            # Get days from parent swiper-slide data-tags, or from description text
+            parent = card.find_parent('swiper-slide')
+            dias_raw = ''
+            if parent:
+                dias_raw = parent.get('data-tags', '')
+            if dias_raw:
+                dias_validos = self._parsear_dias(dias_raw)
+            else:
+                dias_validos = self._extraer_dias_de_texto(descripcion)
+
+            # Try to extract discount from text
+            descuento_raw = descripcion
+            descuento_valor = 0
+            match = re.search(r'(\d+)\s*%', str(descuento_raw))
+            if match:
+                descuento_valor = int(match.group(1))
+            # Also check for price-based offers (e.g. "$100")
+            if descuento_valor == 0:
+                price_match = re.search(r'\$\s*([\d.,]+)', str(descuento_raw))
+                if price_match:
+                    descuento_raw = f"${price_match.group(1)}"
+
+            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else str(descuento_raw)[:100]
+
+            # Image from header.image.sources[0].src
+            imagen_url = ''
+            header = data.get('header', {})
+            if isinstance(header, dict):
+                image_data = header.get('image', {})
+                if isinstance(image_data, dict):
+                    sources = image_data.get('sources', [])
+                    if sources and isinstance(sources, list):
+                        imagen_url = sources[0].get('src', '')
+            if not imagen_url:
+                imagen_url = data.get('image', data.get('img', ''))
+            if imagen_url and not imagen_url.startswith('http'):
+                imagen_url = f"https://www.entel.cl{imagen_url}"
+
+            # URL
+            link = data.get('href', data.get('link', data.get('url', '')))
+            url = link if link and link.startswith('http') else f"https://www.entel.cl{link}" if link else self.PAGE_URL
+
+            card_id = data.get('id', re.sub(r'[^a-z0-9]', '_', nombre.lower()[:30]))
+
+            return Beneficio(
+                id=f"entel_{card_id}",
+                banco=self.BANCO,
+                tarjeta="Entel",
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=dias_validos,
+                ubicacion='',
+                presencial=True,
+                online=True,
+                url_fuente=url,
+                imagen_url=imagen_url,
+                descripcion=descripcion[:200],
+                activo=True,
+            )
+        except Exception:
+            return None
+
+    def _parsear_dias(self, tags_str: str) -> List[str]:
+        """Parsea dias de data-tags='lunes, martes, ...'"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sabado': 'sabado', 'domingo': 'domingo',
+        }
+        tags = [t.strip().lower() for t in tags_str.split(',')]
+        dias = [dias_map[t] for t in tags if t in dias_map]
+        return dias if dias else ['todos']
+
+    def _extraer_dias_de_texto(self, texto: str) -> List[str]:
+        """Extrae días mencionados en la descripción del beneficio"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sábados': 'sabado', 'sabado': 'sabado',
+            'domingo': 'domingo', 'domingos': 'domingo',
+        }
+        texto_lower = texto.lower()
+        # "de X a Y" range
+        range_match = re.search(r'de\s+(\w+)\s+a\s+(\w+)', texto_lower)
+        if range_match:
+            start, end = range_match.group(1), range_match.group(2)
+            ordered = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+            s_norm = dias_map.get(start)
+            e_norm = dias_map.get(end)
+            if s_norm and e_norm and s_norm in ordered and e_norm in ordered:
+                si = ordered.index(s_norm)
+                ei = ordered.index(e_norm)
+                if ei >= si:
+                    return ordered[si:ei+1]
+                else:
+                    return ordered[si:] + ordered[:ei+1]
+        # Individual day mentions
+        found = []
+        for word, norm in dias_map.items():
+            if word in texto_lower and norm not in found:
+                found.append(norm)
+        return found if found else ['todos']
+
+
+# ============================================
 # ORQUESTADOR PRINCIPAL
 # ============================================
 
 class OrquestadorScrapers:
-    """Orquesta los scrapers y normaliza datos"""
+    """Orquesta los scrapers, normaliza datos (fechas, regiones, textos)"""
+
+    # Meses en español para normalización de fechas
+    MESES_ES = {
+        'enero': ('Ene', 1), 'febrero': ('Feb', 2), 'marzo': ('Mar', 3),
+        'abril': ('Abr', 4), 'mayo': ('May', 5), 'junio': ('Jun', 6),
+        'julio': ('Jul', 7), 'agosto': ('Ago', 8), 'septiembre': ('Sep', 9),
+        'octubre': ('Oct', 10), 'noviembre': ('Nov', 11), 'diciembre': ('Dic', 12),
+    }
+    MESES_NUM_A_ABREV = {
+        1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
+        7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic',
+    }
+
+    # Unificación de regiones
+    REGIONES_MAP = {
+        'metropolitana': 'Metropolitana', 'region metropolitana': 'Metropolitana',
+        'región metropolitana': 'Metropolitana', 'r.m.': 'Metropolitana',
+        'rm': 'Metropolitana', 'santiago': 'Metropolitana',
+        'región metropolitana de santiago': 'Metropolitana',
+        'valparaiso': 'Valparaíso', 'valparaíso': 'Valparaíso',
+        'v region': 'Valparaíso', 'v región': 'Valparaíso',
+        'viña del mar': 'Valparaíso', 'vina del mar': 'Valparaíso',
+        'biobio': 'Biobío', 'biobío': 'Biobío', 'bio bio': 'Biobío',
+        'viii region': 'Biobío', 'viii región': 'Biobío',
+        'concepción': 'Biobío', 'concepcion': 'Biobío',
+        'araucanía': 'Araucanía', 'araucania': 'Araucanía',
+        'ix region': 'Araucanía', 'temuco': 'Araucanía',
+        'coquimbo': 'Coquimbo', 'la serena': 'Coquimbo',
+        'antofagasta': 'Antofagasta',
+        'atacama': 'Atacama', 'copiapó': 'Atacama', 'copiapo': 'Atacama',
+        "o'higgins": "O'Higgins", 'ohiggins': "O'Higgins", 'rancagua': "O'Higgins",
+        'maule': 'Maule', 'talca': 'Maule',
+        'los ríos': 'Los Ríos', 'los rios': 'Los Ríos', 'valdivia': 'Los Ríos',
+        'los lagos': 'Los Lagos', 'puerto montt': 'Los Lagos',
+        'aysén': 'Aysén', 'aysen': 'Aysén',
+        'magallanes': 'Magallanes', 'punta arenas': 'Magallanes',
+        'arica y parinacota': 'Arica y Parinacota', 'arica': 'Arica y Parinacota',
+        'tarapacá': 'Tarapacá', 'tarapaca': 'Tarapacá', 'iquique': 'Tarapacá',
+        'ñuble': 'Ñuble', 'chillán': 'Ñuble', 'chillan': 'Ñuble',
+        # Regiones por número romano
+        'i región': 'Tarapacá', 'i region': 'Tarapacá',
+        'ii región': 'Antofagasta', 'ii region': 'Antofagasta',
+        'iii región': 'Atacama', 'iii region': 'Atacama',
+        'iv región': 'Coquimbo', 'iv region': 'Coquimbo',
+        'v región': 'Valparaíso',
+        'vi región': "O'Higgins", 'vi region': "O'Higgins",
+        'vii región': 'Maule', 'vii region': 'Maule',
+        'viii región': 'Biobío',
+        'ix región': 'Araucanía',
+        'x región': 'Los Lagos', 'x region': 'Los Lagos',
+        'xi región': 'Aysén', 'xi region': 'Aysén',
+        'xii región': 'Magallanes', 'xii region': 'Magallanes',
+        'xiv región': 'Los Ríos', 'xiv region': 'Los Ríos',
+        'xv región': 'Arica y Parinacota', 'xv region': 'Arica y Parinacota',
+        'xvi región': 'Ñuble', 'xvi region': 'Ñuble',
+        'región metropolitana': 'Metropolitana',
+    }
+
+    # Comunas de la Región Metropolitana
+    COMUNAS_RM = [
+        'providencia', 'las condes', 'vitacura', 'lo barnechea', 'ñuñoa',
+        'la reina', 'peñalolén', 'penalolen', 'macul', 'san joaquín',
+        'san joaquin', 'la florida', 'puente alto', 'maipú', 'maipu',
+        'cerrillos', 'estación central', 'estacion central', 'quinta normal',
+        'renca', 'independencia', 'recoleta', 'conchalí', 'conchali',
+        'huechuraba', 'quilicura', 'lampa', 'colina', 'til til',
+        'pudahuel', 'lo prado', 'cerro navia', 'pedro aguirre cerda',
+        'san miguel', 'san ramón', 'san ramon', 'la granja', 'la pintana',
+        'el bosque', 'san bernardo', 'la cisterna', 'lo espejo',
+        'padre hurtado', 'peñaflor', 'penaflor', 'talagante', 'buin',
+        'paine', 'calera de tango', 'isla de maipo', 'pirque',
+        'san josé de maipo', 'san jose de maipo', 'santiago centro',
+        'santiago', 'barrio italia', 'barrio lastarria', 'bellavista',
+    ]
 
     def __init__(self):
         self.all_beneficios: List[Beneficio] = []
 
     def scrapear_todo(self) -> List[Beneficio]:
-        """Ejecuta todos los scrapers"""
+        """Ejecuta todos los scrapers y normaliza datos"""
         print("\n" + "=" * 50)
         print("🚀 INICIANDO SCRAPING DE BENEFICIOS BANCARIOS")
         print("=" * 50 + "\n")
@@ -1100,6 +2174,12 @@ class OrquestadorScrapers:
             ('BCI', ScraperBCI),
             ('Banco Itaú', ScraperItau),
             ('Scotiabank', ScraperScotiabank),
+            ('Santander', ScraperSantander),
+            ('Banco Consorcio', ScraperConsorcio),
+            ('BancoEstado', ScraperBancoEstado),
+            ('Banco Security', ScraperBancoSecurity),
+            ('Banco Ripley', ScraperBancoRipley),
+            ('Entel', ScraperEntel),
         ]
 
         for nombre, ScraperClass in scrapers:
@@ -1113,6 +2193,10 @@ class OrquestadorScrapers:
                 resultados[nombre] = 0
             print()
 
+        # Normalizar todos los beneficios
+        print("🔧 Normalizando datos...")
+        self._normalizar_todos()
+
         print("=" * 50)
         print(f"✅ TOTAL BENEFICIOS EXTRAÍDOS: {len(self.all_beneficios)}")
         for nombre, count in resultados.items():
@@ -1120,6 +2204,149 @@ class OrquestadorScrapers:
         print("=" * 50 + "\n")
 
         return self.all_beneficios
+
+    # ── Normalización ──
+
+    def _normalizar_todos(self):
+        """Aplica todas las normalizaciones a los beneficios"""
+        for b in self.all_beneficios:
+            # Fechas → DD-MMM-AAAA
+            b.valido_desde = self._normalizar_fecha(b.valido_desde)
+            b.valido_hasta = self._normalizar_fecha(b.valido_hasta)
+
+            # Regiones unificadas
+            b.ubicacion = self._normalizar_region(b.ubicacion)
+
+            # Extraer comuna para RM
+            if b.ubicacion == 'Metropolitana':
+                b.comuna = self._extraer_comuna(b.direccion, b.restricciones_texto, b.descripcion)
+
+            # Textos limpios
+            b.descuento_texto = self._limpiar_texto(b.descuento_texto)
+            b.restricciones_texto = self._limpiar_texto(b.restricciones_texto, max_len=200)
+            b.descripcion = self._limpiar_texto(b.descripcion, max_len=200)
+
+            # Normalizar descuento_texto
+            b.descuento_texto = self._normalizar_descuento_texto(b.descuento_texto)
+
+    def _normalizar_fecha(self, fecha_str: str) -> str:
+        """Convierte fecha a formato DD-MMM-AAAA (ej: 31-Mar-2026)"""
+        if not fecha_str or not fecha_str.strip():
+            return ''
+
+        fecha_str = fecha_str.strip()
+
+        # Ya en formato DD-MMM-AAAA
+        if re.match(r'^\d{1,2}-[A-Z][a-z]{2}-\d{4}$', fecha_str):
+            return fecha_str
+
+        # Formato ISO: 2025-08-31 o 2025-08-31T...
+        match = re.match(r'^(\d{4})-(\d{2})-(\d{2})', fecha_str)
+        if match:
+            y, m, d = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            abrev = self.MESES_NUM_A_ABREV.get(m, 'Ene')
+            return f"{d:02d}-{abrev}-{y}"
+
+        # Formato "31 de marzo de 2026" o "31 de marzo 2026"
+        match = re.search(r'(\d{1,2})\s+de\s+(\w+)(?:\s+de)?\s+(\d{4})', fecha_str, re.IGNORECASE)
+        if match:
+            d = int(match.group(1))
+            mes_nombre = match.group(2).lower()
+            y = int(match.group(3))
+            mes_info = self.MESES_ES.get(mes_nombre)
+            if mes_info:
+                return f"{d:02d}-{mes_info[0]}-{y}"
+
+        # Formato "marzo 2026" (sin día)
+        match = re.search(r'(\w+)\s+(\d{4})', fecha_str, re.IGNORECASE)
+        if match:
+            mes_nombre = match.group(1).lower()
+            y = int(match.group(2))
+            mes_info = self.MESES_ES.get(mes_nombre)
+            if mes_info:
+                return f"01-{mes_info[0]}-{y}"
+
+        # Formato DD/MM/YYYY
+        match = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', fecha_str)
+        if match:
+            d, m, y = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            abrev = self.MESES_NUM_A_ABREV.get(m, 'Ene')
+            return f"{d:02d}-{abrev}-{y}"
+
+        return fecha_str
+
+    def _normalizar_region(self, ubicacion: str) -> str:
+        """Unifica variantes de regiones chilenas"""
+        if not ubicacion or not ubicacion.strip():
+            return ''
+
+        ubicacion_lower = ubicacion.strip().lower()
+
+        # Búsqueda directa
+        if ubicacion_lower in self.REGIONES_MAP:
+            return self.REGIONES_MAP[ubicacion_lower]
+
+        # Búsqueda parcial
+        for keyword, region in self.REGIONES_MAP.items():
+            if keyword in ubicacion_lower:
+                return region
+
+        # Si contiene una comuna de RM, es Metropolitana
+        for comuna in self.COMUNAS_RM:
+            if comuna in ubicacion_lower:
+                return 'Metropolitana'
+
+        return ubicacion.strip()
+
+    def _extraer_comuna(self, direccion: str, restricciones: str, descripcion: str) -> str:
+        """Extrae la comuna dentro de la Región Metropolitana"""
+        textos = f"{direccion} {restricciones} {descripcion}".lower()
+        for comuna in self.COMUNAS_RM:
+            if comuna in textos:
+                # Capitalizar correctamente
+                return comuna.title()
+        return ''
+
+    def _limpiar_texto(self, texto: str, max_len: int = 300) -> str:
+        """Limpia texto: elimina HTML, 'P' sueltas, trunca"""
+        if not texto:
+            return ''
+
+        # Eliminar tags HTML residuales
+        texto = re.sub(r'<[^>]+>', ' ', texto)
+
+        # Eliminar entidades HTML
+        texto = re.sub(r'&[a-z]+;', ' ', texto)
+        texto = re.sub(r'&#\d+;', ' ', texto)
+
+        # Eliminar "P" sueltas al final (viene de HTML mal cortado)
+        texto = re.sub(r'\s+P\s*$', '', texto)
+        texto = re.sub(r'\s+P\s+', ' ', texto)
+
+        # Normalizar espacios
+        texto = re.sub(r'\s+', ' ', texto).strip()
+
+        # Truncar con "..."
+        if len(texto) > max_len:
+            texto = texto[:max_len - 3].rsplit(' ', 1)[0] + '...'
+
+        return texto
+
+    def _normalizar_descuento_texto(self, texto: str) -> str:
+        """Normaliza texto de descuento"""
+        if not texto:
+            return ''
+        # Remove stray semicolons: "20%; dto." → "20% dto."
+        texto = texto.replace('%;', '%')
+        # "50% dto." → "50% dcto."
+        texto = re.sub(r'(\d+)%\s*dto\.?', r'\1% dcto.', texto, flags=re.IGNORECASE)
+        # "50% de descuento" → "50% dcto."
+        texto = re.sub(r'(\d+)%\s*de\s*descuento', r'\1% dcto.', texto, flags=re.IGNORECASE)
+        # "50% descuento" → "50% dcto."
+        texto = re.sub(r'(\d+)%\s*descuento', r'\1% dcto.', texto, flags=re.IGNORECASE)
+        # "50% dscto." → "50% dcto."
+        texto = re.sub(r'(\d+)%\s*dscto\.?', r'\1% dcto.', texto, flags=re.IGNORECASE)
+        return texto
 
     def guardar_json(self, filename: str = "beneficios.json"):
         """Guarda los beneficios en JSON"""
