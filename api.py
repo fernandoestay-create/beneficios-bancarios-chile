@@ -439,36 +439,30 @@ async def scrape_status():
 # WHATSAPP WEBHOOK (Twilio Sandbox)
 # ============================================
 
-def procesar_comando_whatsapp(texto: str) -> str:
-    """Procesa comandos de WhatsApp y retorna respuesta"""
-    texto = texto.strip().lower()
+def _detectar_dia_hoy() -> str:
+    """Retorna el día de la semana en español"""
+    dias = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+    return dias[datetime.now().weekday()]
 
-    if texto in ['/', 'hola', 'hi', 'help', 'menu', 'inicio']:
+
+async def procesar_comando_whatsapp(texto: str) -> str:
+    """Procesa mensajes de WhatsApp con IA (RAG) o comandos rápidos"""
+    texto_original = texto.strip()
+    texto = texto_original.lower()
+
+    # ── Comandos rápidos (atajos) ──
+    if texto in ['/', 'help', 'menu', 'comandos']:
         return """*Beneficios Bancarios Chile* 🇨🇱
 
-Comandos:
-/restaurante [nombre] - Buscar restaurante
-/banco [banco] - Descuentos de un banco
-/dia [dia] - Descuentos para un dia
+Puedes escribirme lo que quieras, por ejemplo:
+• "descuentos para hoy"
+• "donde comer sushi con descuento"
+• "mejores descuentos banco falabella"
+• "restaurantes con 30% o mas"
+
+*Atajos rapidos:*
 /top - Top 5 restaurantes
-/stats - Estadisticas
-
-Ejemplo: /restaurante pizza"""
-
-    if texto.startswith('/restaurante '):
-        nombre = texto.replace('/restaurante ', '').strip()
-        resultados = buscar_beneficios(restaurante=nombre)
-        return _formatear_wa(resultados)
-
-    if texto.startswith('/banco '):
-        nombre = texto.replace('/banco ', '').strip()
-        resultados = buscar_beneficios(banco=nombre)
-        return _formatear_wa(resultados, 5)
-
-    if texto.startswith('/dia '):
-        dia = texto.replace('/dia ', '').strip()
-        resultados = buscar_beneficios(dia=dia)
-        return _formatear_wa(resultados, 5)
+/stats - Estadisticas"""
 
     if texto == '/top':
         rest_max = {}
@@ -494,13 +488,81 @@ Restaurantes: {total_rest}
 Descuento Promedio: {promedio:.1f}%
 Descuento Maximo: {max(vals) if vals else 0}%"""
 
-    # Busqueda libre
-    if len(texto) > 2:
+    # ── Consulta con IA (RAG) para todo lo demás ──
+    if len(texto) < 2:
+        return "Escribe tu pregunta sobre descuentos en restaurantes 🍽️"
+
+    try:
+        # Enriquecer la pregunta con contexto del día actual
+        dia_hoy = _detectar_dia_hoy()
+        pregunta_enriquecida = texto_original
+
+        # Si mencionan "hoy", agregar el día real
+        if 'hoy' in texto:
+            pregunta_enriquecida += f" (hoy es {dia_hoy})"
+
+        # 1. Búsqueda semántica en Pinecone
+        resultados_semanticos = buscar_semantico(pregunta_enriquecida, top_k=10)
+
+        # 2. Armar contexto
+        if resultados_semanticos:
+            contexto = "\n".join([
+                f"- {r['restaurante']}: {r['descuento_texto']} ({r['banco']}) - "
+                f"Días válidos: {r.get('dias_validos', 'todos')} - {r.get('ubicacion', '')}"
+                for r in resultados_semanticos
+            ])
+        else:
+            # Fallback: búsqueda por keywords
+            resultados = buscar_beneficios(restaurante=texto)
+            if not resultados:
+                resultados = beneficios_db[:15]
+            contexto = "\n".join([
+                f"- {b.restaurante}: {b.descuento_texto} ({b.banco}) - "
+                f"Días: {', '.join(b.dias_validos)} - {b.ubicacion}"
+                for b in resultados[:15]
+            ])
+
+        # 3. Consultar OpenAI
+        openai_client = get_openai_client()
+        if not openai_client:
+            return "⚠️ Servicio de IA no disponible. Usa /top o /stats."
+
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres un asistente de WhatsApp experto en descuentos bancarios "
+                        "en restaurantes de Chile. Hoy es " + dia_hoy + ".\n\n"
+                        "REGLAS:\n"
+                        "- Responde SOLO con datos de los beneficios proporcionados\n"
+                        "- Sé conciso (máximo 1400 caracteres), amigable y usa emojis\n"
+                        "- Usa formato WhatsApp: *negrita* para nombres\n"
+                        "- Incluye restaurante, banco, descuento y días válidos\n"
+                        "- Si preguntan por 'hoy', filtra por el día actual\n"
+                        "- Si no hay resultados exactos, sugiere opciones similares\n"
+                        "- Responde en español chileno casual"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Beneficios disponibles:\n{contexto}\n\nPregunta del usuario: {texto_original}"
+                }
+            ],
+            temperature=0.4,
+            max_tokens=400,
+        )
+        respuesta = response.choices[0].message.content
+        return respuesta[:1500]
+
+    except Exception as e:
+        print(f"  Error RAG WhatsApp: {e}")
+        # Fallback: búsqueda simple
         resultados = buscar_beneficios(restaurante=texto)
         if resultados:
             return _formatear_wa(resultados)
-
-    return "No entiendo el comando.\nEscribe */* para ver el menu."
+        return "Hubo un error procesando tu consulta. Intenta de nuevo 🙏"
 
 
 def _formatear_wa(beneficios, max_items=3):
@@ -529,7 +591,7 @@ async def webhook_whatsapp(From: str = Form(""), Body: str = Form("")):
     usuario = From.replace("whatsapp:", "")
     print(f"  WhatsApp de {usuario}: {Body}")
 
-    respuesta = procesar_comando_whatsapp(Body)
+    respuesta = await procesar_comando_whatsapp(Body)
 
     resp = MessagingResponse()
     resp.message(respuesta)
