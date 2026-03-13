@@ -701,7 +701,14 @@ const deals={deals_json};
 // ── Bank logos ──
 const BANK_LOGOS={{
 'Banco de Chile':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Banco_de_Chile_Logotipo.svg/200px-Banco_de_Chile_Logotipo.svg.png',
-'Banco Falabella':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Logotipo_Banco_Falabella.svg/200px-Logotipo_Banco_Falabella.svg.png'
+'Banco Falabella':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Logotipo_Banco_Falabella.svg/200px-Logotipo_Banco_Falabella.svg.png',
+'BCI':'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Bci_Logotype.svg/200px-Bci_Logotype.svg.png',
+'Banco Itaú':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Ita%C3%BA_Unibanco_logo_2023.svg/200px-Ita%C3%BA_Unibanco_logo_2023.svg.png',
+'Scotiabank':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Scotiabank_logo.svg/200px-Scotiabank_logo.svg.png'
+}};
+const BANK_COLORS={{
+'Banco de Chile':'#003DA5','Banco Falabella':'#00B140',
+'BCI':'#E31837','Banco Itaú':'#003399','Scotiabank':'#EC111A'
 }};
 function bankBadgeHtml(banco){{
 const logo=BANK_LOGOS[banco];
@@ -850,7 +857,7 @@ if(!mS||!mB||!mR)return;
 const coords=getCoords(d.ubicacion,i);
 if(!coords)return;
 count++;
-const color=d.banco.includes('Chile')?'#003DA5':'#00B140';
+const color=BANK_COLORS[d.banco]||'#6b7280';
 const icon=L.divIcon({{className:'',html:`<div style="background:${{color}};width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800">${{d.descuento_valor||'?'}}%</div>`,
 iconSize:[28,28],iconAnchor:[14,14]}});
 const bankLogo=BANK_LOGOS[d.banco]||'';
