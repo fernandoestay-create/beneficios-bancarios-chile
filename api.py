@@ -493,36 +493,92 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
         return "Escribe tu pregunta sobre descuentos en restaurantes 🍽️"
 
     try:
-        # Enriquecer la pregunta con contexto del día actual
         dia_hoy = _detectar_dia_hoy()
-        pregunta_enriquecida = texto_original
+        DIAS_MAP = {
+            'lunes': 'lunes', 'martes': 'martes', 'miercoles': 'miercoles',
+            'miércoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sabado': 'sabado', 'sábado': 'sabado', 'domingo': 'domingo',
+        }
 
-        # Si mencionan "hoy", agregar el día real
+        # ── Detectar si piden por día específico o "hoy" ──
+        dia_filtro = None
         if 'hoy' in texto:
-            pregunta_enriquecida += f" (hoy es {dia_hoy})"
-
-        # 1. Búsqueda semántica en Pinecone
-        resultados_semanticos = buscar_semantico(pregunta_enriquecida, top_k=10)
-
-        # 2. Armar contexto
-        if resultados_semanticos:
-            contexto = "\n".join([
-                f"- {r['restaurante']}: {r['descuento_texto']} ({r['banco']}) - "
-                f"Días válidos: {r.get('dias_validos', 'todos')} - {r.get('ubicacion', '')}"
-                for r in resultados_semanticos
-            ])
+            dia_filtro = dia_hoy
         else:
-            # Fallback: búsqueda por keywords
-            resultados = buscar_beneficios(restaurante=texto)
-            if not resultados:
-                resultados = beneficios_db[:15]
-            contexto = "\n".join([
-                f"- {b.restaurante}: {b.descuento_texto} ({b.banco}) - "
-                f"Días: {', '.join(b.dias_validos)} - {b.ubicacion}"
-                for b in resultados[:15]
-            ])
+            for palabra, dia_norm in DIAS_MAP.items():
+                if palabra in texto:
+                    dia_filtro = dia_norm
+                    break
 
-        # 3. Consultar OpenAI
+        # ── Detectar si piden por banco específico ──
+        banco_filtro = None
+        for banco_nombre in ['falabella', 'banco de chile', 'chile']:
+            if banco_nombre in texto:
+                banco_filtro = 'Falabella' if 'falabella' in banco_nombre else 'Banco de Chile'
+                break
+
+        # ── Armar contexto según tipo de consulta ──
+        if dia_filtro or ('todos' in texto and ('descuento' in texto or 'beneficio' in texto)):
+            # CONSULTA POR DÍA → Buscar TODOS de la base de datos, agrupados por banco
+            resultados = buscar_beneficios(dia=dia_filtro, banco=banco_filtro)
+            if not resultados and dia_filtro:
+                resultados = buscar_beneficios(dia=dia_filtro)
+
+            # Agrupar por banco
+            por_banco = {}
+            for b in resultados:
+                if b.banco not in por_banco:
+                    por_banco[b.banco] = []
+                por_banco[b.banco].append(b)
+
+            contexto_partes = []
+            for banco, beneficios in sorted(por_banco.items()):
+                contexto_partes.append(f"\n=== {banco} ({len(beneficios)} descuentos) ===")
+                for b in sorted(beneficios, key=lambda x: x.descuento_valor, reverse=True):
+                    contexto_partes.append(
+                        f"- {b.restaurante}: {b.descuento_texto} | "
+                        f"Días: {', '.join(b.dias_validos)} | {b.ubicacion}"
+                    )
+            contexto = "\n".join(contexto_partes)
+            total_encontrados = len(resultados)
+        else:
+            # CONSULTA GENERAL → Búsqueda semántica en Pinecone
+            pregunta_enriquecida = texto_original
+            if 'hoy' in texto:
+                pregunta_enriquecida += f" (hoy es {dia_hoy})"
+
+            resultados_semanticos = buscar_semantico(pregunta_enriquecida, top_k=15)
+
+            if resultados_semanticos:
+                # Agrupar por banco
+                por_banco = {}
+                for r in resultados_semanticos:
+                    banco = r.get('banco', 'Otro')
+                    if banco not in por_banco:
+                        por_banco[banco] = []
+                    por_banco[banco].append(r)
+
+                contexto_partes = []
+                for banco, items in sorted(por_banco.items()):
+                    contexto_partes.append(f"\n=== {banco} ===")
+                    for r in items:
+                        contexto_partes.append(
+                            f"- {r['restaurante']}: {r['descuento_texto']} | "
+                            f"Días: {r.get('dias_validos', 'todos')} | {r.get('ubicacion', '')}"
+                        )
+                contexto = "\n".join(contexto_partes)
+            else:
+                resultados = buscar_beneficios(restaurante=texto)
+                if not resultados:
+                    resultados = beneficios_db[:20]
+                contexto = "\n".join([
+                    f"- {b.restaurante}: {b.descuento_texto} ({b.banco}) | "
+                    f"Días: {', '.join(b.dias_validos)} | {b.ubicacion}"
+                    for b in resultados[:20]
+                ])
+            total_encontrados = len(resultados_semanticos) if resultados_semanticos else len(resultados)
+
+        # ── Consultar OpenAI ──
         openai_client = get_openai_client()
         if not openai_client:
             return "⚠️ Servicio de IA no disponible. Usa /top o /stats."
@@ -535,33 +591,40 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
                     "content": (
                         "Eres un asistente de WhatsApp experto en descuentos bancarios "
                         "en restaurantes de Chile. Hoy es " + dia_hoy + ".\n\n"
-                        "REGLAS:\n"
-                        "- Responde SOLO con datos de los beneficios proporcionados\n"
-                        "- Sé conciso (máximo 1400 caracteres), amigable y usa emojis\n"
-                        "- Usa formato WhatsApp: *negrita* para nombres\n"
-                        "- Incluye restaurante, banco, descuento y días válidos\n"
-                        "- Si preguntan por 'hoy', filtra por el día actual\n"
-                        "- Si no hay resultados exactos, sugiere opciones similares\n"
-                        "- Responde en español chileno casual"
+                        "REGLAS IMPORTANTES:\n"
+                        "- Responde SOLO con los datos proporcionados, no inventes\n"
+                        "- SIEMPRE agrupa los resultados por banco con esta jerarquía:\n"
+                        "  *🏦 Nombre del Banco* (X descuentos)\n"
+                        "  • Restaurante - descuento - ubicación\n"
+                        "- Incluye TODOS los restaurantes del contexto, no omitas ninguno\n"
+                        "- Usa formato WhatsApp: *negrita* para bancos y restaurantes\n"
+                        "- Máximo 3800 caracteres\n"
+                        "- Si hay muchos resultados, lista todos pero de forma compacta\n"
+                        "- Termina con un resumen del total\n"
+                        "- Responde en español chileno casual con emojis"
                     )
                 },
                 {
                     "role": "user",
-                    "content": f"Beneficios disponibles:\n{contexto}\n\nPregunta del usuario: {texto_original}"
+                    "content": (
+                        f"Total de beneficios encontrados: {total_encontrados}\n\n"
+                        f"Beneficios agrupados por banco:\n{contexto}\n\n"
+                        f"Pregunta del usuario: {texto_original}"
+                    )
                 }
             ],
-            temperature=0.4,
-            max_tokens=400,
+            temperature=0.3,
+            max_tokens=1000,
         )
         respuesta = response.choices[0].message.content
-        return respuesta[:1500]
+        return respuesta[:4000]  # WhatsApp soporta hasta 4096 chars
 
     except Exception as e:
         print(f"  Error RAG WhatsApp: {e}")
-        # Fallback: búsqueda simple
+        # Fallback: búsqueda simple agrupada por banco
         resultados = buscar_beneficios(restaurante=texto)
         if resultados:
-            return _formatear_wa(resultados)
+            return _formatear_wa(resultados, max_items=10)
         return "Hubo un error procesando tu consulta. Intenta de nuevo 🙏"
 
 
