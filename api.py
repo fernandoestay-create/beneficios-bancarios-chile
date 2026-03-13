@@ -498,6 +498,7 @@ async def ver_resultados(
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Descuentos Bancarios Chile</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{{--bg:#f8f7f4;--panel:#fff;--panel2:#f3f1ed;--text:#1a1a2e;--muted:#6b7280;--line:#e5e2da;
 --primary:#4f46e5;--primary2:#7c3aed;--ok:#16a34a;--warn:#ea580c;--radius:16px;
@@ -517,6 +518,13 @@ background:linear-gradient(135deg,var(--primary),var(--primary2));-webkit-backgr
 .stat{{background:var(--panel2);border-radius:14px;padding:16px;text-align:center}}
 .stat .val{{font-size:28px;font-weight:800;color:var(--primary)}}
 .stat .lbl{{color:var(--muted);font-size:12px;margin-top:2px}}
+/* Tab navigation */
+.tabs{{display:flex;gap:4px;margin-bottom:16px;background:var(--panel2);padding:4px;border-radius:12px;width:fit-content}}
+.tab-btn{{border:0;background:transparent;color:var(--muted);padding:10px 20px;border-radius:10px;
+font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}}
+.tab-btn.active{{background:var(--panel);color:var(--primary);box-shadow:var(--shadow)}}
+.tab-btn:hover:not(.active){{color:var(--text)}}
+.tab-content{{display:none}}.tab-content.active{{display:block}}
 .layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
 .filters{{position:sticky;top:12px;padding:18px}}
 .filters h2{{font-size:16px;margin-bottom:14px;font-weight:700}}
@@ -548,8 +556,10 @@ display:flex;flex-direction:column;transition:box-shadow .2s,transform .15s}}
 .deal-img img{{width:100%;height:100%;object-fit:cover}}
 .deal-img .badge{{position:absolute;top:10px;right:10px;background:linear-gradient(135deg,var(--primary),var(--primary2));
 color:#fff;padding:6px 12px;border-radius:10px;font-weight:800;font-size:14px}}
-.deal-img .bank-badge{{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.92);
-backdrop-filter:blur(6px);padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;color:var(--text)}}
+.deal-img .bank-badge{{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.95);
+backdrop-filter:blur(6px);padding:5px 10px;border-radius:8px;display:flex;align-items:center;gap:6px}}
+.bank-badge img{{height:18px;width:auto;display:block}}
+.bank-badge span{{font-size:0;}}
 .deal-body{{padding:14px;flex:1;display:flex;flex-direction:column;gap:8px}}
 .deal-title{{font-size:16px;font-weight:700}}
 .deal-desc{{color:var(--muted);font-size:13px;line-height:1.5}}
@@ -564,8 +574,19 @@ padding:8px 14px;border-radius:10px;font-weight:700;font-size:13px;transition:op
 .empty{{display:none;text-align:center;padding:40px;color:var(--muted);border:2px dashed var(--line);border-radius:var(--radius)}}
 .no-img{{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3f1ed,#e8e5de);font-size:40px}}
 .footer{{text-align:center;margin-top:24px;color:var(--muted);font-size:12px}}
-@media(max-width:980px){{.hero,.layout,.grid{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
-.filters{{position:static}}.deal-img{{height:140px}}}}
+/* Map */
+#map{{height:calc(100vh - 200px);min-height:500px;border-radius:var(--radius);border:1px solid var(--line)}}
+.map-layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
+.map-stats{{padding:14px;margin-bottom:10px;text-align:center}}
+.map-stats .val{{font-size:22px;font-weight:800;color:var(--primary)}}
+.leaflet-popup-content{{font-family:Inter,sans-serif;font-size:13px;line-height:1.5}}
+.popup-title{{font-weight:700;font-size:15px;margin-bottom:4px}}
+.popup-bank{{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:4px}}
+.popup-bank img{{height:14px}}
+.popup-desc{{color:var(--muted);margin:4px 0}}
+.popup-link{{display:inline-block;background:var(--primary);color:#fff;padding:4px 10px;border-radius:6px;text-decoration:none;font-weight:600;font-size:12px;margin-top:4px}}
+@media(max-width:980px){{.hero,.layout,.grid,.map-layout{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
+.filters{{position:static}}.deal-img{{height:140px}}#map{{height:60vh}}}}
 </style>
 </head>
 <body>
@@ -583,6 +604,11 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div class="stat"><div class="val">{int(max_desc)}%</div><div class="lbl">Mejor descuento</div></div>
 </div>
 </section>
+<div class="tabs">
+<button class="tab-btn active" data-tab="descuentos">🍽️ Descuentos</button>
+<button class="tab-btn" data-tab="mapa">📍 Mapa</button>
+</div>
+<div id="tab-descuentos" class="tab-content active">
 <section class="layout">
 <aside class="card filters">
 <h2>Filtros</h2>
@@ -633,10 +659,55 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div class="empty" id="empty">No hay descuentos con esos filtros 🤷</div>
 </main>
 </section>
+</div>
+<div id="tab-mapa" class="tab-content">
+<section class="map-layout">
+<aside class="card filters">
+<h2>Mapa de descuentos</h2>
+<div class="card map-stats">
+<div class="val" id="mapCount">0</div>
+<div class="lbl">Restaurantes en el mapa</div>
+</div>
+<div class="group"><label>Buscar</label>
+<input id="mapSearch" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
+<div class="group"><label>Banco</label>
+<select id="mapBankFilter"><option value="all">Todos los bancos</option>{banco_options}</select></div>
+<div class="group"><label>Zona</label>
+<select id="mapRegionFilter"><option value="all">Todas</option>{region_options}</select></div>
+<p style="color:var(--muted);font-size:12px;margin-top:10px">📍 Solo se muestran restaurantes con dirección conocida. Los marcadores se ubican por zona geográfica.</p>
+</aside>
+<main>
+<div id="map"></div>
+</main>
+</section>
+</div>
 <div class="footer">Actualizado: {timestamp_ultimo_scrape or 'N/A'} · Beneficios Bancarios Chile 🇨🇱</div>
 </div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const deals={deals_json};
+
+// ── Bank logos ──
+const BANK_LOGOS={{
+'Banco de Chile':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Banco_de_Chile_Logotipo.svg/200px-Banco_de_Chile_Logotipo.svg.png',
+'Banco Falabella':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Logotipo_Banco_Falabella.svg/200px-Logotipo_Banco_Falabella.svg.png'
+}};
+function bankBadgeHtml(banco){{
+const logo=BANK_LOGOS[banco];
+if(logo)return `<img src="${{logo}}" alt="${{banco}}" onerror="this.style.display='none';this.nextElementSibling.style.fontSize='11px'"><span>${{banco}}</span>`;
+return `<span style="font-size:11px;font-weight:700">${{banco}}</span>`;
+}}
+
+// ── Tabs ──
+document.querySelectorAll('.tab-btn').forEach(btn=>{{btn.addEventListener('click',()=>{{
+document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+btn.classList.add('active');
+document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+if(btn.dataset.tab==='mapa')initMap();
+}})}});
+
+// ── Card grid ──
 const grid=document.getElementById('grid'),empty=document.getElementById('empty'),
 countEl=document.getElementById('count'),search=document.getElementById('search'),
 bankF=document.getElementById('bankFilter'),regionF=document.getElementById('regionFilter'),
@@ -679,7 +750,7 @@ const linkHtml=d.url_fuente?`<a class="link" href="${{d.url_fuente}}" target="_b
 const el=document.createElement('article');el.className='deal';
 el.innerHTML=`<div class="deal-img">${{imgHtml}}
 <div class="badge">${{d.descuento_texto||d.descuento_valor+'%'}}</div>
-<div class="bank-badge">${{d.banco}}</div></div>
+<div class="bank-badge">${{bankBadgeHtml(d.banco)}}</div></div>
 <div class="deal-body"><div class="deal-title">${{d.restaurante}}</div>
 ${{d.descripcion?`<div class="deal-desc">${{d.descripcion.slice(0,100)}}</div>`:''}}
 <div class="meta"><span class="tag">📅 ${{dias}}</span>
@@ -697,19 +768,86 @@ document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
 document.querySelector('#dayChips .chip[data-day="all"]').classList.add('active');
 document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');render()}});
 
-// Auto-aplicar filtros desde URL
 const initDia={init_dia},initBanco={init_banco},initQ={init_q};
 if(initQ)search.value=initQ;
 if(initBanco)bankF.value=initBanco;
 if(initDia){{document.querySelectorAll('#dayChips .chip').forEach(c=>{{c.classList.remove('active');
 if(c.dataset.day===initDia)c.classList.add('active')}})}}
 render();
-// Live filters
 search.addEventListener('input',render);bankF.addEventListener('change',render);
 regionF.addEventListener('change',render);sortF.addEventListener('change',render);
 minD.addEventListener('input',render);
 document.getElementById('dayChips').addEventListener('click',()=>setTimeout(render,10));
 document.getElementById('modeChips').addEventListener('click',()=>setTimeout(render,10));
+
+// ── MAP ──
+const REGION_COORDS={{
+'region metropolitana de santiago':[-33.4489,-70.6693],
+'metropolitana':[-33.4489,-70.6693],'santiago':[-33.4489,-70.6693],
+'valparaiso':[-33.0472,-71.6127],'valparaíso':[-33.0472,-71.6127],
+'biobio':[-36.8201,-73.0444],'biobío':[-36.8201,-73.0444],'concepcion':[-36.8270,-73.0503],
+'maule':[-35.4264,-71.6554],'araucania':[-38.7359,-72.5904],'araucanía':[-38.7359,-72.5904],
+'antofagasta':[-23.6509,-70.3954],'coquimbo':[-29.9533,-71.3395],
+'ohiggins':[-34.1654,-70.7399],"o'higgins":[-34.1654,-70.7399],
+'los lagos':[-41.4693,-72.9424],'los rios':[-39.8142,-73.2459],'losríos':[-39.8142,-73.2459],
+'atacama':[-27.3668,-70.3323],'tarapaca':[-20.2133,-69.9553],'tarapacá':[-20.2133,-69.9553],
+'arica':[-18.4783,-70.3126],'magallanes':[-53.1548,-70.9113],
+'aysen':[-45.5712,-72.0685],'aysén':[-45.5712,-72.0685],
+'nuble':[-36.6096,-72.1034],'ñuble':[-36.6096,-72.1034],
+'chile':[-33.4489,-70.6693]
+}};
+function getCoords(ubicacion,idx){{
+if(!ubicacion)return null;
+const key=ubicacion.toLowerCase().replace(/región\s*(de(l)?\s*)?/gi,'').trim();
+for(const[k,v] of Object.entries(REGION_COORDS)){{
+if(key.includes(k)||k.includes(key))return[v[0]+(Math.random()-.5)*.02,v[1]+(Math.random()-.5)*.02];
+}}
+return null;
+}}
+let mapObj=null,markers=null;
+function initMap(){{
+if(mapObj){{mapObj.invalidateSize();renderMapMarkers();return}}
+mapObj=L.map('map').setView([-33.45,-70.65],6);
+L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}@2x.png',{{
+attribution:'&copy; <a href="https://carto.com">CARTO</a>',maxZoom:18}}).addTo(mapObj);
+markers=L.layerGroup().addTo(mapObj);
+renderMapMarkers();
+document.getElementById('mapSearch').addEventListener('input',renderMapMarkers);
+document.getElementById('mapBankFilter').addEventListener('change',renderMapMarkers);
+document.getElementById('mapRegionFilter').addEventListener('change',renderMapMarkers);
+}}
+function renderMapMarkers(){{
+if(!markers)return;
+markers.clearLayers();
+const q=document.getElementById('mapSearch').value.trim().toLowerCase();
+const bank=document.getElementById('mapBankFilter').value;
+const region=document.getElementById('mapRegionFilter').value;
+let count=0;
+const withAddr=deals.filter(d=>d.direccion||d.ubicacion);
+withAddr.forEach((d,i)=>{{
+const mS=!q||[d.restaurante,d.banco,d.descripcion,d.direccion].join(' ').toLowerCase().includes(q);
+const mB=bank==='all'||d.banco===bank;
+const mR=region==='all'||d.ubicacion===region;
+if(!mS||!mB||!mR)return;
+const coords=getCoords(d.ubicacion,i);
+if(!coords)return;
+count++;
+const color=d.banco.includes('Chile')?'#003DA5':'#00B140';
+const icon=L.divIcon({{className:'',html:`<div style="background:${{color}};width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800">${{d.descuento_valor||'?'}}%</div>`,
+iconSize:[28,28],iconAnchor:[14,14]}});
+const bankLogo=BANK_LOGOS[d.banco]||'';
+const logoHtml=bankLogo?`<img src="${{bankLogo}}" style="height:14px">`:'';
+const popup=`<div><div class="popup-title">${{d.restaurante}}</div>
+<div class="popup-bank" style="background:${{color}}15;color:${{color}}">${{logoHtml}} ${{d.banco}}</div>
+<div style="font-weight:700;color:var(--primary)">${{d.descuento_texto||d.descuento_valor+'%'}}</div>
+${{d.descripcion?`<div class="popup-desc">${{d.descripcion.slice(0,80)}}</div>`:''}}
+${{d.direccion?`<div style="font-size:12px">📍 ${{d.direccion}}</div>`:''}}
+<div style="font-size:11px;color:#6b7280">📅 ${{d.dias_validos.join(', ')}}</div>
+${{d.url_fuente?`<a class="popup-link" href="${{d.url_fuente}}" target="_blank">Ver detalle</a>`:''}}</div>`;
+L.marker(coords,{{icon}}).bindPopup(popup,{{maxWidth:280}}).addTo(markers);
+}});
+document.getElementById('mapCount').textContent=count;
+}}
 </script>
 </body></html>"""
     return HTMLResponse(content=page_html)
@@ -732,17 +870,18 @@ async def procesar_comando_whatsapp(texto: str) -> str:
 
     # ── Comandos rápidos (atajos) ──
     if texto in ['/', 'hola', 'hi', 'hello', 'help', 'menu', 'comandos', 'inicio']:
-        return """*Beneficios Bancarios Chile* 🇨🇱
+        dia_hoy = _detectar_dia_hoy()
+        return f"""¡Hola! 👋🍽️ ¿De qué tienes ganas hoy?
 
-Puedes escribirme lo que quieras, por ejemplo:
-• "descuentos para hoy"
-• "donde comer sushi con descuento"
-• "mejores descuentos banco falabella"
-• "restaurantes con 30% o mas"
+Soy tu asistente de descuentos en restaurantes 🇨🇱
+Pregúntame lo que quieras, por ejemplo:
 
-*Atajos rapidos:*
-/top - Top 5 restaurantes
-/stats - Estadisticas"""
+🔥 "descuentos para hoy" (hoy es {dia_hoy})
+🍣 "donde comer sushi con descuento"
+💳 "mejores descuentos banco falabella"
+💰 "restaurantes con 30% o más"
+
+*Atajos:* /top · /stats"""
 
     if texto == '/top':
         rest_max = {}
