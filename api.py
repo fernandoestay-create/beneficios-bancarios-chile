@@ -758,8 +758,8 @@ const DAY_MAP=[['lunes','L'],['martes','M'],['miercoles','X'],['jueves','J'],['v
 const dayCircles=DAY_MAP.map(([k,l])=>{{
 const on=d.dias_validos.includes(k)||d.dias_validos.includes('todos');
 return `<div class="day-circle${{on?' active':''}}">${{l}}</div>`}}).join('');
-const modeBadge=d.presencial?'<span class="mode-badge presencial">🏪 Pres.</span>'
-:(d.online?'<span class="mode-badge online">💻 Online</span>':'');
+const modeBadge=d.online?'<span class="mode-badge online">💻 Online</span>'
+:'<span class="mode-badge presencial">🏪 Pres.</span>';
 const linkHtml=d.url_fuente?`<a class="link" href="${{d.url_fuente}}" target="_blank">Ver detalle</a>`:'';
 const el=document.createElement('article');el.className='deal';
 el.innerHTML=`<div class="deal-img">${{imgHtml}}
@@ -769,7 +769,7 @@ el.innerHTML=`<div class="deal-img">${{imgHtml}}
 ${{d.descripcion?`<div class="deal-desc">${{d.descripcion.slice(0,100)}}</div>`:''}}
 <div class="day-bar"><div class="day-circles">${{dayCircles}}</div>${{modeBadge}}</div>
 <div class="deal-info">
-<div class="deal-info-row"><span class="info-icon">📍</span>${{d.ubicacion||'Chile'}}</div>
+<div class="deal-info-row"><span class="info-icon">📍</span>${{(d.ubicacion||'Chile').replace(/\\b\\w/g,c=>c.toUpperCase())}}</div>
 ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${{d.direccion}}</div>`:''}}
 </div>
 <div class="cta-row">${{linkHtml}}</div></div>
