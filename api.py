@@ -615,10 +615,12 @@ max-height:220px;overflow-y:auto;padding:4px}}
 .ms-search-input{{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);
 font-size:12px;outline:none;background:var(--panel2)}}.ms-search-input:focus{{border-color:var(--primary)}}
 /* Summary bar */
-.summary-bar{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}}
-.summary-pill{{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;
-font-size:12px;font-weight:600;background:var(--panel2);border:1px solid var(--line)}}
-.summary-pill img{{height:14px}}.summary-pill .sp-ct{{font-weight:800;color:var(--primary)}}
+.summary-bar{{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center;justify-content:center}}
+.summary-pill{{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;border-radius:10px;
+background:var(--panel2);border:1px solid var(--line);min-width:48px}}
+.summary-pill img{{height:20px;width:auto}}.summary-pill .sp-nologo{{font-size:10px;font-weight:700;color:var(--muted);
+text-align:center;line-height:1.1;max-width:50px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}}
+.summary-pill .sp-ct{{font-weight:800;font-size:13px;color:var(--primary)}}
 /* Map */
 #map{{height:calc(100vh - 200px);min-height:500px;border-radius:var(--radius);border:1px solid var(--line)}}
 .map-layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
@@ -720,12 +722,13 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div class="group"><label>Buscar</label>
 <input id="mapSearch" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
 <div class="group"><label>Banco</label>
-<select id="mapBankFilter"><option value="all">Todos los bancos</option>{banco_options}</select></div>
+<div class="multi-select" id="mapBankMS"></div></div>
 <div class="group"><label>Zona</label>
-<select id="mapRegionFilter"><option value="all">Todas</option>{region_options}</select></div>
-<p style="color:var(--muted);font-size:12px;margin-top:10px">📍 Solo se muestran restaurantes con dirección conocida. Los marcadores se ubican por zona geográfica.</p>
+<div class="multi-select" id="mapRegionMS"></div></div>
+<p style="color:var(--muted);font-size:12px;margin-top:10px">📍 Solo se muestran restaurantes con dirección conocida.</p>
 </aside>
 <main>
+<div id="mapSummaryBar" class="summary-bar" style="margin-bottom:8px"></div>
 <div id="map"></div>
 </main>
 </section>
@@ -828,7 +831,7 @@ initChips('dayChips','day');initChips('modeChips','mode');
 minD.addEventListener('input',()=>{{minDV.textContent=minD.value+'%'}});
 
 // ── Normalize for search ──
-function norm(s){{return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9\\s]/g,'').toLowerCase()}}
+function norm(s){{return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9\\s]/g,'')}}
 
 function render(){{
 const qRaw=search.value.trim();
@@ -856,8 +859,9 @@ if(bankEntries.length>0){{
 summaryBar.style.display='flex';
 summaryBar.innerHTML=bankEntries.map(([b,c])=>{{
 const logo=BANK_LOGOS[b];
-const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.style.display='none'">`:'';
-return `<span class="summary-pill">${{lh}}<span class="sp-ct">${{c}}</span> ${{b}}</span>`}}).join('');
+const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span><span class=sp-ct>${{c}}</span>'">`
+:`<span class="sp-nologo">${{b}}</span>`;
+return `<span class="summary-pill" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
 }}else{{summaryBar.style.display='none';summaryBar.innerHTML=''}}
 grid.innerHTML='';
 if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
@@ -935,6 +939,9 @@ if(key.includes(k)||k.includes(key))return[v[0]+(Math.random()-.5)*.02,v[1]+(Mat
 return null;
 }}
 let mapObj=null,markers=null;
+const mapBankMS=new MS('mapBankMS',bankOpts,'Todos los bancos');
+const mapRegionMS=new MS('mapRegionMS',regionOpts,'Todas las regiones');
+const mapSummary=document.getElementById('mapSummaryBar');
 function initMap(){{
 if(mapObj){{mapObj.invalidateSize();renderMapMarkers();return}}
 mapObj=L.map('map').setView([-33.45,-70.65],6);
@@ -943,25 +950,26 @@ attribution:'&copy; <a href="https://carto.com">CARTO</a>',maxZoom:18}}).addTo(m
 markers=L.layerGroup().addTo(mapObj);
 renderMapMarkers();
 document.getElementById('mapSearch').addEventListener('input',renderMapMarkers);
-document.getElementById('mapBankFilter').addEventListener('change',renderMapMarkers);
-document.getElementById('mapRegionFilter').addEventListener('change',renderMapMarkers);
 }}
 function renderMapMarkers(){{
 if(!markers)return;
 markers.clearLayers();
-const q=document.getElementById('mapSearch').value.trim().toLowerCase();
-const bank=document.getElementById('mapBankFilter').value;
-const region=document.getElementById('mapRegionFilter').value;
+const qRaw=document.getElementById('mapSearch').value.trim();
+const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
+const banks=mapBankMS.vals(),regions=mapRegionMS.vals();
 let count=0;
+const byBank={{}};
 const withAddr=deals.filter(d=>d.direccion||d.ubicacion);
 withAddr.forEach((d,i)=>{{
-const mS=!q||[d.restaurante,d.banco,d.descripcion,d.direccion].join(' ').toLowerCase().includes(q);
-const mB=bank==='all'||d.banco===bank;
-const mR=region==='all'||d.ubicacion===region;
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||''].join(' '));
+const mS=!qWords.length||qWords.every(w=>txt.includes(w));
+const mB=!banks||banks.includes(d.banco);
+const mR=!regions||regions.includes(d.ubicacion);
 if(!mS||!mB||!mR)return;
 const coords=getCoords(d.ubicacion,i);
 if(!coords)return;
 count++;
+byBank[d.banco]=(byBank[d.banco]||0)+1;
 const color=BANK_COLORS[d.banco]||'#6b7280';
 const icon=L.divIcon({{className:'',html:`<div style="background:${{color}};width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800">${{d.descuento_valor||'?'}}%</div>`,
 iconSize:[28,28],iconAnchor:[14,14]}});
@@ -977,6 +985,15 @@ ${{d.url_fuente?`<a class="popup-link" href="${{d.url_fuente}}" target="_blank">
 L.marker(coords,{{icon}}).bindPopup(popup,{{maxWidth:280}}).addTo(markers);
 }});
 document.getElementById('mapCount').textContent=count;
+const be=Object.entries(byBank).sort((a,b)=>b[1]-a[1]);
+if(be.length>0){{
+mapSummary.style.display='flex';
+mapSummary.innerHTML=be.map(([b,c])=>{{
+const logo=BANK_LOGOS[b];
+const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span><span class=sp-ct>${{c}}</span>'">`
+:`<span class="sp-nologo">${{b}}</span>`;
+return `<span class="summary-pill" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
+}}else{{mapSummary.style.display='none'}}
 }}
 </script>
 </body></html>"""
