@@ -549,13 +549,24 @@ color:var(--text);font-size:13px;outline:none;transition:border .2s}}
 font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}}
 .chip:hover{{border-color:var(--primary);background:#f5f3ff}}
 .chip.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+/* Day circle multi-select */
+.day-select{{display:flex;align-items:center;gap:6px;flex-wrap:wrap}}
+.day-sel{{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:12px;font-weight:700;border:2px solid var(--line);color:var(--muted);background:var(--panel2);
+cursor:pointer;transition:all .15s;user-select:none}}
+.day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
+.day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.day-sel-all{{width:auto;padding:0 12px;border-radius:999px;font-size:11px;letter-spacing:.3px}}
 .range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
 input[type=range]{{accent-color:var(--primary)}}
 .btns{{display:flex;gap:8px;margin-top:10px}}
-.btns-top{{margin-top:0;margin-bottom:12px;position:sticky;top:0;z-index:5;background:var(--panel2);padding:8px 0}}
+.btns-top{{margin-top:0;margin-bottom:10px;position:sticky;top:0;z-index:5;background:var(--panel);padding:6px 0}}
+.btns-bottom{{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}}
 button{{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}}
 .btn-primary{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;flex:1}}
 .btn-secondary{{background:var(--panel2);color:var(--text);border:1px solid var(--line)}}
+.btn-sm{{padding:7px 14px;font-size:12px;font-weight:600;border-radius:8px}}
+.btn-link{{background:none;color:var(--muted);font-size:12px;font-weight:500;padding:6px 10px;text-decoration:underline;text-underline-offset:2px}}
 .results{{padding:18px}}
 .toolbar{{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}}
 .pill{{padding:6px 12px;border-radius:999px;background:rgba(22,163,74,.08);color:var(--ok);
@@ -677,15 +688,15 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div class="group"><label>Banco</label>
 <div class="multi-select" id="bankMS"></div></div>
 <div class="group"><label>Día</label>
-<div class="chips" id="dayChips">
-<button class="chip active" data-day="all">Todos</button>
-<button class="chip" data-day="lunes">Lun</button>
-<button class="chip" data-day="martes">Mar</button>
-<button class="chip" data-day="miercoles">Mié</button>
-<button class="chip" data-day="jueves">Jue</button>
-<button class="chip" data-day="viernes">Vie</button>
-<button class="chip" data-day="sabado">Sáb</button>
-<button class="chip" data-day="domingo">Dom</button>
+<div class="day-select" id="daySelect">
+<div class="day-sel day-sel-all active" data-day="all">Todos</div>
+<div class="day-sel" data-day="lunes">L</div>
+<div class="day-sel" data-day="martes">M</div>
+<div class="day-sel" data-day="miercoles">X</div>
+<div class="day-sel" data-day="jueves">J</div>
+<div class="day-sel" data-day="viernes">V</div>
+<div class="day-sel" data-day="sabado">S</div>
+<div class="day-sel" data-day="domingo">D</div>
 </div></div>
 <div class="group"><label>Zona</label>
 <div class="multi-select" id="regionMS"></div></div>
@@ -707,6 +718,10 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <button class="chip" data-mode="presencial">🏪 Presencial</button>
 <button class="chip" data-mode="online">💻 Online</button>
 </div></div>
+<div class="btns btns-bottom">
+<button class="btn-primary btn-sm" id="applyBtn2">Aplicar</button>
+<button class="btn-link" id="resetBtn2">Limpiar filtros</button>
+</div>
 </aside>
 <main class="card results">
 <div class="toolbar">
@@ -840,7 +855,26 @@ function chipVal(id,attr){{const a=document.querySelector('#'+id+' .chip.active'
 function initChips(id,attr){{document.getElementById(id).addEventListener('click',e=>{{
 const c=e.target.closest('.chip');if(!c)return;
 document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('active'));c.classList.add('active')}})}}
-initChips('dayChips','day');initChips('modeChips','mode');
+initChips('modeChips','mode');
+
+// ── Day multi-select circles ──
+const daySelect=document.getElementById('daySelect');
+const dayAll=daySelect.querySelector('[data-day="all"]');
+const daySels=[...daySelect.querySelectorAll('.day-sel:not(.day-sel-all)')];
+function getSelectedDays(){{
+  if(dayAll.classList.contains('active'))return null;
+  const sel=daySels.filter(d=>d.classList.contains('active')).map(d=>d.dataset.day);
+  return sel.length?sel:null;
+}}
+daySelect.addEventListener('click',e=>{{
+  const d=e.target.closest('.day-sel');if(!d)return;
+  if(d===dayAll){{
+    dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));
+  }}else{{
+    dayAll.classList.remove('active');d.classList.toggle('active');
+    if(!daySels.some(s=>s.classList.contains('active')))dayAll.classList.add('active');
+  }}
+}});
 minD.addEventListener('input',()=>{{minDV.textContent=minD.value+'%'}});
 
 // ── Normalize for search ──
@@ -850,7 +884,7 @@ function render(){{
 const qRaw=search.value.trim();
 const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
 const banks=bankMS.vals(),regions=regionMS.vals(),comunas=comunaMS.vals();
-const sort=sortF.value,min=+minD.value,day=chipVal('dayChips','day'),mode=chipVal('modeChips','mode');
+const sort=sortF.value,min=+minD.value,selDays=getSelectedDays(),mode=chipVal('modeChips','mode');
 let f=deals.filter(d=>{{
 const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.ubicacion||'',d.direccion||''].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
@@ -858,7 +892,7 @@ const mB=!banks||banks.includes(d.banco);
 const mR=!regions||regions.includes(d.ubicacion);
 const mC=!comunas||comunas.includes(d.comuna);
 const mD=d.descuento_valor>=min;
-const mDay=day==='all'||d.dias_validos.includes(day)||d.dias_validos.includes('todos');
+const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
 const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
 return mS&&mB&&mR&&mC&&mD&&mDay&&mMode}});
 f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
@@ -914,24 +948,27 @@ ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${
 <div class="disclaimer">⚠️ Siempre revisar condiciones especiales en el banco</div></div>`;
 grid.appendChild(el)}})}}
 
-document.getElementById('applyBtn').addEventListener('click',render);
-document.getElementById('resetBtn').addEventListener('click',()=>{{
+function resetAll(){{
 search.value='';bankMS.reset();regionMS.reset();comunaMS.reset();comunaG.style.display='none';
 sortF.value='desc-desc';minD.value=0;minDV.textContent='0%';
 document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-document.querySelector('#dayChips .chip[data-day="all"]').classList.add('active');
-document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');render()}});
+document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');
+dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));render()}}
+document.getElementById('applyBtn').addEventListener('click',render);
+document.getElementById('resetBtn').addEventListener('click',resetAll);
+document.getElementById('applyBtn2').addEventListener('click',render);
+document.getElementById('resetBtn2').addEventListener('click',resetAll);
 
 const initDia={init_dia},initBanco={init_banco},initQ={init_q};
 if(initQ)search.value=initQ;
 if(initBanco){{const c=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===initBanco);
 if(c){{c.checked=true;bankMS.sel.add(initBanco);bankMS._tags()}}}}
-if(initDia){{document.querySelectorAll('#dayChips .chip').forEach(c=>{{c.classList.remove('active');
-if(c.dataset.day===initDia)c.classList.add('active')}})}}
+if(initDia){{dayAll.classList.remove('active');
+daySels.forEach(s=>{{if(s.dataset.day===initDia)s.classList.add('active')}});}}
 render();
 search.addEventListener('input',render);sortF.addEventListener('change',render);
 minD.addEventListener('input',render);
-document.getElementById('dayChips').addEventListener('click',()=>setTimeout(render,10));
+daySelect.addEventListener('click',()=>setTimeout(render,10));
 document.getElementById('modeChips').addEventListener('click',()=>setTimeout(render,10));
 
 // ── MAP ──
