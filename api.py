@@ -483,7 +483,8 @@ async def ver_resultados(
         'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble', 'Biobío',
         'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
     }
-    regiones_list = sorted(r for r in set(b.ubicacion for b in all_data if b.ubicacion) if r in REGIONES_VALIDAS)
+    regiones_set = set(r for r in set(b.ubicacion for b in all_data if b.ubicacion) if r in REGIONES_VALIDAS)
+    regiones_list = (['Metropolitana'] if 'Metropolitana' in regiones_set else []) + sorted(r for r in regiones_set if r != 'Metropolitana')
     comunas_list = sorted(set(b.comuna for b in all_data if b.comuna))
     banco_options = "".join(f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>' for b in bancos_list)
     region_options = "".join(f'<option value="{html_lib.escape(r)}">{html_lib.escape(r)}</option>' for r in regiones_list)
@@ -537,36 +538,34 @@ font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;display:flex;al
 .tab-btn:hover:not(.active){{color:var(--text)}}
 .tab-content{{display:none}}.tab-content.active{{display:block}}
 .layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
-.filters{{position:sticky;top:12px;padding:18px}}
-.filters h2{{font-size:16px;margin-bottom:14px;font-weight:700}}
-.group{{margin-bottom:14px}}
-.group label{{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}}
-.input,select{{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
-color:var(--text);font-size:13px;outline:none;transition:border .2s}}
+.filters{{position:sticky;top:12px;padding:16px}}
+.filters h2{{font-size:15px;margin-bottom:12px;font-weight:700}}
+.group{{margin-bottom:12px}}
+.group label{{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}}
+.input,select{{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);
+color:var(--text);font-size:12px;outline:none;transition:border .2s;height:36px;box-sizing:border-box}}
 .input:focus,select:focus{{border-color:var(--primary)}}
-.chips{{display:flex;flex-wrap:wrap;gap:6px}}
-.chip{{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:6px 11px;border-radius:999px;
-font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}}
+.chips{{display:flex;flex-wrap:wrap;gap:5px}}
+.chip{{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:5px 10px;border-radius:999px;
+font-size:11px;cursor:pointer;font-weight:500;transition:all .15s}}
 .chip:hover{{border-color:var(--primary);background:#f5f3ff}}
 .chip.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
 /* Day circle multi-select */
-.day-select{{display:flex;align-items:center;gap:6px;flex-wrap:wrap}}
-.day-sel{{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-font-size:12px;font-weight:700;border:2px solid var(--line);color:var(--muted);background:var(--panel2);
-cursor:pointer;transition:all .15s;user-select:none}}
+.day-select{{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}}
+.day-sel{{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:11px;font-weight:700;border:1.5px solid var(--line);color:var(--muted);background:var(--panel2);
+cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
 .day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
 .day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
-.day-sel-all{{width:auto;padding:0 12px;border-radius:999px;font-size:11px;letter-spacing:.3px}}
-.range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
+.day-sel-all{{width:auto;padding:0 10px;border-radius:999px;font-size:10px;letter-spacing:.3px}}
+.range-row{{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}}
+.range-row strong{{font-size:12px}}
 input[type=range]{{accent-color:var(--primary)}}
-.btns{{display:flex;gap:8px;margin-top:10px}}
-.btns-top{{margin-top:0;margin-bottom:10px;position:sticky;top:0;z-index:5;background:var(--panel);padding:6px 0}}
-.btns-bottom{{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}}
-button{{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}}
+button{{border:0;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:12px}}
+.btn-reset{{width:100%;background:var(--panel2);color:var(--muted);border:1px solid var(--line);
+font-size:11px;font-weight:500;padding:7px 0;margin-top:10px;transition:all .15s}}
+.btn-reset:hover{{border-color:var(--primary);color:var(--primary)}}
 .btn-primary{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;flex:1}}
-.btn-secondary{{background:var(--panel2);color:var(--text);border:1px solid var(--line)}}
-.btn-sm{{padding:7px 14px;font-size:12px;font-weight:600;border-radius:8px}}
-.btn-link{{background:none;color:var(--muted);font-size:12px;font-weight:500;padding:6px 10px;text-decoration:underline;text-underline-offset:2px}}
 .results{{padding:18px}}
 .toolbar{{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}}
 .pill{{padding:6px 12px;border-radius:999px;background:rgba(22,163,74,.08);color:var(--ok);
@@ -609,9 +608,9 @@ padding:8px 20px;border-radius:10px;font-weight:700;font-size:13px;transition:op
 .footer{{text-align:center;margin-top:24px;color:var(--muted);font-size:12px}}
 /* Multi-select */
 .multi-select{{position:relative}}
-.ms-trigger{{width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
-cursor:pointer;display:flex;align-items:center;min-height:40px;gap:4px;flex-wrap:wrap}}
-.ms-placeholder{{color:var(--muted);font-size:13px}}
+.ms-trigger{{width:100%;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);
+cursor:pointer;display:flex;align-items:center;min-height:36px;height:auto;gap:4px;flex-wrap:wrap;box-sizing:border-box}}
+.ms-placeholder{{color:var(--muted);font-size:12px}}
 .ms-tags{{display:flex;flex-wrap:wrap;gap:4px;flex:1}}
 .ms-tag{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:2px 8px;
 border-radius:6px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}}
@@ -621,7 +620,7 @@ border-radius:6px;font-size:11px;font-weight:600;display:inline-flex;align-items
 border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:100;
 max-height:220px;overflow-y:auto;padding:4px}}
 .multi-select.open .ms-dropdown{{display:block}}
-.ms-option{{padding:7px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;border-radius:6px}}
+.ms-option{{padding:7px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;border-radius:6px}}
 .ms-option:hover{{background:var(--panel2)}}
 .ms-option input{{accent-color:var(--primary);width:16px;height:16px;cursor:pointer}}
 .ms-search-input{{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);
@@ -642,7 +641,7 @@ height:22px;display:flex;align-items:center;justify-content:center}}
 .summary-pill .sp-ct{{font-weight:800;font-size:14px;color:var(--primary);margin-top:4px}}
 /* Map */
 #map{{height:calc(100vh - 200px);min-height:500px;border-radius:var(--radius);border:1px solid var(--line)}}
-.map-layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
+.map-layout{{display:block}}
 .map-stats{{padding:14px;margin-bottom:10px;text-align:center}}
 .map-stats .val{{font-size:22px;font-weight:800;color:var(--primary)}}
 .leaflet-popup-content{{font-family:Inter,sans-serif;font-size:13px;line-height:1.5}}
@@ -679,10 +678,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <section class="layout">
 <aside class="card filters">
 <h2>Filtros</h2>
-<div class="btns btns-top">
-<button class="btn-primary" id="applyBtn">Aplicar</button>
-<button class="btn-secondary" id="resetBtn">Limpiar</button>
-</div>
+<button class="btn-reset" id="resetBtn">Limpiar filtros</button>
 <div class="group"><label>Buscar</label>
 <input id="search" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
 <div class="group"><label>Banco</label>
@@ -718,10 +714,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <button class="chip" data-mode="presencial">🏪 Presencial</button>
 <button class="chip" data-mode="online">💻 Online</button>
 </div></div>
-<div class="btns btns-bottom">
-<button class="btn-primary btn-sm" id="applyBtn2">Aplicar</button>
-<button class="btn-link" id="resetBtn2">Limpiar filtros</button>
-</div>
+<button class="btn-reset" id="resetBtn2">Limpiar filtros</button>
 </aside>
 <main class="card results">
 <div class="toolbar">
@@ -735,26 +728,15 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 </section>
 </div>
 <div id="tab-mapa" class="tab-content">
-<section class="map-layout">
-<aside class="card filters">
-<h2>Mapa de descuentos</h2>
-<div class="card map-stats">
-<div class="val" id="mapCount">0</div>
-<div class="lbl">Restaurantes en el mapa</div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+<div class="card map-stats" style="margin:0;padding:10px 18px;display:flex;align-items:center;gap:8px">
+<span class="val" id="mapCount" style="font-size:20px">0</span>
+<span class="lbl" style="font-size:11px;text-align:left;line-height:1.2">restaurantes<br>en el mapa</span>
 </div>
-<div class="group"><label>Buscar</label>
-<input id="mapSearch" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
-<div class="group"><label>Banco</label>
-<div class="multi-select" id="mapBankMS"></div></div>
-<div class="group"><label>Zona</label>
-<div class="multi-select" id="mapRegionMS"></div></div>
-<p style="color:var(--muted);font-size:12px;margin-top:10px">📍 Solo se muestran restaurantes con dirección conocida.</p>
-</aside>
-<main>
+<p style="color:var(--muted);font-size:11px;margin:0">📍 Los filtros de Descuentos se aplican también al mapa.</p>
+</div>
 <div id="mapSummaryBar" class="summary-bar" style="margin-bottom:8px"></div>
 <div id="map"></div>
-</main>
-</section>
 </div>
 <div class="footer">Actualizado: {timestamp_ultimo_scrape or 'N/A'} · Beneficios Bancarios Chile 🇨🇱</div>
 </div>
@@ -799,7 +781,7 @@ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
 document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
 btn.classList.add('active');
 document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-if(btn.dataset.tab==='mapa')initMap();
+if(btn.dataset.tab==='mapa'){{initMap();setTimeout(()=>{{if(mapObj)mapObj.invalidateSize();renderMapMarkers()}},100)}}
 }})}});
 
 // ── Card grid ──
@@ -920,6 +902,8 @@ if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.s
 grid.innerHTML='';
 if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
 empty.style.display='none';countEl.textContent=f.length+' encontrados';
+// Sync map markers with same filters
+if(mapObj)renderMapMarkers();
 f.forEach(d=>{{
 const imgSrc=d.imagen_url||d.logo_url;
 const imgHtml=imgSrc?`<img src="${{imgSrc}}" alt="${{d.restaurante}}" loading="lazy">`
@@ -954,9 +938,7 @@ sortF.value='desc-desc';minD.value=0;minDV.textContent='0%';
 document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
 document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');
 dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));render()}}
-document.getElementById('applyBtn').addEventListener('click',render);
 document.getElementById('resetBtn').addEventListener('click',resetAll);
-document.getElementById('applyBtn2').addEventListener('click',render);
 document.getElementById('resetBtn2').addEventListener('click',resetAll);
 
 const initDia={init_dia},initBanco={init_banco},initQ={init_q};
@@ -996,8 +978,6 @@ if(key.includes(k)||k.includes(key))return[v[0]+(Math.random()-.5)*.02,v[1]+(Mat
 return null;
 }}
 let mapObj=null,markers=null;
-const mapBankMS=new MS('mapBankMS',bankOpts,'Todos los bancos');
-const mapRegionMS=new MS('mapRegionMS',regionOpts,'Todas las regiones');
 const mapSummary=document.getElementById('mapSummaryBar');
 function initMap(){{
 if(mapObj){{mapObj.invalidateSize();renderMapMarkers();return}}
@@ -1006,23 +986,28 @@ L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}@2x.
 attribution:'&copy; <a href="https://carto.com">CARTO</a>',maxZoom:18}}).addTo(mapObj);
 markers=L.layerGroup().addTo(mapObj);
 renderMapMarkers();
-document.getElementById('mapSearch').addEventListener('input',renderMapMarkers);
 }}
 function renderMapMarkers(){{
 if(!markers)return;
 markers.clearLayers();
-const qRaw=document.getElementById('mapSearch').value.trim();
+// Use same filters as Descuentos tab
+const qRaw=search.value.trim();
 const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
-const banks=mapBankMS.vals(),regions=mapRegionMS.vals();
+const banks=bankMS.vals(),regions=regionMS.vals(),comunas=comunaMS.vals();
+const min=+minD.value,selDays=getSelectedDays(),mode=chipVal('modeChips','mode');
 let count=0;
 const byBank={{}};
 const withAddr=deals.filter(d=>d.direccion||d.ubicacion);
 withAddr.forEach((d,i)=>{{
-const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||''].join(' '));
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||'',d.ubicacion||''].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
 const mR=!regions||regions.includes(d.ubicacion);
-if(!mS||!mB||!mR)return;
+const mC=!comunas||comunas.includes(d.comuna);
+const mD=d.descuento_valor>=min;
+const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
+const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
+if(!mS||!mB||!mR||!mC||!mD||!mDay||!mMode)return;
 const coords=getCoords(d.ubicacion,i);
 if(!coords)return;
 count++;
@@ -1045,7 +1030,7 @@ document.getElementById('mapCount').textContent=count;
 const be=Object.entries(byBank).sort((a,b)=>b[1]-a[1]);
 if(be.length>0){{
 mapSummary.style.display='flex';
-const selMapBanks=mapBankMS.vals();
+const selMapBanks=bankMS.vals();
 mapSummary.innerHTML=be.map(([b,c])=>{{
 const logo=BANK_LOGOS[b];
 const isActive=selMapBanks&&selMapBanks.includes(b);
@@ -1054,8 +1039,8 @@ const lh=logo?`<div class="sp-logo"><img src="${{logo}}" alt="${{b}}" onerror="t
 return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
 mapSummary.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
 const banco=pill.dataset.banco;
-const cb=[...mapBankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===banco);
-if(cb){{cb.checked=!cb.checked;if(cb.checked)mapBankMS.sel.add(banco);else mapBankMS.sel.delete(banco);mapBankMS._tags();renderMapMarkers()}}
+const cb=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===banco);
+if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.sel.delete(banco);bankMS._tags();render()}}
 }})}});
 }}else{{mapSummary.style.display='none'}}
 }}
