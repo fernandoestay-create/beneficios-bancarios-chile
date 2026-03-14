@@ -1000,11 +1000,6 @@ class ScraperScotiabank:
             id_region = sitio.get('id_region', 0)
             ubicacion = 'Metropolitana' if es_santiago else self._region_por_id(id_region)
 
-            # Web del restaurante (link individual)
-            web = sitio.get('web', '')
-            # Usar la web del restaurante como url_fuente si existe, sino la página general
-            url_individual = web if web and web.startswith('http') else self.PAGE_URL
-
             sitio_id = sitio.get('id_sitio', nombre.lower().replace(' ', '_'))
 
             return Beneficio(
@@ -1021,7 +1016,7 @@ class ScraperScotiabank:
                 direccion=direccion,
                 presencial=True,
                 online=False,
-                url_fuente=url_individual,
+                url_fuente=self.PAGE_URL,
                 imagen_url=imagen_url,
                 restricciones_texto=condiciones[:300] if condiciones else '',
                 activo=True,
