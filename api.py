@@ -488,6 +488,9 @@ async def ver_resultados(
     banco_options = "".join(f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>' for b in bancos_list)
     region_options = "".join(f'<option value="{html_lib.escape(r)}">{html_lib.escape(r)}</option>' for r in regiones_list)
     comuna_options = "".join(f'<option value="{html_lib.escape(c)}">{html_lib.escape(c)}</option>' for c in comunas_list)
+    bancos_json_list = json.dumps(bancos_list, ensure_ascii=False)
+    regiones_json_list = json.dumps(regiones_list, ensure_ascii=False)
+    comunas_json_list = json.dumps(comunas_list, ensure_ascii=False)
 
     # Pre-selección de filtros desde URL
     init_dia = f'"{dia}"' if dia else 'null'
@@ -592,6 +595,30 @@ padding:8px 20px;border-radius:10px;font-weight:700;font-size:13px;transition:op
 .empty{{display:none;text-align:center;padding:40px;color:var(--muted);border:2px dashed var(--line);border-radius:var(--radius)}}
 .no-img{{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3f1ed,#e8e5de);font-size:40px}}
 .footer{{text-align:center;margin-top:24px;color:var(--muted);font-size:12px}}
+/* Multi-select */
+.multi-select{{position:relative}}
+.ms-trigger{{width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+cursor:pointer;display:flex;align-items:center;min-height:40px;gap:4px;flex-wrap:wrap}}
+.ms-placeholder{{color:var(--muted);font-size:13px}}
+.ms-tags{{display:flex;flex-wrap:wrap;gap:4px;flex:1}}
+.ms-tag{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:2px 8px;
+border-radius:6px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}}
+.ms-remove{{cursor:pointer;font-size:14px;line-height:1;opacity:.8}}.ms-remove:hover{{opacity:1}}
+.ms-arrow{{margin-left:auto;color:var(--muted);font-size:12px;flex-shrink:0}}
+.ms-dropdown{{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);
+border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:100;
+max-height:220px;overflow-y:auto;padding:4px}}
+.multi-select.open .ms-dropdown{{display:block}}
+.ms-option{{padding:7px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;border-radius:6px}}
+.ms-option:hover{{background:var(--panel2)}}
+.ms-option input{{accent-color:var(--primary);width:16px;height:16px;cursor:pointer}}
+.ms-search-input{{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);
+font-size:12px;outline:none;background:var(--panel2)}}.ms-search-input:focus{{border-color:var(--primary)}}
+/* Summary bar */
+.summary-bar{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}}
+.summary-pill{{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;
+font-size:12px;font-weight:600;background:var(--panel2);border:1px solid var(--line)}}
+.summary-pill img{{height:14px}}.summary-pill .sp-ct{{font-weight:800;color:var(--primary)}}
 /* Map */
 #map{{height:calc(100vh - 200px);min-height:500px;border-radius:var(--radius);border:1px solid var(--line)}}
 .map-layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
@@ -634,7 +661,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div class="group"><label>Buscar</label>
 <input id="search" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
 <div class="group"><label>Banco</label>
-<select id="bankFilter"><option value="all">Todos los bancos</option>{banco_options}</select></div>
+<div class="multi-select" id="bankMS"></div></div>
 <div class="group"><label>Día</label>
 <div class="chips" id="dayChips">
 <button class="chip active" data-day="all">Todos</button>
@@ -647,9 +674,9 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <button class="chip" data-day="domingo">Dom</button>
 </div></div>
 <div class="group"><label>Zona</label>
-<select id="regionFilter"><option value="all">Todas</option>{region_options}</select></div>
+<div class="multi-select" id="regionMS"></div></div>
 <div class="group" id="comunaGroup" style="display:none"><label>Comuna</label>
-<select id="comunaFilter"><option value="all">Todas</option>{comuna_options}</select></div>
+<div class="multi-select" id="comunaMS"></div></div>
 <div class="group"><label>Ordenar</label>
 <select id="sortFilter">
 <option value="desc-desc">Mayor descuento</option>
@@ -676,6 +703,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <h2>Resultados</h2>
 <span class="pill" id="count">0</span>
 </div>
+<div id="summaryBar" class="summary-bar"></div>
 <div class="grid" id="grid"></div>
 <div class="empty" id="empty">No hay descuentos con esos filtros 🤷</div>
 </main>
@@ -746,16 +774,51 @@ if(btn.dataset.tab==='mapa')initMap();
 // ── Card grid ──
 const grid=document.getElementById('grid'),empty=document.getElementById('empty'),
 countEl=document.getElementById('count'),search=document.getElementById('search'),
-bankF=document.getElementById('bankFilter'),regionF=document.getElementById('regionFilter'),
-comunaF=document.getElementById('comunaFilter'),comunaG=document.getElementById('comunaGroup'),
+comunaG=document.getElementById('comunaGroup'),
 sortF=document.getElementById('sortFilter'),minD=document.getElementById('minDisc'),
-minDV=document.getElementById('minDiscVal');
-const RM_KEYS=['metropolitana','region metropolitana','región metropolitana de santiago','rm'];
-function isRM(v){{return RM_KEYS.some(k=>v.toLowerCase().includes(k))}}
-regionF.addEventListener('change',()=>{{
-if(regionF.value!=='all'&&isRM(regionF.value)){{comunaG.style.display='block'}}
-else{{comunaG.style.display='none';comunaF.value='all'}}
-}});
+minDV=document.getElementById('minDiscVal'),summaryBar=document.getElementById('summaryBar');
+
+// ── Multi-Select Component ──
+const bankOpts={bancos_json_list};
+const regionOpts={regiones_json_list};
+const comunaOpts={comunas_json_list};
+class MS{{
+constructor(id,opts,ph){{this.el=document.getElementById(id);this.opts=opts;this.sel=new Set();this.ph=ph;this._build()}}
+_build(){{
+const hs=this.opts.length>5;
+this.el.innerHTML=`<div class="ms-trigger"><div class="ms-tags"><span class="ms-placeholder">${{this.ph}}</span></div><span class="ms-arrow">▾</span></div><div class="ms-dropdown">${{hs?'<input class="ms-search-input" placeholder="Buscar...">':''}}<div class="ms-opts">${{this.opts.map(o=>`<label class="ms-option"><input type="checkbox" value="${{o}}"> ${{o}}</label>`).join('')}}</div></div>`;
+this.el.querySelector('.ms-trigger').addEventListener('click',e=>{{
+if(e.target.closest('.ms-remove'))return;
+document.querySelectorAll('.multi-select.open').forEach(x=>{{if(x!==this.el)x.classList.remove('open')}});
+this.el.classList.toggle('open')}});
+this.el.querySelectorAll('.ms-option input').forEach(cb=>{{cb.addEventListener('change',()=>{{
+if(cb.checked)this.sel.add(cb.value);else this.sel.delete(cb.value);
+this._tags();render()}})}});
+const si=this.el.querySelector('.ms-search-input');
+if(si){{si.addEventListener('input',()=>{{const q=si.value.toLowerCase();
+this.el.querySelectorAll('.ms-option').forEach(o=>{{o.style.display=o.textContent.toLowerCase().includes(q)?'':'none'}})}});
+si.addEventListener('click',e=>e.stopPropagation())}}
+document.addEventListener('click',e=>{{if(!this.el.contains(e.target))this.el.classList.remove('open')}})}}
+_tags(){{
+const t=this.el.querySelector('.ms-tags');
+if(!this.sel.size){{t.innerHTML=`<span class="ms-placeholder">${{this.ph}}</span>`;return}}
+t.innerHTML=[...this.sel].map(v=>`<span class="ms-tag">${{v}}<span class="ms-remove" data-v="${{v}}">×</span></span>`).join('');
+t.querySelectorAll('.ms-remove').forEach(x=>{{x.addEventListener('click',e=>{{
+e.stopPropagation();this.sel.delete(x.dataset.v);
+const c=[...this.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===x.dataset.v);
+if(c)c.checked=false;this._tags();render()}})}})}}
+vals(){{return this.sel.size?[...this.sel]:null}}
+reset(){{this.sel.clear();this.el.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);this._tags()}}
+}}
+const bankMS=new MS('bankMS',bankOpts,'Todos los bancos');
+const regionMS=new MS('regionMS',regionOpts,'Todas las regiones');
+const comunaMS=new MS('comunaMS',comunaOpts,'Todas las comunas');
+// Show comunas when Metropolitana selected
+regionMS.el.querySelectorAll('.ms-option input').forEach(cb=>{{cb.addEventListener('change',()=>{{
+const rv=regionMS.vals();
+if(rv&&rv.includes('Metropolitana')){{comunaG.style.display='block'}}
+else{{comunaG.style.display='none';comunaMS.reset()}}
+}})}});
 
 function chipVal(id,attr){{const a=document.querySelector('#'+id+' .chip.active');return a?a.dataset[attr]:'all'}}
 function initChips(id,attr){{document.getElementById(id).addEventListener('click',e=>{{
@@ -764,14 +827,20 @@ document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('active
 initChips('dayChips','day');initChips('modeChips','mode');
 minD.addEventListener('input',()=>{{minDV.textContent=minD.value+'%'}});
 
+// ── Normalize for search ──
+function norm(s){{return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9\\s]/g,'').toLowerCase()}}
+
 function render(){{
-const q=search.value.trim().toLowerCase(),bank=bankF.value,region=regionF.value,
-comuna=comunaF.value,sort=sortF.value,min=+minD.value,day=chipVal('dayChips','day'),mode=chipVal('modeChips','mode');
+const qRaw=search.value.trim();
+const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
+const banks=bankMS.vals(),regions=regionMS.vals(),comunas=comunaMS.vals();
+const sort=sortF.value,min=+minD.value,day=chipVal('dayChips','day'),mode=chipVal('modeChips','mode');
 let f=deals.filter(d=>{{
-const mS=!q||[d.restaurante,d.banco,d.descripcion,d.ubicacion,d.direccion].join(' ').toLowerCase().includes(q);
-const mB=bank==='all'||d.banco===bank;
-const mR=region==='all'||d.ubicacion===region;
-const mC=comuna==='all'||d.comuna===comuna;
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.ubicacion||'',d.direccion||''].join(' '));
+const mS=!qWords.length||qWords.every(w=>txt.includes(w));
+const mB=!banks||banks.includes(d.banco);
+const mR=!regions||regions.includes(d.ubicacion);
+const mC=!comunas||comunas.includes(d.comuna);
 const mD=d.descuento_valor>=min;
 const mDay=day==='all'||d.dias_validos.includes(day)||d.dias_validos.includes('todos');
 const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
@@ -780,6 +849,16 @@ f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuent
 case'name':return a.restaurante.localeCompare(b.restaurante);
 case'bank':return a.banco.localeCompare(b.banco);
 default:return b.descuento_valor-a.descuento_valor}}}});
+// ── Summary bar (count per bank) ──
+const byBank={{}};f.forEach(d=>{{byBank[d.banco]=(byBank[d.banco]||0)+1}});
+const bankEntries=Object.entries(byBank).sort((a,b)=>b[1]-a[1]);
+if(bankEntries.length>0){{
+summaryBar.style.display='flex';
+summaryBar.innerHTML=bankEntries.map(([b,c])=>{{
+const logo=BANK_LOGOS[b];
+const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.style.display='none'">`:'';
+return `<span class="summary-pill">${{lh}}<span class="sp-ct">${{c}}</span> ${{b}}</span>`}}).join('');
+}}else{{summaryBar.style.display='none';summaryBar.innerHTML=''}}
 grid.innerHTML='';
 if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
 empty.style.display='none';countEl.textContent=f.length+' encontrados';
@@ -813,7 +892,7 @@ grid.appendChild(el)}})}}
 
 document.getElementById('applyBtn').addEventListener('click',render);
 document.getElementById('resetBtn').addEventListener('click',()=>{{
-search.value='';bankF.value='all';regionF.value='all';comunaF.value='all';comunaG.style.display='none';
+search.value='';bankMS.reset();regionMS.reset();comunaMS.reset();comunaG.style.display='none';
 sortF.value='desc-desc';minD.value=0;minDV.textContent='0%';
 document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
 document.querySelector('#dayChips .chip[data-day="all"]').classList.add('active');
@@ -821,12 +900,12 @@ document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('activ
 
 const initDia={init_dia},initBanco={init_banco},initQ={init_q};
 if(initQ)search.value=initQ;
-if(initBanco)bankF.value=initBanco;
+if(initBanco){{const c=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===initBanco);
+if(c){{c.checked=true;bankMS.sel.add(initBanco);bankMS._tags()}}}}
 if(initDia){{document.querySelectorAll('#dayChips .chip').forEach(c=>{{c.classList.remove('active');
 if(c.dataset.day===initDia)c.classList.add('active')}})}}
 render();
-search.addEventListener('input',render);bankF.addEventListener('change',render);
-regionF.addEventListener('change',render);comunaF.addEventListener('change',render);sortF.addEventListener('change',render);
+search.addEventListener('input',render);sortF.addEventListener('change',render);
 minD.addEventListener('input',render);
 document.getElementById('dayChips').addEventListener('click',()=>setTimeout(render,10));
 document.getElementById('modeChips').addEventListener('click',()=>setTimeout(render,10));
@@ -849,7 +928,7 @@ const REGION_COORDS={{
 }};
 function getCoords(ubicacion,idx){{
 if(!ubicacion)return null;
-const key=ubicacion.toLowerCase().replace(/región\s*(de(l)?\s*)?/gi,'').trim();
+const key=ubicacion.toLowerCase().replace(/región\\s*(de(l)?\\s*)?/gi,'').trim();
 for(const[k,v] of Object.entries(REGION_COORDS)){{
 if(key.includes(k)||k.includes(key))return[v[0]+(Math.random()-.5)*.02,v[1]+(Math.random()-.5)*.02];
 }}
