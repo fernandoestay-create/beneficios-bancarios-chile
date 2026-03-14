@@ -451,7 +451,7 @@ TOKENS_ACCESO = {
 }
 
 # Modo público: si es True, no pide clave (para cuando quieras abrir la página)
-ACCESO_PUBLICO = False
+ACCESO_PUBLICO = True
 
 
 def _login_page(error: str = ""):
