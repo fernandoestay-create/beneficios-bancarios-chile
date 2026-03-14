@@ -615,17 +615,19 @@ max-height:220px;overflow-y:auto;padding:4px}}
 .ms-search-input{{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);
 font-size:12px;outline:none;background:var(--panel2)}}.ms-search-input:focus{{border-color:var(--primary)}}
 /* Summary bar */
-.summary-bar{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;justify-content:center}}
-.summary-pill{{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-padding:6px 4px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
-width:64px;height:52px;cursor:pointer;transition:all .15s;user-select:none}}
+.summary-bar{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:stretch;justify-content:center}}
+.summary-pill{{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+padding:8px 4px 6px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
+width:68px;cursor:pointer;transition:all .15s;user-select:none}}
 .summary-pill:hover{{border-color:var(--primary);background:#f5f3ff}}
 .summary-pill.active{{background:linear-gradient(135deg,rgba(79,70,229,.1),rgba(124,58,237,.1));
 border-color:var(--primary);box-shadow:0 0 0 2px rgba(79,70,229,.2)}}
-.summary-pill img{{height:18px;width:auto;max-width:52px;object-fit:contain}}
+.summary-pill .sp-logo{{height:22px;display:flex;align-items:center;justify-content:center;flex:1}}
+.summary-pill .sp-logo img{{height:100%;width:auto;max-width:56px;object-fit:contain}}
 .summary-pill .sp-nologo{{font-size:9px;font-weight:700;color:var(--muted);
-text-align:center;line-height:1.1;max-width:56px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}}
-.summary-pill .sp-ct{{font-weight:800;font-size:13px;color:var(--primary)}}
+text-align:center;line-height:1.1;max-width:56px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+height:22px;display:flex;align-items:center;justify-content:center}}
+.summary-pill .sp-ct{{font-weight:800;font-size:14px;color:var(--primary);margin-top:4px}}
 /* Map */
 #map{{height:calc(100vh - 200px);min-height:500px;border-radius:var(--radius);border:1px solid var(--line)}}
 .map-layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
@@ -752,11 +754,11 @@ const BANK_LOGOS={{
 'Banco Itaú':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Ita%C3%BA_Unibanco_logo_2023.svg/200px-Ita%C3%BA_Unibanco_logo_2023.svg.png',
 'Scotiabank':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Scotiabank_logo.svg/200px-Scotiabank_logo.svg.png',
 'Santander':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Banco_Santander_Logotipo.svg/200px-Banco_Santander_Logotipo.svg.png',
-'Banco Consorcio':'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Logo_Banco_Consorcio.svg/200px-Logo_Banco_Consorcio.svg.png',
-'BancoEstado':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/BancoEstado_logo.svg/200px-BancoEstado_logo.svg.png',
-'Banco Security':'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banco_Security_logo.svg/200px-Banco_Security_logo.svg.png',
-'Banco Ripley':'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Banco_Ripley_Logo.svg/200px-Banco_Ripley_Logo.svg.png',
-'Entel':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Entel_logo.svg/200px-Entel_logo.svg.png'
+'Banco Consorcio':'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Logo_consorcio.svg/200px-Logo_consorcio.svg.png',
+'BancoEstado':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Logo_BancoEstado.svg/200px-Logo_BancoEstado.svg.png',
+'Banco Security':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Logo_empresa_banco_security.png/200px-Logo_empresa_banco_security.png',
+'Banco Ripley':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Logo_Ripley_banco_2.png/200px-Logo_Ripley_banco_2.png',
+'Entel':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/EntelChile_Logo.svg/200px-EntelChile_Logo.svg.png'
 }};
 const BANK_COLORS={{
 'Banco de Chile':'#003DA5','Banco Falabella':'#00B140',
@@ -866,7 +868,7 @@ const selBanks=bankMS.vals();
 summaryBar.innerHTML=bankEntries.map(([b,c])=>{{
 const logo=BANK_LOGOS[b];
 const isActive=selBanks&&selBanks.includes(b);
-const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.querySelector('.sp-nologo')||this.insertAdjacentHTML('afterend','<span class=sp-nologo>${{b}}</span>');this.remove()">`
+const lh=logo?`<div class="sp-logo"><img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span>'"></div>`
 :`<span class="sp-nologo">${{b}}</span>`;
 return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
 summaryBar.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
@@ -1004,7 +1006,7 @@ const selMapBanks=mapBankMS.vals();
 mapSummary.innerHTML=be.map(([b,c])=>{{
 const logo=BANK_LOGOS[b];
 const isActive=selMapBanks&&selMapBanks.includes(b);
-const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.querySelector('.sp-nologo')||this.insertAdjacentHTML('afterend','<span class=sp-nologo>${{b}}</span>');this.remove()">`
+const lh=logo?`<div class="sp-logo"><img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span>'"></div>`
 :`<span class="sp-nologo">${{b}}</span>`;
 return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
 mapSummary.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
