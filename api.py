@@ -615,11 +615,16 @@ max-height:220px;overflow-y:auto;padding:4px}}
 .ms-search-input{{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);
 font-size:12px;outline:none;background:var(--panel2)}}.ms-search-input:focus{{border-color:var(--primary)}}
 /* Summary bar */
-.summary-bar{{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center;justify-content:center}}
-.summary-pill{{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;border-radius:10px;
-background:var(--panel2);border:1px solid var(--line);min-width:48px}}
-.summary-pill img{{height:20px;width:auto}}.summary-pill .sp-nologo{{font-size:10px;font-weight:700;color:var(--muted);
-text-align:center;line-height:1.1;max-width:50px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}}
+.summary-bar{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center;justify-content:center}}
+.summary-pill{{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+padding:6px 4px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
+width:64px;height:52px;cursor:pointer;transition:all .15s;user-select:none}}
+.summary-pill:hover{{border-color:var(--primary);background:#f5f3ff}}
+.summary-pill.active{{background:linear-gradient(135deg,rgba(79,70,229,.1),rgba(124,58,237,.1));
+border-color:var(--primary);box-shadow:0 0 0 2px rgba(79,70,229,.2)}}
+.summary-pill img{{height:18px;width:auto;max-width:52px;object-fit:contain}}
+.summary-pill .sp-nologo{{font-size:9px;font-weight:700;color:var(--muted);
+text-align:center;line-height:1.1;max-width:56px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}}
 .summary-pill .sp-ct{{font-weight:800;font-size:13px;color:var(--primary)}}
 /* Map */
 #map{{height:calc(100vh - 200px);min-height:500px;border-radius:var(--radius);border:1px solid var(--line)}}
@@ -857,11 +862,18 @@ const byBank={{}};f.forEach(d=>{{byBank[d.banco]=(byBank[d.banco]||0)+1}});
 const bankEntries=Object.entries(byBank).sort((a,b)=>b[1]-a[1]);
 if(bankEntries.length>0){{
 summaryBar.style.display='flex';
+const selBanks=bankMS.vals();
 summaryBar.innerHTML=bankEntries.map(([b,c])=>{{
 const logo=BANK_LOGOS[b];
-const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span><span class=sp-ct>${{c}}</span>'">`
+const isActive=selBanks&&selBanks.includes(b);
+const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.querySelector('.sp-nologo')||this.insertAdjacentHTML('afterend','<span class=sp-nologo>${{b}}</span>');this.remove()">`
 :`<span class="sp-nologo">${{b}}</span>`;
-return `<span class="summary-pill" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
+return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
+summaryBar.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
+const banco=pill.dataset.banco;
+const cb=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===banco);
+if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.sel.delete(banco);bankMS._tags();render()}}
+}})}});
 }}else{{summaryBar.style.display='none';summaryBar.innerHTML=''}}
 grid.innerHTML='';
 if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
@@ -988,11 +1000,18 @@ document.getElementById('mapCount').textContent=count;
 const be=Object.entries(byBank).sort((a,b)=>b[1]-a[1]);
 if(be.length>0){{
 mapSummary.style.display='flex';
+const selMapBanks=mapBankMS.vals();
 mapSummary.innerHTML=be.map(([b,c])=>{{
 const logo=BANK_LOGOS[b];
-const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span><span class=sp-ct>${{c}}</span>'">`
+const isActive=selMapBanks&&selMapBanks.includes(b);
+const lh=logo?`<img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.querySelector('.sp-nologo')||this.insertAdjacentHTML('afterend','<span class=sp-nologo>${{b}}</span>');this.remove()">`
 :`<span class="sp-nologo">${{b}}</span>`;
-return `<span class="summary-pill" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
+return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
+mapSummary.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
+const banco=pill.dataset.banco;
+const cb=[...mapBankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===banco);
+if(cb){{cb.checked=!cb.checked;if(cb.checked)mapBankMS.sel.add(banco);else mapBankMS.sel.delete(banco);mapBankMS._tags();renderMapMarkers()}}
+}})}});
 }}else{{mapSummary.style.display='none'}}
 }}
 </script>
