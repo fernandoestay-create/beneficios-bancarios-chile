@@ -4,15 +4,15 @@ API REST - BENEFICIOS BANCARIOS
 FastAPI + OpenAI RAG
 """
 
-from fastapi import FastAPI, HTTPException, Query, Form, Response
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Query, Form, Response, Cookie
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import quote_plus
 from pydantic import BaseModel
 from typing import List, Optional
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -441,6 +441,70 @@ async def scrape_status():
 
 
 # ============================================
+# ACCESO TEMPORAL — tokens con fecha de expiración
+# ============================================
+
+# Tokens de acceso: {"clave": fecha_expiración}
+# Para agregar uno nuevo: TOKENS_ACCESO["nuevaclave"] = datetime(2026, 3, 20)
+TOKENS_ACCESO = {
+    "prueba": datetime(2026, 3, 15, 23, 59, 59),   # caduca 15 marzo 2026
+}
+
+# Modo público: si es True, no pide clave (para cuando quieras abrir la página)
+ACCESO_PUBLICO = False
+
+
+def _login_page(error: str = ""):
+    """Página simple de login para acceso temporal"""
+    err_html = f'<p style="color:#e74c3c;margin-bottom:12px">{error}</p>' if error else ''
+    return f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Acceso — Beneficios Bancarios</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;
+display:flex;align-items:center;justify-content:center}}
+.card{{background:#fff;border-radius:16px;padding:40px 36px;width:360px;
+box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}}
+.card h1{{font-size:22px;color:#333;margin-bottom:6px}}
+.card p.sub{{font-size:13px;color:#888;margin-bottom:24px}}
+.card input{{width:100%;padding:12px 16px;border:2px solid #e0e0e0;border-radius:10px;
+font-size:15px;outline:none;transition:border .2s}}
+.card input:focus{{border-color:#667eea}}
+.card button{{width:100%;padding:12px;margin-top:14px;border:none;border-radius:10px;
+background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:15px;
+font-weight:600;cursor:pointer;transition:opacity .2s}}
+.card button:hover{{opacity:.9}}
+.emoji{{font-size:48px;margin-bottom:12px}}
+</style></head><body>
+<div class="card">
+<div class="emoji">🔒</div>
+<h1>Acceso de prueba</h1>
+<p class="sub">Ingresa la clave que te compartieron</p>
+{err_html}
+<form method="POST" action="/ver/login">
+<input type="text" name="clave" placeholder="Clave de acceso" autocomplete="off" autofocus>
+<button type="submit">Entrar</button>
+</form>
+</div></body></html>"""
+
+
+@app.post("/ver/login", response_class=HTMLResponse)
+async def ver_login(clave: str = Form(...)):
+    """Valida la clave y setea cookie de sesión"""
+    clave = clave.strip().lower()
+    if clave not in TOKENS_ACCESO:
+        return HTMLResponse(_login_page("Clave incorrecta"), status_code=401)
+    if datetime.now() > TOKENS_ACCESO[clave]:
+        return HTMLResponse(_login_page("Esta clave ya caducó ⏰"), status_code=403)
+    # Cookie válida por 24h
+    resp = RedirectResponse("/ver", status_code=303)
+    resp.set_cookie("acceso_key", clave, max_age=86400, httponly=True)
+    return resp
+
+
+# ============================================
 # PÁGINA WEB - TABLA COMPLETA DE RESULTADOS
 # ============================================
 
@@ -449,9 +513,22 @@ async def ver_resultados(
     dia: Optional[str] = Query(None, description="Día de la semana"),
     banco: Optional[str] = Query(None, description="Nombre del banco"),
     q: Optional[str] = Query(None, description="Búsqueda libre"),
+    key: Optional[str] = Query(None, description="Clave de acceso temporal"),
+    acceso_key: Optional[str] = Cookie(None),
 ):
     """Genera página HTML con cards de beneficios, filtros interactivos e imágenes"""
     import html as html_lib
+
+    # --- Control de acceso temporal ---
+    if not ACCESO_PUBLICO:
+        # Prioridad: query param > cookie
+        token = (key or "").strip().lower() or (acceso_key or "").strip().lower()
+        if not token or token not in TOKENS_ACCESO:
+            return HTMLResponse(_login_page())
+        if datetime.now() > TOKENS_ACCESO[token]:
+            return HTMLResponse(_login_page("Esta clave ya caducó ⏰"), status_code=403)
+        # Si vino por query param, setear cookie para no pedir de nuevo
+        # (se hace al final del response)
 
     all_data = beneficios_db
     # Serializar a JSON para filtros en JS
@@ -1066,7 +1143,11 @@ if(cb){{cb.checked=!cb.checked;if(cb.checked)mapBankMS.sel.add(banco);else mapBa
 }}
 </script>
 </body></html>"""
-    return HTMLResponse(content=page_html)
+    # Si llegó por ?key=xxx, setear cookie para sesión
+    resp = HTMLResponse(content=page_html)
+    if key and not ACCESO_PUBLICO:
+        resp.set_cookie("acceso_key", key.strip().lower(), max_age=86400, httponly=True)
+    return resp
 
 
 # ============================================
