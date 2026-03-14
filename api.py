@@ -607,13 +607,13 @@ background:linear-gradient(135deg,var(--primary),var(--primary2));-webkit-backgr
 .stat{{background:var(--panel2);border-radius:14px;padding:16px;text-align:center}}
 .stat .val{{font-size:28px;font-weight:800;color:var(--primary)}}
 .stat .lbl{{color:var(--muted);font-size:12px;margin-top:2px}}
-/* Tab navigation */
-.tabs{{display:flex;gap:4px;margin-bottom:16px;background:var(--panel2);padding:4px;border-radius:12px;width:fit-content}}
-.tab-btn{{border:0;background:transparent;color:var(--muted);padding:10px 20px;border-radius:10px;
+/* View toggle (inside results) */
+.view-toggle{{display:flex;gap:4px;margin-bottom:16px;background:var(--panel2);padding:4px;border-radius:12px;width:fit-content}}
+.view-btn{{border:0;background:transparent;color:var(--muted);padding:10px 20px;border-radius:10px;
 font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}}
-.tab-btn.active{{background:var(--panel);color:var(--primary);box-shadow:var(--shadow)}}
-.tab-btn:hover:not(.active){{color:var(--text)}}
-.tab-content{{display:none}}.tab-content.active{{display:block}}
+.view-btn.active{{background:var(--panel);color:var(--primary);box-shadow:var(--shadow)}}
+.view-btn:hover:not(.active){{color:var(--text)}}
+.view-content{{display:none}}.view-content.active{{display:block}}
 .layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
 .filters{{position:sticky;top:12px;padding:18px}}
 .filters h2{{font-size:16px;margin-bottom:14px;font-weight:700}}
@@ -628,13 +628,13 @@ font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}}
 .chip:hover{{border-color:var(--primary);background:#f5f3ff}}
 .chip.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
 /* Day circle multi-select */
-.day-select{{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}}
-.day-sel{{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-font-size:10px;font-weight:700;border:1.5px solid var(--line);color:var(--muted);background:var(--panel2);
+.day-select{{display:flex;align-items:center;gap:2px;flex-wrap:nowrap}}
+.day-sel{{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:9px;font-weight:700;border:1.5px solid var(--line);color:var(--muted);background:var(--panel2);
 cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
 .day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
 .day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
-.day-sel-all{{width:auto;padding:0 10px;border-radius:999px;font-size:10px;letter-spacing:.3px}}
+.day-sel-all{{width:auto;padding:0 8px;border-radius:999px;font-size:9px;letter-spacing:.3px;flex-shrink:0}}
 .range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
 input[type=range]{{accent-color:var(--primary)}}
 .btns{{display:flex;gap:8px;margin-top:10px}}
@@ -719,17 +719,14 @@ text-align:center;line-height:1.1;max-width:56px;overflow:hidden;white-space:now
 height:22px;display:flex;align-items:center;justify-content:center}}
 .summary-pill .sp-ct{{font-weight:800;font-size:14px;color:var(--primary);margin-top:4px}}
 /* Map */
-#map{{height:calc(100vh - 200px);min-height:500px;border-radius:var(--radius);border:1px solid var(--line)}}
-.map-layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
-.map-stats{{padding:14px;margin-bottom:10px;text-align:center}}
-.map-stats .val{{font-size:22px;font-weight:800;color:var(--primary)}}
+#map{{height:calc(100vh - 260px);min-height:450px;border-radius:var(--radius);border:1px solid var(--line)}}
 .leaflet-popup-content{{font-family:Inter,sans-serif;font-size:13px;line-height:1.5}}
 .popup-title{{font-weight:700;font-size:15px;margin-bottom:4px}}
 .popup-bank{{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:4px}}
 .popup-bank img{{height:14px}}
 .popup-desc{{color:var(--muted);margin:4px 0}}
 .popup-link{{display:inline-block;background:var(--primary);color:#fff;padding:4px 10px;border-radius:6px;text-decoration:none;font-weight:600;font-size:12px;margin-top:4px}}
-@media(max-width:980px){{.hero,.layout,.grid,.map-layout{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
+@media(max-width:980px){{.hero,.layout,.grid{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
 .filters{{position:static}}.deal-img{{height:140px}}#map{{height:60vh}}
 .day-circle{{width:24px;height:24px;font-size:10px}}.day-bar{{gap:4px;padding:6px 8px}}}}
 </style>
@@ -749,11 +746,6 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div class="stat"><div class="val">{int(max_desc)}%</div><div class="lbl">Mejor descuento</div></div>
 </div>
 </section>
-<div class="tabs">
-<button class="tab-btn active" data-tab="descuentos">🍽️ Descuentos</button>
-<button class="tab-btn" data-tab="mapa">📍 Mapa</button>
-</div>
-<div id="tab-descuentos" class="tab-content active">
 <section class="layout">
 <aside class="card filters">
 <h2>Filtros</h2>
@@ -777,13 +769,6 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div class="multi-select" id="regionMS"></div></div>
 <div class="group" id="comunaGroup" style="display:none"><label>Comuna</label>
 <div class="multi-select" id="comunaMS"></div></div>
-<div class="group"><label>Ordenar</label>
-<select id="sortFilter">
-<option value="desc-desc">Mayor descuento</option>
-<option value="desc-asc">Menor descuento</option>
-<option value="name">Nombre A-Z</option>
-<option value="bank">Banco A-Z</option>
-</select></div>
 <div class="group"><label>Descuento mínimo</label>
 <div class="range-row"><input id="minDisc" type="range" min="0" max="50" step="5" value="0">
 <strong id="minDiscVal">0%</strong></div></div>
@@ -793,9 +778,21 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <button class="chip" data-mode="presencial">🏪 Presencial</button>
 <button class="chip" data-mode="online">💻 Online</button>
 </div></div>
+<div class="group" id="sortGroup"><label>Ordenar</label>
+<select id="sortFilter">
+<option value="desc-desc">Mayor descuento</option>
+<option value="desc-asc">Menor descuento</option>
+<option value="name">Nombre A-Z</option>
+<option value="bank">Banco A-Z</option>
+</select></div>
 <button class="btn-secondary" id="resetBtn2" style="width:100%;margin-top:10px;font-size:12px;padding:7px 0">Limpiar filtros</button>
 </aside>
 <main class="card results">
+<div class="view-toggle">
+<button class="view-btn active" data-view="tarjetas">🍽️ Tarjetas</button>
+<button class="view-btn" data-view="mapa">📍 Mapa</button>
+</div>
+<div id="view-tarjetas" class="view-content active">
 <div class="toolbar">
 <h2>Resultados</h2>
 <span class="pill" id="count">0</span>
@@ -803,31 +800,17 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <div id="summaryBar" class="summary-bar"></div>
 <div class="grid" id="grid"></div>
 <div class="empty" id="empty">No hay descuentos con esos filtros 🤷</div>
-</main>
-</section>
 </div>
-<div id="tab-mapa" class="tab-content">
-<section class="map-layout">
-<aside class="card filters">
-<h2>Mapa de descuentos</h2>
-<div class="card map-stats">
-<div class="val" id="mapCount">0</div>
-<div class="lbl">Restaurantes en el mapa</div>
+<div id="view-mapa" class="view-content">
+<div class="toolbar">
+<h2>Mapa</h2>
+<span class="pill" id="mapCount">0 en mapa</span>
 </div>
-<div class="group"><label>Buscar</label>
-<input id="mapSearch" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
-<div class="group"><label>Banco</label>
-<div class="multi-select" id="mapBankMS"></div></div>
-<div class="group"><label>Zona</label>
-<div class="multi-select" id="mapRegionMS"></div></div>
-<p style="color:var(--muted);font-size:12px;margin-top:10px">📍 Solo se muestran restaurantes con dirección conocida.</p>
-</aside>
-<main>
-<div id="mapSummaryBar" class="summary-bar" style="margin-bottom:8px"></div>
 <div id="map"></div>
+<p style="color:var(--muted);font-size:11px;margin-top:8px;text-align:center">📍 Solo se muestran restaurantes con dirección conocida</p>
+</div>
 </main>
 </section>
-</div>
 <div class="footer">Actualizado: {timestamp_ultimo_scrape or 'N/A'} · Beneficios Bancarios Chile 🇨🇱</div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -865,13 +848,17 @@ if(logo)return `<img src="${{logo}}" alt="${{banco}}" onerror="this.style.displa
 return `<span style="font-size:11px;font-weight:700">${{banco}}</span>`;
 }}
 
-// ── Tabs ──
-document.querySelectorAll('.tab-btn').forEach(btn=>{{btn.addEventListener('click',()=>{{
-document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+// ── View toggle ──
+let currentView='tarjetas';
+document.querySelectorAll('.view-btn').forEach(btn=>{{btn.addEventListener('click',()=>{{
+document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+document.querySelectorAll('.view-content').forEach(c=>c.classList.remove('active'));
 btn.classList.add('active');
-document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-if(btn.dataset.tab==='mapa'){{initMap();setTimeout(()=>{{if(mapObj)mapObj.invalidateSize()}},50)}}
+currentView=btn.dataset.view;
+document.getElementById('view-'+currentView).classList.add('active');
+// Show/hide sort (only for tarjetas)
+document.getElementById('sortGroup').style.display=currentView==='tarjetas'?'':'none';
+if(currentView==='mapa'){{initMap();setTimeout(()=>{{if(mapObj)mapObj.invalidateSize();renderMapMarkers()}},80)}}
 }})}});
 
 // ── Card grid ──
@@ -1020,12 +1007,13 @@ ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${
 <div class="disclaimer">⚠️ Siempre revisar condiciones especiales en el banco</div></div>`;
 grid.appendChild(el)}})}}
 
+function renderAll(){{render();if(currentView==='mapa'&&mapObj)renderMapMarkers()}}
 function resetAll(){{
 search.value='';bankMS.reset();regionMS.reset();comunaMS.reset();comunaG.style.display='none';
 sortF.value='desc-desc';minD.value=0;minDV.textContent='0%';
 document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
 document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');
-dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));render()}}
+dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));renderAll()}}
 document.getElementById('resetBtn').addEventListener('click',resetAll);
 document.getElementById('resetBtn2').addEventListener('click',resetAll);
 
@@ -1036,10 +1024,10 @@ if(c){{c.checked=true;bankMS.sel.add(initBanco);bankMS._tags()}}}}
 if(initDia){{dayAll.classList.remove('active');
 daySels.forEach(s=>{{if(s.dataset.day===initDia)s.classList.add('active')}});}}
 render();
-search.addEventListener('input',render);sortF.addEventListener('change',render);
-minD.addEventListener('input',render);
-daySelect.addEventListener('click',()=>setTimeout(render,10));
-document.getElementById('modeChips').addEventListener('click',()=>setTimeout(render,10));
+search.addEventListener('input',renderAll);sortF.addEventListener('change',renderAll);
+minD.addEventListener('input',renderAll);
+daySelect.addEventListener('click',()=>setTimeout(renderAll,10));
+document.getElementById('modeChips').addEventListener('click',()=>setTimeout(renderAll,10));
 
 // ── MAP ──
 const REGION_COORDS={{
@@ -1066,9 +1054,6 @@ if(key.includes(k)||k.includes(key))return[v[0]+(Math.random()-.5)*.02,v[1]+(Mat
 return null;
 }}
 let mapObj=null,markers=null;
-const mapBankMS=new MS('mapBankMS',bankOpts,'Todos los bancos');
-const mapRegionMS=new MS('mapRegionMS',regionOpts,'Todas las regiones');
-const mapSummary=document.getElementById('mapSummaryBar');
 function initMap(){{
 if(mapObj){{mapObj.invalidateSize();renderMapMarkers();return}}
 mapObj=L.map('map').setView([-33.45,-70.65],6);
@@ -1076,24 +1061,16 @@ L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}@2x.
 attribution:'&copy; <a href="https://carto.com">CARTO</a>',maxZoom:18}}).addTo(mapObj);
 markers=L.layerGroup().addTo(mapObj);
 renderMapMarkers();
-document.getElementById('mapSearch').addEventListener('input',renderMapMarkers);
 }}
 function renderMapMarkers(){{
 if(!markers)return;
 markers.clearLayers();
-// Combine map-local filters with main Descuentos filters
-const mqRaw=document.getElementById('mapSearch').value.trim();
-const mainQRaw=search.value.trim();
-const combinedQ=(mqRaw+' '+mainQRaw).trim();
-const qWords=combinedQ?norm(combinedQ).split(/\\s+/).filter(w=>w.length>0):[];
-const mapBanks=mapBankMS.vals(),mainBanks=bankMS.vals();
-const mapRegions=mapRegionMS.vals(),mainRegions=regionMS.vals();
-const banks=mapBanks||mainBanks;
-const regions=mapRegions||mainRegions;
-const comunas=comunaMS.vals();
+// Uses same filters as card view
+const qRaw=search.value.trim();
+const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
+const banks=bankMS.vals(),regions=regionMS.vals(),comunas=comunaMS.vals();
 const min=+minD.value,selDays=getSelectedDays(),mode=chipVal('modeChips','mode');
 let count=0;
-const byBank={{}};
 const withAddr=deals.filter(d=>d.direccion||d.ubicacion);
 withAddr.forEach((d,i)=>{{
 const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||'',d.ubicacion||''].join(' '));
@@ -1108,7 +1085,6 @@ if(!mS||!mB||!mR||!mC||!mD||!mDay||!mMode)return;
 const coords=getCoords(d.ubicacion,i);
 if(!coords)return;
 count++;
-byBank[d.banco]=(byBank[d.banco]||0)+1;
 const color=BANK_COLORS[d.banco]||'#6b7280';
 const icon=L.divIcon({{className:'',html:`<div style="background:${{color}};width:28px;height:28px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800">${{d.descuento_valor||'?'}}%</div>`,
 iconSize:[28,28],iconAnchor:[14,14]}});
@@ -1123,23 +1099,7 @@ ${{d.direccion?`<div style="font-size:12px">📍 ${{d.direccion}}</div>`:''}}
 ${{d.url_fuente?`<a class="popup-link" href="${{d.url_fuente}}" target="_blank">Ver detalle</a>`:''}}</div>`;
 L.marker(coords,{{icon}}).bindPopup(popup,{{maxWidth:280}}).addTo(markers);
 }});
-document.getElementById('mapCount').textContent=count;
-const be=Object.entries(byBank).sort((a,b)=>b[1]-a[1]);
-if(be.length>0){{
-mapSummary.style.display='flex';
-const selMapBanks=mapBankMS.vals();
-mapSummary.innerHTML=be.map(([b,c])=>{{
-const logo=BANK_LOGOS[b];
-const isActive=selMapBanks&&selMapBanks.includes(b);
-const lh=logo?`<div class="sp-logo"><img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span>'"></div>`
-:`<span class="sp-nologo">${{b}}</span>`;
-return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
-mapSummary.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
-const banco=pill.dataset.banco;
-const cb=[...mapBankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===banco);
-if(cb){{cb.checked=!cb.checked;if(cb.checked)mapBankMS.sel.add(banco);else mapBankMS.sel.delete(banco);mapBankMS._tags();renderMapMarkers()}}
-}})}});
-}}else{{mapSummary.style.display='none'}}
+document.getElementById('mapCount').textContent=count+' en mapa';
 }}
 </script>
 </body></html>"""
