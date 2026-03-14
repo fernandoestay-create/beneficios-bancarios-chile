@@ -758,13 +758,18 @@ const BANK_LOGOS={{
 'BancoEstado':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Logo_BancoEstado.svg/200px-Logo_BancoEstado.svg.png',
 'Banco Security':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Logo_empresa_banco_security.png/200px-Logo_empresa_banco_security.png',
 'Banco Ripley':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Logo_Ripley_banco_2.png/200px-Logo_Ripley_banco_2.png',
-'Entel':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/EntelChile_Logo.svg/200px-EntelChile_Logo.svg.png'
+'Entel':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/EntelChile_Logo.svg/200px-EntelChile_Logo.svg.png',
+'Tenpo':'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Logotipo_Tenpo.svg/200px-Logotipo_Tenpo.svg.png',
+'Lider BCI':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Lider_2025.svg/200px-Lider_2025.svg.png',
+'Banco BICE':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Bice-logo.svg/200px-Bice-logo.svg.png',
+'Mach':'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Logotipo_MACH.svg/200px-Logotipo_MACH.svg.png'
 }};
 const BANK_COLORS={{
 'Banco de Chile':'#003DA5','Banco Falabella':'#00B140',
 'BCI':'#E31837','Banco Itaú':'#003399','Scotiabank':'#EC111A',
 'Santander':'#EC0000','Banco Consorcio':'#003366','BancoEstado':'#00A651',
-'Banco Security':'#1B3A5C','Banco Ripley':'#7B2D8E','Entel':'#FF6B00'
+'Banco Security':'#1B3A5C','Banco Ripley':'#7B2D8E','Entel':'#FF6B00',
+'Tenpo':'#00C389','Lider BCI':'#E31837','Banco BICE':'#002F6C','Mach':'#6B21A8'
 }};
 function bankBadgeHtml(banco){{
 const logo=BANK_LOGOS[banco];
@@ -1106,6 +1111,10 @@ Descuento Maximo: {max(vals) if vals else 0}%"""
             'ripley': 'Banco Ripley', 'consorcio': 'Banco Consorcio',
             'bancoestado': 'BancoEstado', 'banco estado': 'BancoEstado',
             'entel': 'Entel',
+            'tenpo': 'Tenpo',
+            'lider bci': 'Lider BCI', 'liderbci': 'Lider BCI', 'lider': 'Lider BCI',
+            'bice': 'Banco BICE',
+            'mach': 'Mach',
         }
         if 'banco de chile' in texto or ('chile' in texto and 'banco' in texto):
             banco_filtro = 'Banco de Chile'

@@ -2077,6 +2077,771 @@ class ScraperEntel:
 
 
 # ============================================
+# SCRAPER TENPO (Webflow CMS)
+# ============================================
+
+class ScraperTenpo:
+    """Scraper de Tenpo via Webflow CMS (HTML estático paginado)"""
+
+    BASE_URL = "https://www.tenpo.cl/beneficios"
+    BANCO = "Tenpo"
+    MAX_PAGES = 6
+
+    FOOD_KEYWORDS = [
+        'foodie', 'comida', 'restaurante', 'restaurant', 'pizza', 'sushi',
+        'burger', 'café', 'cafe', 'bar', 'parrilla', 'grill', 'cocina',
+        'food', 'gourmet', 'starbucks', 'mcdonald', 'papa john', 'domino',
+        'subway', 'kfc', 'delivery', 'rappi', 'uber eats', 'pedidosya',
+        'brunch', 'almuerzo', 'cena', 'menú', 'menu', 'sabores',
+    ]
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+        })
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de comida de Tenpo (Webflow CMS)"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (Webflow CMS)...")
+            from bs4 import BeautifulSoup
+
+            all_cards = []
+            for page_num in range(1, self.MAX_PAGES + 1):
+                url = f"{self.BASE_URL}?ca01dc3d_page={page_num}" if page_num > 1 else self.BASE_URL
+                try:
+                    response = self.session.get(url, timeout=15)
+                    response.raise_for_status()
+                except Exception:
+                    break
+
+                soup = BeautifulSoup(response.text, 'html.parser')
+                # Webflow CMS benefit cards (not filter checkboxes)
+                cards = soup.select('.beneficio-collection-item')
+                if not cards:
+                    break
+
+                all_cards.extend(cards)
+                if page_num == 1:
+                    print(f"   Página 1: {len(cards)} cards")
+
+                # If fewer than expected, we're on the last page
+                if len(cards) < 10:
+                    break
+
+            print(f"   Total cards: {len(all_cards)}")
+
+            seen_names = set()
+            for card in all_cards:
+                beneficio = self._parsear_card(card)
+                if beneficio and beneficio.restaurante not in seen_names:
+                    seen_names.add(beneficio.restaurante)
+                    self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _parsear_card(self, card) -> Optional[Beneficio]:
+        """Parsea una card de Webflow CMS a Beneficio"""
+        try:
+            # Category from fs-cmsfilter-field="Categoria"
+            cat_el = card.select_one('[fs-cmsfilter-field="Categoria"]')
+            category = cat_el.get_text(strip=True).lower() if cat_el else ''
+
+            # Name from fs-cmsfilter-field="Name"
+            name_el = card.select_one('[fs-cmsfilter-field="Name"]')
+            nombre = name_el.get_text(strip=True) if name_el else ''
+
+            if not nombre:
+                titulo_el = card.select_one('.b-titulo, .titulo-beneficio')
+                nombre = titulo_el.get_text(strip=True) if titulo_el else ''
+            if not nombre:
+                return None
+
+            # Title/discount text
+            titulo_el = card.select_one('.titulo-beneficio, .b-titulo, .titulo-beneficio-all')
+            titulo = titulo_el.get_text(strip=True) if titulo_el else ''
+
+            # Description
+            desc_el = card.select_one('.p-text-beneficio-copy, .texto-beneficio')
+            descripcion = desc_el.get_text(strip=True) if desc_el else ''
+
+            # Check if food-related by category or keywords
+            texto_buscar = f"{nombre} {titulo} {descripcion} {category}".lower()
+            es_comida = category in ['foodie', 'comida', 'food', 'gastronomía', 'gastronomia', 'restaurante']
+            if not es_comida:
+                es_comida = any(kw in texto_buscar for kw in self.FOOD_KEYWORDS)
+            if not es_comida:
+                return None
+
+            # Discount
+            descuento_valor = 0
+            match = re.search(r'(\d+)\s*%', f"{titulo} {descripcion}")
+            if match:
+                descuento_valor = int(match.group(1))
+            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else titulo[:100] if titulo else descripcion[:100]
+
+            # Days from .dia-abrev elements
+            dias_els = card.select('.dia-abrev')
+            if dias_els:
+                dias_texto = ' '.join(d.get_text(strip=True) for d in dias_els)
+                dias_validos = self._extraer_dias(dias_texto)
+            else:
+                dias_validos = self._extraer_dias(f"{titulo} {descripcion}")
+
+            # Image from background-image or img
+            imagen_url = ''
+            head_card = card.select_one('.head-card')
+            if head_card:
+                style = head_card.get('style', '')
+                bg_match = re.search(r'url\(["\']?(.*?)["\']?\)', style)
+                if bg_match:
+                    imagen_url = bg_match.group(1)
+            if not imagen_url:
+                img_el = card.select_one('img.brand-partner, img')
+                if img_el:
+                    imagen_url = img_el.get('src', '') or img_el.get('data-src', '')
+
+            # Logo from .brand-partner img
+            logo_url = ''
+            logo_el = card.select_one('img.brand-partner')
+            if logo_el:
+                logo_url = logo_el.get('src', '')
+
+            # Link
+            link_el = card.select_one('a')
+            href = link_el.get('href', '') if link_el else ''
+            url = href if href and href.startswith('http') else f"https://www.tenpo.cl{href}" if href else self.BASE_URL
+
+            # Location
+            ciudad_el = card.select_one('[fs-cmsfilter-field="Ciudad"]')
+            ubicacion = ciudad_el.get_text(strip=True) if ciudad_el else ''
+            if ubicacion.lower() == 'todo chile':
+                ubicacion = ''
+
+            card_id = re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40])
+
+            return Beneficio(
+                id=f"tenpo_{card_id}",
+                banco=self.BANCO,
+                tarjeta="Tenpo",
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=dias_validos,
+                ubicacion=ubicacion,
+                presencial=True,
+                online=True,
+                url_fuente=url,
+                imagen_url=imagen_url,
+                logo_url=logo_url,
+                descripcion=descripcion[:200],
+                activo=True,
+            )
+        except Exception:
+            return None
+
+    def _extraer_dias(self, texto: str) -> List[str]:
+        """Extrae días mencionados en texto"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sábados': 'sabado', 'sabado': 'sabado',
+            'domingo': 'domingo', 'domingos': 'domingo',
+        }
+        texto_lower = texto.lower()
+        if 'todos los días' in texto_lower or 'todos los dias' in texto_lower:
+            return ['todos']
+        found = [dias_map[d] for d in dias_map if d in texto_lower]
+        return list(dict.fromkeys(found)) if found else ['todos']
+
+
+# ============================================
+# SCRAPER LIDER BCI (Modyo CMS via Playwright)
+# ============================================
+
+class ScraperLiderBCI:
+    """Scraper de Lider BCI via Modyo CMS API (interceptada con Playwright)"""
+
+    API_URL = "https://www.bci.cl/api/content/spaces/tarjeta-lider/types/descuentos/entries?per_page=10000&sort_by=meta.published_at&order=desc"
+    PAGE_URL = "https://www.liderbci.cl/descuentos"
+    BANCO = "Lider BCI"
+
+    def __init__(self):
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de gastronomía de Lider BCI (Playwright intercept)"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (Playwright + API intercept)...")
+            from playwright.sync_api import sync_playwright
+
+            captured_data = []
+
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                context = browser.new_context(
+                    user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                )
+                page = context.new_page()
+
+                def capture(response):
+                    if 'tarjeta-lider' in response.url and 'entries' in response.url and response.status == 200:
+                        try:
+                            captured_data.append(response.json())
+                        except Exception:
+                            pass
+
+                page.on('response', capture)
+                page.goto(self.PAGE_URL, wait_until='domcontentloaded', timeout=30000)
+                page.wait_for_timeout(8000)
+                browser.close()
+
+            if not captured_data:
+                print(f"   ⚠️ No se capturó data de API, intentando request directo...")
+                return self._fallback_request()
+
+            # Process captured API data
+            for data in captured_data:
+                entries = data.get('entries', [])
+                print(f"   Entries capturadas: {len(entries)}")
+                for entry in entries:
+                    beneficio = self._parsear_entry(entry)
+                    if beneficio:
+                        self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _fallback_request(self) -> List[Beneficio]:
+        """Intenta request directo a la API (puede fallar por Cloudflare)"""
+        try:
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Accept': 'application/json',
+                'Referer': self.PAGE_URL,
+            })
+            response = session.get(self.API_URL, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            entries = data.get('entries', [])
+            for entry in entries:
+                beneficio = self._parsear_entry(entry)
+                if beneficio:
+                    self.beneficios.append(beneficio)
+            print(f"   Fallback request OK: {len(self.beneficios)} beneficios")
+        except Exception as e:
+            print(f"   ❌ Fallback también falló: {e}")
+        return self.beneficios
+
+    def _parsear_entry(self, entry: dict) -> Optional[Beneficio]:
+        """Parsea una entry de Modyo CMS a Beneficio si es gastronomía"""
+        try:
+            fields = entry.get('fields', {})
+            meta = entry.get('meta', {})
+
+            categoria = fields.get('categoria', '').strip()
+            # Normalize: "Gastronomía" → "gastronomia" (remove accents + lowercase)
+            import unicodedata
+            cat_norm = ''.join(c for c in unicodedata.normalize('NFD', categoria.lower()) if unicodedata.category(c) != 'Mn')
+            if cat_norm != 'gastronomia':
+                return None
+
+            nombre_raw = fields.get('descripcion_card', '') or meta.get('name', 'Desconocido')
+            # Extract restaurant name from "En KFC todos los lunes" → try to get cleaner name
+            nombre = meta.get('name', '').replace('Descuento - ', '').strip()
+            if not nombre:
+                nombre = nombre_raw
+
+            slug = meta.get('slug', '')
+            descuento_card = fields.get('valor_descuento', '')
+            dias_texto = fields.get('texto_dias', '')
+            filtrado_dias = fields.get('filtrado_dias', [])
+
+            # Discount
+            descuento_valor = 0
+            match = re.search(r'(\d+)', descuento_card)
+            if match:
+                descuento_valor = int(match.group(1))
+            descuento_texto = descuento_card.strip() if descuento_card else ''
+            if descuento_valor > 0 and 'dcto' not in descuento_texto.lower() and 'dto' not in descuento_texto.lower():
+                descuento_texto = f"{descuento_valor}% dcto."
+
+            # Days
+            dias_validos = ['todos']
+            if isinstance(filtrado_dias, list) and filtrado_dias:
+                dias_map = {
+                    'lunes': 'lunes', 'martes': 'martes', 'miercoles': 'miercoles',
+                    'miércoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+                    'sabado': 'sabado', 'sábado': 'sabado', 'domingo': 'domingo',
+                }
+                dias = [dias_map.get(d.lower().strip(), d.lower().strip()) for d in filtrado_dias if d.lower().strip() in dias_map]
+                if dias:
+                    dias_validos = dias
+
+            # Images
+            img_data = fields.get('imagen', {})
+            imagen_url = img_data.get('url', '') if isinstance(img_data, dict) else ''
+            logo_data = fields.get('logo_marca', {})
+            logo_url = logo_data.get('url', '') if isinstance(logo_data, dict) else ''
+
+            # Vigencia
+            vigencia = fields.get('vigencia_detalle', '')
+            valido_desde = ''
+            valido_hasta = ''
+            if vigencia:
+                fechas = re.findall(r'(\d{1,2}-\d{2}-\d{4})', vigencia)
+                if len(fechas) >= 2:
+                    valido_desde = fechas[0]
+                    valido_hasta = fechas[-1]
+                elif len(fechas) == 1:
+                    valido_hasta = fechas[0]
+
+            # Modo (presencial/online)
+            modo = fields.get('modo_descuento_detalle', '').lower()
+            presencial = 'presencial' in modo or not modo
+            online = 'online' in modo
+
+            # Tope
+            tope_raw = fields.get('tope_descuento_detalle', '')
+            tope = 0
+            tope_match = re.search(r'\$\s*([\d.]+)', str(tope_raw))
+            if tope_match:
+                tope = int(tope_match.group(1).replace('.', ''))
+
+            # Descripción
+            titulo = fields.get('titulo_detalle', '')
+            desc_card = fields.get('descripcion_card', '')
+            descripcion = titulo if titulo else desc_card
+
+            url = f"https://www.liderbci.cl/descuentos/{slug}" if slug else self.PAGE_URL
+
+            entry_id = meta.get('uuid', re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40]))
+
+            return Beneficio(
+                id=f"liderbci_{entry_id}",
+                banco=self.BANCO,
+                tarjeta="Tarjeta Lider BCI",
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=dias_validos,
+                valido_desde=valido_desde,
+                valido_hasta=valido_hasta,
+                ubicacion='',
+                tope_descuento=tope,
+                presencial=presencial,
+                online=online,
+                url_fuente=url,
+                imagen_url=imagen_url,
+                logo_url=logo_url,
+                descripcion=descripcion[:200] if descripcion else '',
+                activo=True,
+            )
+        except Exception:
+            return None
+
+
+# ============================================
+# SCRAPER BANCO BICE (Widget JS Bundle)
+# ============================================
+
+class ScraperBICE:
+    """Scraper de Banco BICE via Widget JS Bundle (Modyo CMS)"""
+
+    WIDGET_URL = "https://banco.bice.cl/personas/widget_manager/1b019b42-daf2-4148-a051-a360be61be81/4197b85bfbed841f865596459940910d8cde6819bfc3633dd5073564e7d11be7.js"
+    FALLBACK_API = "https://bice.certification.modyo.com/api/content/spaces/beneficios-bice/types/beneficios/entries"
+    BANCO = "Banco BICE"
+    FOOD_CATEGORIES = ['restaurante', 'gourmet', 'delivery']
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+        })
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de restaurantes de Banco BICE"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (Widget JS Bundle)...")
+
+            entries = self._fetch_widget_js()
+            if not entries:
+                print(f"   ⚠️ Widget JS falló, intentando API certification...")
+                entries = self._fetch_certification_api()
+
+            if not entries:
+                print(f"   ❌ No se pudieron obtener datos")
+                return self.beneficios
+
+            print(f"   Total entries: {len(entries)}")
+
+            # Filter food categories
+            for entry in entries:
+                cat = entry.get('meta', {}).get('category_slug') or entry.get('meta', {}).get('category') or ''
+                if cat and cat.lower() in self.FOOD_CATEGORIES:
+                    beneficio = self._parsear_entry(entry)
+                    if beneficio:
+                        self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _fetch_widget_js(self) -> list:
+        """Extrae entries del JS bundle del widget"""
+        try:
+            response = self.session.get(self.WIDGET_URL, timeout=20)
+            response.raise_for_status()
+            js_content = response.text
+
+            # Extract JSON array from 'const entries = [...]'
+            match = re.search(r'const\s+entries\s*=\s*(\[.*?\]);\s*\n', js_content, re.DOTALL)
+            if match:
+                return json.loads(match.group(1))
+
+            # Try alternative patterns
+            match = re.search(r'entries\s*[:=]\s*(\[.*?\])\s*[;,]', js_content, re.DOTALL)
+            if match:
+                return json.loads(match.group(1))
+
+            return []
+        except Exception as e:
+            print(f"   Widget JS error: {e}")
+            return []
+
+    def _fetch_certification_api(self) -> list:
+        """Fallback: API de certificación de Modyo"""
+        try:
+            all_entries = []
+            for cat in self.FOOD_CATEGORIES:
+                params = {'meta.category': cat, 'per_page': 100}
+                response = self.session.get(self.FALLBACK_API, params=params, timeout=15)
+                response.raise_for_status()
+                data = response.json()
+                entries = data.get('entries', [])
+                all_entries.extend(entries)
+            return all_entries
+        except Exception as e:
+            print(f"   API certification error: {e}")
+            return []
+
+    def _parsear_entry(self, entry: dict) -> Optional[Beneficio]:
+        """Parsea una entry BICE a Beneficio"""
+        try:
+            meta = entry.get('meta', {})
+            fields = entry.get('fields', {})
+
+            nombre = fields.get('Marca', meta.get('name', 'Desconocido'))
+
+            # Discount
+            promo_big = fields.get('Texto-promo-big', '')
+            promo_small = fields.get('Texto-promo-small', '')
+            descuento_valor = 0
+            match = re.search(r'(\d+)', str(promo_big))
+            if match:
+                descuento_valor = int(match.group(1))
+            descuento_texto = f"{promo_big} {promo_small}".strip()
+            if descuento_valor > 0 and 'dcto' not in descuento_texto.lower():
+                descuento_texto = f"{descuento_valor}% dcto."
+
+            # Region
+            regiones = fields.get('Region', [])
+            ubicacion = ''
+            if isinstance(regiones, list) and regiones:
+                ubicacion = regiones[0]
+
+            # Cities/address
+            ciudades_html = fields.get('Ciudades', '')
+            direccion_html = fields.get('Direccion', '')
+            ciudades = re.sub(r'<[^>]+>', ' ', str(ciudades_html)).strip() if ciudades_html else ''
+            direccion = re.sub(r'<[^>]+>', ' ', str(direccion_html)).strip() if direccion_html else ''
+
+            # Dates
+            fecha_desde = fields.get('Fecha-desde', '')
+            fecha_hasta = fields.get('Fecha-hasta', '')
+            valido_desde = fecha_desde[:10] if fecha_desde else ''
+            valido_hasta = fecha_hasta[:10] if fecha_hasta else ''
+
+            # Cards/tarjetas
+            tarjetas = fields.get('Tarjetas', [])
+            tarjeta = ', '.join(tarjetas[:2]) if tarjetas else 'Tarjetas BICE'
+
+            # Days from name (e.g. "Living Cafe / Lunes")
+            dias_validos = self._extraer_dias(meta.get('name', ''))
+
+            # Images
+            logo_data = fields.get('Logo', {})
+            logo_url = logo_data.get('url', '') if isinstance(logo_data, dict) else ''
+            img_data = fields.get('Imagen-show', fields.get('Galeria', [{}]))
+            imagen_url = ''
+            if isinstance(img_data, dict):
+                imagen_url = img_data.get('url', '')
+            elif isinstance(img_data, list) and img_data:
+                imagen_url = img_data[0].get('url', '') if isinstance(img_data[0], dict) else ''
+
+            # Donde (presencial/online)
+            donde = fields.get('Donde', '').lower()
+            presencial = 'presencial' in donde or 'fisic' in donde or not donde
+            online = 'online' in donde
+
+            # Description
+            bajada_html = fields.get('Bajada-sitio-publico', '') or fields.get('Bajada', '')
+            descripcion = re.sub(r'<[^>]+>', ' ', str(bajada_html)).strip()[:200] if bajada_html else ''
+
+            # URL
+            slug = meta.get('slug', '')
+            url = f"https://banco.bice.cl/personas/beneficios/{slug}" if slug else 'https://banco.bice.cl/personas/beneficios'
+
+            # Website
+            sitio_web = fields.get('Sitio_web', '')
+
+            entry_id = meta.get('uuid', re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40]))
+
+            return Beneficio(
+                id=f"bice_{entry_id}",
+                banco=self.BANCO,
+                tarjeta=tarjeta,
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=dias_validos,
+                valido_desde=valido_desde,
+                valido_hasta=valido_hasta,
+                ubicacion=ubicacion,
+                comuna=ciudades[:50] if ciudades else '',
+                direccion=direccion[:200] if direccion else '',
+                presencial=presencial,
+                online=online,
+                url_fuente=url,
+                imagen_url=imagen_url,
+                logo_url=logo_url,
+                descripcion=descripcion,
+                activo=True,
+            )
+        except Exception:
+            return None
+
+    def _extraer_dias(self, texto: str) -> List[str]:
+        """Extrae días de texto como 'Living Cafe / Lunes'"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sabado': 'sabado', 'domingo': 'domingo',
+        }
+        texto_lower = texto.lower()
+        found = [dias_map[d] for d in dias_map if d in texto_lower]
+        return list(dict.fromkeys(found)) if found else ['todos']
+
+
+# ============================================
+# SCRAPER MACH (HTML embebido, Modyo CMS)
+# ============================================
+
+class ScraperMach:
+    """Scraper de Mach via HTML con JSON embebido (const apiBnf)"""
+
+    PAGE_URL = "https://www.machbank.cl/beneficios?catg=restaurantes"
+    BANCO = "Mach"
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+        })
+        self.beneficios: List[Beneficio] = []
+
+    def scrapear(self) -> List[Beneficio]:
+        """Extrae beneficios de restaurantes de Mach"""
+        try:
+            print(f"📡 Scrapeando {self.BANCO} (HTML con JSON embebido)...")
+
+            response = self.session.get(self.PAGE_URL, timeout=20)
+            response.raise_for_status()
+            html = response.text
+
+            # Extract embedded JSON array: const apiBnf = [...];
+            match = re.search(r'const\s+apiBnf\s*=\s*(\[.*?\]);\s*\n', html, re.DOTALL)
+            if not match:
+                # Try alternative patterns
+                match = re.search(r'apiBnf\s*=\s*(\[.*?\]);\s', html, re.DOTALL)
+
+            if not match:
+                print(f"   ⚠️ No se encontró apiBnf en HTML, intentando Playwright...")
+                return self._playwright_fallback()
+
+            entries = json.loads(match.group(1))
+            print(f"   Total entries embebidas: {len(entries)}")
+
+            # Filter restaurants
+            for entry in entries:
+                cat = entry.get('meta', {}).get('category_name') or entry.get('meta', {}).get('category') or ''
+                if cat and cat.lower() in ['restaurantes', 'restaurante', 'comida']:
+                    beneficio = self._parsear_entry(entry)
+                    if beneficio:
+                        self.beneficios.append(beneficio)
+
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
+            return self.beneficios
+
+        except Exception as e:
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
+            return self.beneficios
+
+    def _playwright_fallback(self) -> List[Beneficio]:
+        """Fallback: interceptar API con Playwright"""
+        try:
+            from playwright.sync_api import sync_playwright
+
+            captured_data = []
+
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+
+                def capture(response):
+                    if 'mach' in response.url and 'entries' in response.url and response.status == 200:
+                        try:
+                            captured_data.append(response.json())
+                        except Exception:
+                            pass
+
+                page.on('response', capture)
+                page.goto(self.PAGE_URL, wait_until='domcontentloaded', timeout=30000)
+                page.wait_for_timeout(8000)
+                browser.close()
+
+            for data in captured_data:
+                entries = data.get('entries', [])
+                for entry in entries:
+                    cat = entry.get('meta', {}).get('category_name') or ''
+                    if cat and cat.lower() in ['restaurantes', 'restaurante']:
+                        beneficio = self._parsear_entry(entry)
+                        if beneficio:
+                            self.beneficios.append(beneficio)
+
+            print(f"   Playwright fallback: {len(self.beneficios)} beneficios")
+            return self.beneficios
+        except Exception as e:
+            print(f"   ❌ Fallback también falló: {e}")
+            return self.beneficios
+
+    def _parsear_entry(self, entry: dict) -> Optional[Beneficio]:
+        """Parsea una entry de Mach a Beneficio"""
+        try:
+            meta = entry.get('meta', {})
+            fields = entry.get('fields', {})
+
+            nombre = fields.get('nombre_de_empresa', '') or fields.get('titulo', meta.get('name', 'Desconocido'))
+            titulo = fields.get('titulo', '')
+
+            # Discount from etiqueta_banner
+            etiqueta = fields.get('etiqueta_banner', '')
+            descuento_valor = 0
+            match = re.search(r'(\d+)\s*%', etiqueta)
+            if match:
+                descuento_valor = int(match.group(1))
+            if not etiqueta:
+                match = re.search(r'(\d+)\s*%', titulo)
+                if match:
+                    descuento_valor = int(match.group(1))
+            descuento_texto = etiqueta.strip() if etiqueta else f"{descuento_valor}% dcto." if descuento_valor > 0 else titulo[:100]
+
+            # Days
+            dias_raw = fields.get('dia_de_promo', [])
+            dias_validos = ['todos']
+            if isinstance(dias_raw, list) and dias_raw:
+                dias_map = {
+                    'lunes': 'lunes', 'martes': 'martes', 'miercoles': 'miercoles',
+                    'miércoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+                    'sabado': 'sabado', 'sábado': 'sabado', 'domingo': 'domingo',
+                }
+                dias = [dias_map.get(d.lower().strip(), d.lower().strip()) for d in dias_raw if d.lower().strip() in dias_map]
+                if dias:
+                    dias_validos = dias
+
+            # Payment method
+            medio_pago = fields.get('medio_de_pago', [])
+            tarjeta_parts = []
+            for mp in (medio_pago if isinstance(medio_pago, list) else []):
+                mp_lower = mp.lower()
+                if 'credito' in mp_lower or 'crédito' in mp_lower:
+                    tarjeta_parts.append('Crédito')
+                elif 'debito' in mp_lower or 'débito' in mp_lower:
+                    tarjeta_parts.append('Débito')
+                elif 'qr' in mp_lower:
+                    tarjeta_parts.append('QR')
+            tarjeta = f"Mach {', '.join(tarjeta_parts)}".strip() if tarjeta_parts else 'Mach'
+
+            # Region
+            regiones = fields.get('region_de_promo', [])
+            ubicacion = regiones[0] if isinstance(regiones, list) and regiones else ''
+
+            # Type (presencial/online)
+            tipo = fields.get('tipo_de_beneficio', [])
+            presencial = any('presencial' in t.lower() for t in tipo) if isinstance(tipo, list) else True
+            online = any('online' in t.lower() for t in tipo) if isinstance(tipo, list) else False
+
+            # Images
+            img_data = fields.get('imagen', {})
+            imagen_url = img_data.get('url', '') if isinstance(img_data, dict) else ''
+            logo_data = fields.get('logo_de_empresa', {})
+            logo_url = logo_data.get('url', '') if isinstance(logo_data, dict) else ''
+
+            # Description
+            descripcion = fields.get('descripcion', '') or fields.get('descripcion_banner', '')
+            descripcion = re.sub(r'<[^>]+>', ' ', str(descripcion)).strip()[:200]
+
+            # URL
+            slug = meta.get('slug', '')
+            url = f"https://www.machbank.cl/beneficios/detalle/{slug}" if slug else self.PAGE_URL
+
+            entry_id = meta.get('uuid', re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40]))
+
+            return Beneficio(
+                id=f"mach_{entry_id}",
+                banco=self.BANCO,
+                tarjeta=tarjeta,
+                restaurante=nombre,
+                descuento_valor=float(descuento_valor),
+                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_texto=descuento_texto,
+                dias_validos=dias_validos,
+                ubicacion=ubicacion,
+                presencial=presencial,
+                online=online,
+                url_fuente=url,
+                imagen_url=imagen_url,
+                logo_url=logo_url,
+                descripcion=descripcion,
+                activo=True,
+            )
+        except Exception:
+            return None
+
+
+# ============================================
 # ORQUESTADOR PRINCIPAL
 # ============================================
 
@@ -2180,6 +2945,10 @@ class OrquestadorScrapers:
             ('Banco Security', ScraperBancoSecurity),
             ('Banco Ripley', ScraperBancoRipley),
             ('Entel', ScraperEntel),
+            ('Tenpo', ScraperTenpo),
+            ('Lider BCI', ScraperLiderBCI),
+            ('Banco BICE', ScraperBICE),
+            ('Mach', ScraperMach),
         ]
 
         for nombre, ScraperClass in scrapers:
