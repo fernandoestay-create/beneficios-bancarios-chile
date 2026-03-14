@@ -483,8 +483,9 @@ async def ver_resultados(
         'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble', 'Biobío',
         'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
     }
-    regiones_list = sorted(r for r in set(b.ubicacion for b in all_data if b.ubicacion) if r in REGIONES_VALIDAS)
-    comunas_list = sorted(set(b.comuna for b in all_data if b.comuna))
+    _regiones_set = set(r for r in set(b.ubicacion for b in all_data if b.ubicacion) if r in REGIONES_VALIDAS)
+    regiones_list = (['Metropolitana'] if 'Metropolitana' in _regiones_set else []) + sorted(r for r in _regiones_set if r != 'Metropolitana')
+    comunas_list = sorted(set(b.comuna for b in all_data if b.comuna and b.ubicacion == 'Metropolitana'))
     banco_options = "".join(f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>' for b in bancos_list)
     region_options = "".join(f'<option value="{html_lib.escape(r)}">{html_lib.escape(r)}</option>' for r in regiones_list)
     comuna_options = "".join(f'<option value="{html_lib.escape(c)}">{html_lib.escape(c)}</option>' for c in comunas_list)
@@ -550,13 +551,13 @@ font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}}
 .chip:hover{{border-color:var(--primary);background:#f5f3ff}}
 .chip.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
 /* Day circle multi-select */
-.day-select{{display:flex;align-items:center;gap:6px;flex-wrap:wrap}}
-.day-sel{{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-font-size:12px;font-weight:700;border:2px solid var(--line);color:var(--muted);background:var(--panel2);
-cursor:pointer;transition:all .15s;user-select:none}}
+.day-select{{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}}
+.day-sel{{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:10px;font-weight:700;border:1.5px solid var(--line);color:var(--muted);background:var(--panel2);
+cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
 .day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
 .day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
-.day-sel-all{{width:auto;padding:0 12px;border-radius:999px;font-size:11px;letter-spacing:.3px}}
+.day-sel-all{{width:auto;padding:0 10px;border-radius:999px;font-size:10px;letter-spacing:.3px}}
 .range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
 input[type=range]{{accent-color:var(--primary)}}
 .btns{{display:flex;gap:8px;margin-top:10px}}
@@ -679,10 +680,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <section class="layout">
 <aside class="card filters">
 <h2>Filtros</h2>
-<div class="btns btns-top">
-<button class="btn-primary" id="applyBtn">Aplicar</button>
-<button class="btn-secondary" id="resetBtn">Limpiar</button>
-</div>
+<button class="btn-secondary" id="resetBtn" style="width:100%;margin-bottom:10px;font-size:12px;padding:7px 0">Limpiar filtros</button>
 <div class="group"><label>Buscar</label>
 <input id="search" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
 <div class="group"><label>Banco</label>
@@ -718,10 +716,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <button class="chip" data-mode="presencial">🏪 Presencial</button>
 <button class="chip" data-mode="online">💻 Online</button>
 </div></div>
-<div class="btns btns-bottom">
-<button class="btn-primary btn-sm" id="applyBtn2">Aplicar</button>
-<button class="btn-link" id="resetBtn2">Limpiar filtros</button>
-</div>
+<button class="btn-secondary" id="resetBtn2" style="width:100%;margin-top:10px;font-size:12px;padding:7px 0">Limpiar filtros</button>
 </aside>
 <main class="card results">
 <div class="toolbar">
@@ -799,7 +794,7 @@ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
 document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
 btn.classList.add('active');
 document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-if(btn.dataset.tab==='mapa')initMap();
+if(btn.dataset.tab==='mapa'){{initMap();setTimeout(()=>{{if(mapObj)mapObj.invalidateSize()}},50)}}
 }})}});
 
 // ── Card grid ──
@@ -954,9 +949,7 @@ sortF.value='desc-desc';minD.value=0;minDV.textContent='0%';
 document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
 document.querySelector('#modeChips .chip[data-mode="all"]').classList.add('active');
 dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));render()}}
-document.getElementById('applyBtn').addEventListener('click',render);
 document.getElementById('resetBtn').addEventListener('click',resetAll);
-document.getElementById('applyBtn2').addEventListener('click',render);
 document.getElementById('resetBtn2').addEventListener('click',resetAll);
 
 const initDia={init_dia},initBanco={init_banco},initQ={init_q};
@@ -1011,18 +1004,30 @@ document.getElementById('mapSearch').addEventListener('input',renderMapMarkers);
 function renderMapMarkers(){{
 if(!markers)return;
 markers.clearLayers();
-const qRaw=document.getElementById('mapSearch').value.trim();
-const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
-const banks=mapBankMS.vals(),regions=mapRegionMS.vals();
+// Combine map-local filters with main Descuentos filters
+const mqRaw=document.getElementById('mapSearch').value.trim();
+const mainQRaw=search.value.trim();
+const combinedQ=(mqRaw+' '+mainQRaw).trim();
+const qWords=combinedQ?norm(combinedQ).split(/\\s+/).filter(w=>w.length>0):[];
+const mapBanks=mapBankMS.vals(),mainBanks=bankMS.vals();
+const mapRegions=mapRegionMS.vals(),mainRegions=regionMS.vals();
+const banks=mapBanks||mainBanks;
+const regions=mapRegions||mainRegions;
+const comunas=comunaMS.vals();
+const min=+minD.value,selDays=getSelectedDays(),mode=chipVal('modeChips','mode');
 let count=0;
 const byBank={{}};
 const withAddr=deals.filter(d=>d.direccion||d.ubicacion);
 withAddr.forEach((d,i)=>{{
-const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||''].join(' '));
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||'',d.ubicacion||''].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
 const mR=!regions||regions.includes(d.ubicacion);
-if(!mS||!mB||!mR)return;
+const mC=!comunas||comunas.includes(d.comuna);
+const mD=d.descuento_valor>=min;
+const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
+const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
+if(!mS||!mB||!mR||!mC||!mD||!mDay||!mMode)return;
 const coords=getCoords(d.ubicacion,i);
 if(!coords)return;
 count++;
