@@ -1019,7 +1019,7 @@ class ScraperScotiabank:
                 direccion=direccion,
                 presencial=True,
                 online=False,
-                url_fuente=web if web and web.startswith('http') else self.PAGE_URL,
+                url_fuente=self.PAGE_URL,
                 imagen_url=imagen_url,
                 restricciones_texto=condiciones[:300] if condiciones else '',
                 activo=True,

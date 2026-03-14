@@ -552,6 +552,7 @@ font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}}
 .range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
 input[type=range]{{accent-color:var(--primary)}}
 .btns{{display:flex;gap:8px;margin-top:10px}}
+.btns-top{{margin-top:0;margin-bottom:12px;position:sticky;top:0;z-index:5;background:var(--panel2);padding:8px 0}}
 button{{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}}
 .btn-primary{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;flex:1}}
 .btn-secondary{{background:var(--panel2);color:var(--text);border:1px solid var(--line)}}
@@ -667,6 +668,10 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <section class="layout">
 <aside class="card filters">
 <h2>Filtros</h2>
+<div class="btns btns-top">
+<button class="btn-primary" id="applyBtn">Aplicar</button>
+<button class="btn-secondary" id="resetBtn">Limpiar</button>
+</div>
 <div class="group"><label>Buscar</label>
 <input id="search" class="input" type="text" placeholder="Ej: sushi, pizza..."></div>
 <div class="group"><label>Banco</label>
@@ -702,10 +707,6 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <button class="chip" data-mode="presencial">🏪 Presencial</button>
 <button class="chip" data-mode="online">💻 Online</button>
 </div></div>
-<div class="btns">
-<button class="btn-primary" id="applyBtn">Aplicar</button>
-<button class="btn-secondary" id="resetBtn">Limpiar</button>
-</div>
 </aside>
 <main class="card results">
 <div class="toolbar">
