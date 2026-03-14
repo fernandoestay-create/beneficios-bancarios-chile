@@ -1120,25 +1120,188 @@ def _detectar_dia_hoy() -> str:
     return dias[datetime.now().weekday()]
 
 
-async def procesar_comando_whatsapp(texto: str) -> str:
+# ── Estado conversacional por usuario ──
+# {phone: {"step": "ask_banco"|"ask_dia"|"ask_comida", "bancos": [], "dia": "", "comida": ""}}
+user_flow = {}
+
+BANCOS_ALIAS = {
+    'banco de chile': 'Banco de Chile', 'chile': 'Banco de Chile',
+    'falabella': 'Banco Falabella', 'banco falabella': 'Banco Falabella',
+    'bci': 'BCI',
+    'itau': 'Banco Itaú', 'itaú': 'Banco Itaú', 'banco itau': 'Banco Itaú',
+    'scotiabank': 'Scotiabank', 'scotia': 'Scotiabank',
+    'santander': 'Santander',
+    'security': 'Banco Security', 'banco security': 'Banco Security',
+    'ripley': 'Banco Ripley', 'banco ripley': 'Banco Ripley',
+    'consorcio': 'Banco Consorcio', 'banco consorcio': 'Banco Consorcio',
+    'bancoestado': 'BancoEstado', 'banco estado': 'BancoEstado', 'estado': 'BancoEstado',
+    'entel': 'Entel',
+    'tenpo': 'Tenpo',
+    'lider': 'Lider BCI', 'lider bci': 'Lider BCI',
+    'bice': 'Banco BICE', 'banco bice': 'Banco BICE',
+    'mach': 'Mach',
+}
+
+DIAS_ALIAS = {
+    'lunes': 'lunes', 'martes': 'martes', 'miercoles': 'miercoles', 'miércoles': 'miercoles',
+    'jueves': 'jueves', 'viernes': 'viernes', 'sabado': 'sabado', 'sábado': 'sabado',
+    'domingo': 'domingo', 'hoy': _detectar_dia_hoy(),
+}
+
+
+def _parse_bancos(texto: str) -> list:
+    """Parsea bancos del texto del usuario"""
+    texto = texto.lower().strip()
+    if texto in ['todos', 'todo', 'all', 'cualquiera', 'da igual', 'no importa']:
+        return []  # sin filtro = todos
+    # Intentar match largo primero, luego corto
+    encontrados = []
+    for alias, nombre in sorted(BANCOS_ALIAS.items(), key=lambda x: -len(x[0])):
+        if alias in texto and nombre not in encontrados:
+            encontrados.append(nombre)
+            texto = texto.replace(alias, '', 1)
+    return encontrados
+
+
+def _parse_dia(texto: str) -> str:
+    """Parsea día del texto del usuario"""
+    texto = texto.lower().strip()
+    if texto in ['todos', 'todo', 'all', 'cualquiera', 'da igual', 'no importa']:
+        return ''  # sin filtro
+    if texto == 'hoy':
+        return _detectar_dia_hoy()
+    for alias, dia in DIAS_ALIAS.items():
+        if alias in texto:
+            return dia
+    return ''
+
+
+def _generar_resultado_flow(bancos: list, dia: str, comida: str) -> str:
+    """Genera resultado filtrado + link para el flujo conversacional"""
+    resultados = list(beneficios_db)
+
+    # Filtrar por banco(s)
+    if bancos:
+        resultados = [b for b in resultados if b.banco in bancos]
+
+    # Filtrar por día
+    if dia:
+        resultados = [b for b in resultados
+                      if dia in b.dias_validos or 'todos' in b.dias_validos]
+
+    # Filtrar por comida (keyword en restaurante o descripcion)
+    if comida:
+        kw = comida.lower()
+        filtrados = [b for b in resultados
+                     if kw in b.restaurante.lower()
+                     or kw in getattr(b, 'descripcion', '').lower()]
+        if filtrados:
+            resultados = filtrados
+
+    # Ordenar por mayor descuento
+    resultados.sort(key=lambda b: b.descuento_valor, reverse=True)
+
+    if not resultados:
+        return "No encontré descuentos con esos filtros 🤷\n\nEscribe *hola* para buscar de nuevo."
+
+    # Agrupar por banco (top 3 por banco, max 5 bancos)
+    por_banco = {}
+    for b in resultados:
+        if b.banco not in por_banco:
+            por_banco[b.banco] = []
+        por_banco[b.banco].append(b)
+
+    texto = f"🍽️ *{len(resultados)} descuentos encontrados*\n"
+    if bancos:
+        texto += f"💳 {', '.join(bancos)}\n"
+    if dia:
+        texto += f"📅 {dia.capitalize()}\n"
+    if comida:
+        texto += f"🍕 {comida}\n"
+    texto += "\n"
+
+    bancos_mostrados = 0
+    for banco, items in sorted(por_banco.items(), key=lambda x: -max(i.descuento_valor for i in x[1])):
+        if bancos_mostrados >= 5:
+            break
+        texto += f"*🏦 {banco}* ({len(items)} dctos)\n"
+        for b in items[:3]:
+            texto += f"  • {b.restaurante} — {b.descuento_texto}\n"
+        if len(items) > 3:
+            texto += f"  _...y {len(items)-3} más_\n"
+        texto += "\n"
+        bancos_mostrados += 1
+
+    # Link
+    BASE_URL = "https://api-beneficios-chile.onrender.com/ver"
+    params = []
+    if dia:
+        params.append(f"dia={quote_plus(dia)}")
+    if bancos and len(bancos) == 1:
+        params.append(f"banco={quote_plus(bancos[0])}")
+    if comida:
+        params.append(f"q={quote_plus(comida)}")
+    link = BASE_URL + ("?" + "&".join(params) if params else "")
+
+    texto += f"📋 *Ver todos con filtros:*\n{link}"
+    return texto[:1500]
+
+
+async def procesar_comando_whatsapp(texto: str, usuario: str = "") -> str:
     """Procesa mensajes de WhatsApp con IA (RAG) o comandos rápidos"""
     texto_original = texto.strip()
     texto = texto_original.lower()
 
+    # ── Flujo conversacional activo? ──
+    if usuario and usuario in user_flow:
+        state = user_flow[usuario]
+
+        if state["step"] == "ask_banco":
+            state["bancos"] = _parse_bancos(texto)
+            state["step"] = "ask_dia"
+            bancos_txt = ", ".join(state["bancos"]) if state["bancos"] else "Todos"
+            dia_hoy = _detectar_dia_hoy()
+            return f"""✅ Banco(s): *{bancos_txt}*
+
+📅 *¿Qué día?*
+Ej: _lunes_, _viernes_, _hoy_ ({dia_hoy})
+O escribe *todos*"""
+
+        if state["step"] == "ask_dia":
+            state["dia"] = _parse_dia(texto)
+            state["step"] = "ask_comida"
+            dia_txt = state["dia"].capitalize() if state["dia"] else "Todos"
+            return f"""✅ Día: *{dia_txt}*
+
+🍕 *¿Qué tipo de comida?*
+Ej: _sushi_, _pizza_, _italiana_, _hamburguesa_
+O escribe *todos*"""
+
+        if state["step"] == "ask_comida":
+            comida = '' if texto in ['todos', 'todo', 'all', 'cualquiera', 'da igual'] else texto_original
+            state["comida"] = comida
+            # Generar resultado y limpiar estado
+            resultado = _generar_resultado_flow(state["bancos"], state["dia"], comida)
+            del user_flow[usuario]
+            return resultado
+
     # ── Comandos rápidos (atajos) ──
     if texto in ['/', 'hola', 'hi', 'hello', 'help', 'menu', 'comandos', 'inicio']:
-        dia_hoy = _detectar_dia_hoy()
-        return f"""¡Hola! 👋🍽️ ¿De qué tienes ganas hoy?
+        # Iniciar flujo conversacional
+        if usuario:
+            user_flow[usuario] = {"step": "ask_banco", "bancos": [], "dia": "", "comida": ""}
+        bancos_disponibles = sorted(set(b.banco for b in beneficios_db))
+        bancos_txt = ", ".join(bancos_disponibles)
+        return f"""¡Hola! 👋🍽️ Te ayudo a encontrar descuentos en restaurantes 🇨🇱
 
-Soy tu asistente de descuentos en restaurantes 🇨🇱
-Pregúntame lo que quieras, por ejemplo:
+Vamos a buscar en *{len(beneficios_db)} descuentos* de *{len(bancos_disponibles)} bancos*.
 
-🔥 "descuentos para hoy" (hoy es {dia_hoy})
-🍣 "donde comer sushi con descuento"
-💳 "mejores descuentos banco falabella"
-💰 "restaurantes con 30% o más"
+💳 *¿Qué banco(s) tienes?*
+Puedes poner varios separados por coma.
+Ej: _Falabella, BCI, Scotiabank_
+O escribe *todos*
 
-*Atajos:* /top · /stats"""
+_{bancos_txt}_"""
 
     if texto == '/top':
         rest_max = {}
@@ -1398,7 +1561,7 @@ async def webhook_whatsapp(From: str = Form(""), Body: str = Form("")):
     usuario = From.replace("whatsapp:", "")
     print(f"  WhatsApp de {usuario}: {Body}")
 
-    respuesta = await procesar_comando_whatsapp(Body)
+    respuesta = await procesar_comando_whatsapp(Body, usuario=usuario)
 
     resp = MessagingResponse()
     resp.message(respuesta)
