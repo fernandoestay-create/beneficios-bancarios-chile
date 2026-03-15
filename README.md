@@ -1,373 +1,563 @@
-# 🏦 SISTEMA DE SCRAPING DE BENEFICIOS BANCARIOS CHILE
+# 🍽️ Beneficios Bancarios Chile
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Deploy](https://img.shields.io/badge/Render-Deployed-success.svg)](https://api-beneficios-chile.onrender.com/ver)
 
-Un sistema completo para **scrapear, almacenar y consultar** descuentos bancarios en restaurantes de Chile mediante **API REST, WhatsApp Bot y ChatGPT RAG**.
+Sistema completo que **scrapea descuentos bancarios en restaurantes de Chile** y los expone a través de una **página web interactiva**, un **bot de WhatsApp con IA**, y una **API REST**.
 
-## 📸 Demo Rápida
+> **v_01** — 985 beneficios · 15 bancos · Página web con filtros + mapa · Bot WhatsApp conversacional
+
+---
+
+## 🏗️ Arquitectura
 
 ```
-SCRAPERS DIARIOS
-    ↓
-Banco de Chile (229 beneficios)
-Banco Falabella (71 beneficios)
-    ↓
-JSON + Pinecone + GitHub
-    ↓
-🔹 API REST (FastAPI)
-    GET /beneficios
-    GET /beneficios/buscar?banco=Falabella
-    POST /rag (ChatGPT)
-
-🔹 BOT WhatsApp
-    /restaurante starbucks
-    /banco "Banco de Chile"
-    /dia lunes
-    
-🔹 DASHBOARD (opcional)
-    Mostrar top restaurantes
-    Estadísticas en tiempo real
+┌─────────────────────────────────────────────────────────────┐
+│                  SCRAPERS  (scrapers.py)                     │
+│   15 bancos → requests + BeautifulSoup → Beneficio objects   │
+│   Normalización: fechas, regiones, comunas, textos           │
+│   Output: beneficios.json (985 dctos) + beneficios.csv       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    API REST  (api.py)                         │
+│   FastAPI + Uvicorn                                          │
+│                                                              │
+│   ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐  │
+│   │  Página Web  │  │  Bot WhatsApp │  │  API JSON         │  │
+│   │  GET /ver    │  │  POST /webhook│  │  GET /beneficios  │  │
+│   │  Filtros     │  │  Twilio       │  │  POST /rag        │  │
+│   │  Tarjetas    │  │  3 pasos      │  │  GET /bancos      │  │
+│   │  Mapa        │  │  + RAG (IA)   │  │  GET /estadisticas│  │
+│   └─────────────┘  └──────────────┘  └───────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+         Pinecone      OpenAI       Twilio
+         (vectores)   (GPT-4o-mini) (WhatsApp)
 ```
 
 ---
 
-## ✨ CARACTERÍSTICAS
+## 📊 Estado actual
 
-### 🤖 Scrapers Inteligentes
-- ✅ **Banco de Chile**: 229+ restaurantes
-- ✅ **Banco Falabella**: 71+ restaurantes  
-- ✅ Actualización automática diaria con GitHub Actions
-- ✅ Manejo de JavaScript y sitios complejos
-
-### 🔌 API REST
-- ✅ FastAPI con OpenAPI docs
-- ✅ Búsqueda avanzada (banco, restaurante, día)
-- ✅ Integración ChatGPT RAG
-- ✅ Paginación y filtros
-- ✅ CORS habilitado
-
-### 💬 Bot WhatsApp
-- ✅ Búsqueda por restaurante
-- ✅ Filtrar por banco y día
-- ✅ Ver top restaurantes
-- ✅ Estadísticas en tiempo real
-- ✅ Menú interactivo
-
-### 🧠 RAG + IA
-- ✅ Integración OpenAI ChatGPT
-- ✅ Vectorización con Pinecone
-- ✅ Respuestas contextuales
-- ✅ Búsqueda semántica
-
-### ⚡ Deployment
-- ✅ GitHub Actions para scraping automático
-- ✅ Deploy en Render (gratuito)
-- ✅ CI/CD completo
+| Métrica | Valor |
+|---------|-------|
+| Beneficios activos | **985** |
+| Bancos scrapeados | **15** |
+| Restaurantes únicos | **~700+** |
+| Mejor descuento | **50%** |
+| Regiones cubiertas | **16** |
 
 ---
 
-## 🚀 INICIO RÁPIDO (5 minutos)
+## 🏦 Bancos scrapeados (15)
 
-### 1. Descargar archivos
+| # | Banco | Método | Beneficios |
+|---|-------|--------|------------|
+| 1 | Banco de Chile | API CMS interna | ~200 |
+| 2 | Banco Falabella | API CMS v2 | ~150 |
+| 3 | BCI | HTML scraping | ~100 |
+| 4 | Banco Itaú | API JSON | ~50 |
+| 5 | Scotiabank | JS embebido (arrays) | ~61 |
+| 6 | Santander | HTML scraping | ~80 |
+| 7 | Banco Consorcio | HTML scraping | ~40 |
+| 8 | BancoEstado | API/HTML | ~60 |
+| 9 | Banco Security | HTML scraping | ~50 |
+| 10 | Banco Ripley | HTML scraping | ~40 |
+| 11 | Entel | HTML scraping | ~30 |
+| 12 | Tenpo | API/HTML | ~20 |
+| 13 | Lider BCI | HTML scraping | ~25 |
+| 14 | Banco BICE | HTML scraping | ~30 |
+| 15 | Mach | HTML scraping | ~20 |
+
+Cada scraper extrae: restaurante, descuento (% y texto), días válidos, ubicación, dirección, comuna, imagen, link, vigencia, restricciones, modalidad (presencial/online).
+
+---
+
+## 📂 Estructura del proyecto
+
+```
+beneficios-bancarios-chile/
+├── api.py                  # FastAPI: API + página web + bot WhatsApp (1586 líneas)
+├── scrapers.py             # 15 scrapers + modelo Beneficio + Orquestador (3162 líneas)
+├── whatsapp_bot.py          # Bot WhatsApp alternativo (Flask, sin IA) (239 líneas)
+├── upload_pinecone.py       # Sube vectores a Pinecone para RAG (106 líneas)
+├── beneficios.json          # Data scrapeada (985 beneficios, ~1.2MB)
+├── beneficios.csv           # Mismo data en CSV
+├── render.yaml              # Config deploy Render (2 servicios)
+├── requirements.txt         # Dependencias Python
+├── DOCUMENTACION_V01.md     # Documentación técnica detallada
+└── .env                     # Variables de entorno (no en Git)
+```
+
+---
+
+## 🌐 Página Web (`/ver`)
+
+Página interactiva server-rendered (SPA embebida en api.py).
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────┐
+│   Hero: título + stats (total, bancos, mejor dcto)   │
+├────────────────┬─────────────────────────────────────┤
+│   FILTROS      │   [🍽️ Tarjetas]  [📍 Mapa]          │
+│                │                                     │
+│  🔍 Buscar     │   Vista Tarjetas:                   │
+│  💳 Banco      │    Summary bar (logos clickeables)  │
+│  📅 Día        │    Grid 2 columnas de cards         │
+│  📍 Zona       │    Imagen, dcto, banco, días, link  │
+│  🏘️ Comuna     │                                     │
+│  💰 Dcto mín.  │   Vista Mapa:                       │
+│  🏪 Modalidad  │    Mapa Leaflet con markers         │
+│  ↕️ Ordenar    │    Coloreados por banco              │
+│                │    Popups con detalle                │
+│  [Limpiar]     │                                     │
+└────────────────┴─────────────────────────────────────┘
+```
+
+### Filtros disponibles
+
+| Filtro | Tipo | Detalle |
+|--------|------|---------|
+| Buscar | Texto libre | Busca en restaurante, banco, descripción, dirección |
+| Banco | Multi-select | Dropdown con checkboxes, tags, búsqueda interna |
+| Día | 7 círculos + "Todos" | L M X J V S D, multi-selección |
+| Zona | Multi-select | Regiones de Chile. Metropolitana aparece primero |
+| Comuna | Multi-select | Solo visible si Zona = Metropolitana |
+| Descuento mínimo | Slider | 0% a 50% |
+| Modalidad | Chips | Todas / Presencial / Online |
+| Ordenar | Dropdown | Mayor dcto / Menor dcto / Nombre / Banco |
+
+**Un solo panel de filtros** controla ambas vistas (tarjetas y mapa).
+
+### Componente Multi-Select (JS)
+
+Clase `MS` custom — genera dropdowns con checkboxes, tags removibles y búsqueda interna:
+
+```javascript
+const bankMS = new MS('bankMS', bankOpts, 'Todos los bancos');
+bankMS.vals();   // → ["BCI", "Scotiabank"] o null
+bankMS.reset();  // limpia selección
+```
+
+### Mapa
+
+- **Leaflet** con tiles CARTO (light)
+- Markers circulares coloreados por banco con % de descuento
+- Popups con: nombre, banco, descuento, dirección, link
+- Coordenadas aproximadas por región (no geocoding real)
+
+---
+
+## 🤖 Bot WhatsApp
+
+El bot funciona vía Twilio en el endpoint `POST /webhook` de api.py.
+
+### Flujo conversacional (3 pasos)
+
+```
+👤 "hola"
+🤖 "¿Qué banco(s) tienes?"
+   Ej: Falabella, BCI o "todos"
+   (lista los 15 bancos disponibles)
+
+👤 "Falabella, BCI"
+🤖 "✅ Banco(s): Falabella, BCI"
+   "¿Qué día?"
+   Ej: lunes, viernes, hoy o "todos"
+
+👤 "viernes"
+🤖 "✅ Día: Viernes"
+   "¿Qué tipo de comida?"
+   Ej: sushi, pizza, italiana o "todos"
+
+👤 "sushi"
+🤖 🍽️ 12 descuentos encontrados
+   💳 Falabella, BCI | 📅 Viernes | 🍕 sushi
+
+   🏦 BCI (5 dctos)
+     • Sushi Express — 30% dcto.
+     • Sushi Home — 40% dcto.
+
+   🏦 Banco Falabella (7 dctos)
+     • Sushi Master — 25% dcto.
+     ...y 5 más
+
+   📋 Ver todos: https://api-beneficios-chile.onrender.com/ver?dia=viernes&q=sushi
+```
+
+### Comandos rápidos
+
+| Comando | Qué hace |
+|---------|----------|
+| `hola` / `hi` / `inicio` | Inicia flujo conversacional de 3 preguntas |
+| `/top` | Top 5 restaurantes por descuento |
+| `/stats` | Estadísticas generales |
+| Cualquier texto libre | Consulta con IA (RAG) |
+
+### Consulta libre con IA (RAG)
+
+Si el usuario escribe algo fuera del flujo (ej: *"donde comer sushi con descuento hoy"*):
+
+1. Detecta filtros implícitos: día ("hoy"), banco ("falabella"), keywords ("sushi")
+2. Busca en **Pinecone** (semántico) o filtra en memoria
+3. Agrupa resultados por banco
+4. **GPT-4o-mini** genera respuesta en formato WhatsApp
+5. Agrega link a `/ver` con filtros pre-aplicados
+
+### Estado conversacional
+
+```python
+user_flow = {}  # {"+56912345678": {"step": "ask_banco", "bancos": [], ...}}
+```
+
+Se mantiene en memoria por usuario. Se limpia al completar el flujo.
+
+---
+
+## 🔌 API REST
+
+### Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/` | Health check — estado y total de beneficios |
+| `GET` | `/beneficios` | Todos los beneficios (JSON) |
+| `GET` | `/beneficios/buscar` | Buscar con filtros: `?banco=BCI&dia=lunes&restaurante=sushi` |
+| `GET` | `/beneficios/{id}` | Beneficio por ID |
+| `GET` | `/bancos` | Lista de bancos con conteo de beneficios |
+| `GET` | `/estadisticas` | Stats: total, promedio, máximo |
+| `GET` | `/restaurantes/top` | Top restaurantes por descuento |
+| `POST` | `/rag` | Consulta IA: `{"pregunta": "sushi con descuento hoy"}` |
+| `POST` | `/scrape/ejecutar` | Ejecuta scrapers manualmente |
+| `GET` | `/scrape/status` | Estado del último scrape |
+| `GET` | `/ver` | Página web completa |
+| `POST` | `/webhook` | Webhook WhatsApp (Twilio) |
+
+### Ejemplos de uso
+
 ```bash
-git clone https://github.com/tuusuario/beneficios-bancarios.git
-cd beneficios-bancarios
+# Todos los beneficios
+curl https://api-beneficios-chile.onrender.com/beneficios
+
+# Buscar sushi en BCI
+curl "https://api-beneficios-chile.onrender.com/beneficios/buscar?restaurante=sushi&banco=BCI"
+
+# Consultar con IA
+curl -X POST https://api-beneficios-chile.onrender.com/rag \
+  -H "Content-Type: application/json" \
+  -d '{"pregunta": "mejores descuentos para hoy viernes"}'
+
+# Estadísticas
+curl https://api-beneficios-chile.onrender.com/estadisticas
 ```
 
-### 2. Instalar dependencias
+---
+
+## 🧠 RAG (Retrieval-Augmented Generation)
+
+### Pipeline
+
+```
+Pregunta usuario
+    │
+    ▼
+OpenAI Embeddings (text-embedding-3-small)
+    │
+    ▼
+Pinecone (búsqueda vectorial, top 15 resultados)
+    │
+    ▼
+Contexto: beneficios relevantes agrupados por banco
+    │
+    ▼
+GPT-4o-mini (genera respuesta concisa, formato WhatsApp)
+    │
+    ▼
+Respuesta + link a /ver con filtros
+```
+
+### Vectorización
+
+```bash
+python upload_pinecone.py
+# Vectoriza 985 beneficios → Pinecone (text-embedding-3-small)
+# Index: beneficios-bancarios
+# Namespace: beneficios-bancarios
+```
+
+Cada beneficio se convierte a texto para embedding:
+```
+"La Mar - Banco de Chile - 30% dcto. - Días: lunes, martes - Providencia, Metropolitana - Tope $30.000"
+```
+
+---
+
+## ⚙️ Scrapers — Detalle técnico
+
+### Modelo de datos (Beneficio)
+
+```python
+@dataclass
+class Beneficio:
+    id: str                    # "banco_chile_123"
+    banco: str                 # "Banco de Chile"
+    tarjeta: str               # "Tarjetas Banco de Chile"
+    restaurante: str           # "La Mar"
+    descuento_valor: float     # 30.0
+    descuento_tipo: str        # "porcentaje"
+    descuento_texto: str       # "30% dcto."
+    dias_validos: List[str]    # ["lunes", "martes"]
+    ubicacion: str             # "Metropolitana"
+    comuna: str                # "Providencia"
+    direccion: str             # "Av. Nueva Costanera 123"
+    presencial: bool           # True
+    online: bool               # False
+    url_fuente: str            # link al banco
+    imagen_url: str            # imagen del restaurante
+    valido_hasta: str          # "31-Mar-2026"
+    restricciones_texto: str   # "Tope $30.000"
+    descripcion: str           # texto descriptivo
+    # + más campos opcionales
+```
+
+### OrquestadorScrapers
+
+Ejecuta los 15 scrapers secuencialmente y normaliza:
+
+| Normalización | Ejemplo |
+|---------------|---------|
+| Fechas → `DD-MMM-AAAA` | "31 de marzo de 2026" → "31-Mar-2026" |
+| Regiones unificadas | "santiago", "rm", "R.M." → "Metropolitana" |
+| Comunas RM extraídas | Detecta "Providencia" desde la dirección |
+| Textos limpios | Elimina HTML, trunca, normaliza "dto" → "dcto" |
+
+### Ejecución
+
+```bash
+python scrapers.py
+
+# Output:
+# 🚀 INICIANDO SCRAPING DE BENEFICIOS BANCARIOS
+# 📡 Scrapeando Banco de Chile (API CMS)...
+# ✅ Banco de Chile: 229 beneficios extraídos
+# 📡 Scrapeando Banco Falabella (API CMS v2)...
+# ✅ Banco Falabella: 150 beneficios extraídos
+# ... (15 bancos)
+# ✅ TOTAL BENEFICIOS EXTRAÍDOS: 985
+# 💾 Datos guardados en: beneficios.json (985 beneficios)
+```
+
+---
+
+## 🚀 Instalación y uso local
+
+### 1. Clonar
+
+```bash
+git clone https://github.com/fernandoestay-create/beneficios-bancarios-chile.git
+cd beneficios-bancarios-chile
+```
+
+### 2. Entorno virtual + dependencias
+
 ```bash
 python -m venv venv
-source venv/bin/activate  # Mac/Linux
-# o
-venv\Scripts\activate     # Windows
-
+source venv/bin/activate   # Mac/Linux
 pip install -r requirements.txt
 ```
 
-### 3. Ejecutar scrapers
+### 3. Variables de entorno
+
+Crear archivo `.env`:
+
+```bash
+# OpenAI (para RAG)
+OPENAI_API_KEY=sk-...
+
+# Pinecone (para búsqueda semántica)
+PINECONE_API_KEY=...
+PINECONE_ENV=us-east-1
+PINECONE_INDEX=beneficios-bancarios
+PINECONE_HOST=beneficios-bancarios-xxxxx.svc.aped-4627-b74a.pinecone.io
+
+# Twilio (solo si usas whatsapp_bot.py aparte)
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_WHATSAPP_NUMBER=whatsapp:+...
+```
+
+### 4. Scrapear
+
 ```bash
 python scrapers.py
+# Genera: beneficios.json + beneficios.csv
 ```
 
-Verás:
-```
-🚀 INICIANDO SCRAPING...
-📡 Scrapeando Banco de Chile...
-✅ 229 beneficios
+### 5. (Opcional) Subir a Pinecone
 
-📡 Scrapeando Banco Falabella...
-✅ 71 beneficios
-
-✅ TOTAL: 300 BENEFICIOS
-```
-
-### 4. Iniciar API
 ```bash
-python api.py
+python upload_pinecone.py
+# Vectoriza y sube 985 beneficios a Pinecone
 ```
 
-Abre: http://localhost:8000/docs
+### 6. Iniciar API
 
-### 5. (Opcional) WhatsApp Bot
 ```bash
-python whatsapp_bot.py
+uvicorn api:app --reload --port 8000
+```
+
+### 7. Abrir
+
+```
+http://localhost:8000/ver     ← Página web
+http://localhost:8000/docs    ← Swagger API docs
 ```
 
 ---
 
-## 📚 ESTRUCTURA DEL PROYECTO
+## 🌐 Deploy en Render
+
+### Configuración (render.yaml)
+
+```yaml
+services:
+  - type: web
+    name: api-beneficios-chile            # Servicio principal
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn api:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_ENV
+        value: us-east-1
+      - key: PINECONE_INDEX
+        value: beneficios-bancarios
+      - key: PINECONE_HOST
+        value: beneficios-bancarios-xxxxx.svc.aped-4627-b74a.pinecone.io
+
+  - type: web
+    name: whatsapp-bot-beneficios          # Bot alternativo (Flask)
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn whatsapp_bot:app --bind 0.0.0.0:$PORT"
+```
+
+### URLs de producción
 
 ```
-beneficios-bancarios/
-├── 📄 scrapers.py              # Scrapers (Banco Chile + Falabella)
-├── 📄 api.py                   # API REST FastAPI + RAG
-├── 📄 whatsapp_bot.py          # Bot WhatsApp/Twilio
-├── 📄 requirements.txt          # Dependencias Python
-│
-├── 📁 .github/workflows/
-│   └── scraper.yml             # GitHub Actions (cron diario)
-│
-├── 📄 SETUP_GUIDE.md           # Guía detallada de instalación
-├── 📄 README.md                # Este archivo
-│
-├── 📁 scripts/ (opcional)
-│   ├── upload_pinecone.py      # Upload a Pinecone
-│   ├── generate_dashboard.py   # Dashboard HTML
-│   └── sync_github.py          # Sync con GitHub
-│
-├── beneficios.json             # Base de datos (generado)
-└── beneficios.csv              # Backup CSV (generado)
+https://api-beneficios-chile.onrender.com/          ← API
+https://api-beneficios-chile.onrender.com/ver        ← Página web
+https://api-beneficios-chile.onrender.com/webhook    ← WhatsApp (Twilio)
+```
+
+### Deploy automático
+
+Push a `main` → Render despliega automáticamente.
+
+---
+
+## 🔄 Actualización de datos
+
+```bash
+# 1. Re-scrapear (985 beneficios)
+python scrapers.py
+
+# 2. Subir nuevos vectores a Pinecone (opcional, para RAG)
+python upload_pinecone.py
+
+# 3. Commit y push → Render despliega automáticamente
+git add beneficios.json beneficios.csv
+git commit -m "Actualizar datos de beneficios"
+git push origin main
 ```
 
 ---
 
-## 🔌 ENDPOINTS API
+## 🔒 Sistema de acceso temporal
 
-### Listar beneficios
-```bash
-curl http://localhost:8000/beneficios?limit=10
-```
+Para compartir la página con acceso restringido:
 
-### Buscar
-```bash
-curl "http://localhost:8000/beneficios/buscar?restaurante=starbucks&banco=Falabella&min_descuento=30"
-```
-
-### Estadísticas
-```bash
-curl http://localhost:8000/estadisticas
-```
-
-### Consultar con IA
-```bash
-curl -X POST http://localhost:8000/rag \
-  -H "Content-Type: application/json" \
-  -d '{"pregunta": "¿Qué restaurantes tienen 40% descuento?"}'
-```
-
-### Top restaurantes
-```bash
-curl http://localhost:8000/restaurantes/top?limit=10
-```
-
----
-
-## 💬 COMANDOS BOT WhatsApp
-
-```
-/              - Mostrar menú
-/restaurante   - Buscar por nombre
-  /restaurante starbucks
-
-/banco         - Ver beneficios de banco
-  /banco "Banco de Chile"
-
-/dia           - Ver descuentos del día
-  /dia lunes
-
-/top           - Top 5 restaurantes
-/stats         - Estadísticas generales
-```
-
----
-
-## ⚙️ CONFIGURACIÓN
-
-### Variables de entorno (.env)
-```bash
-# Twilio WhatsApp
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_WHATSAPP_NUMBER=whatsapp:+1234567890
-
-# OpenAI
-OPENAI_API_KEY=sk-your-api-key
-
-# Pinecone
-PINECONE_API_KEY=your_api_key
-PINECONE_ENV=gcp-starter
-```
-
-### GitHub Secrets (Para Actions)
-```
-PINECONE_API_KEY=***
-OPENAI_API_KEY=***
-```
-
----
-
-## 📊 DATOS & ESTADÍSTICAS
-
-### Volumen actual
-```
-Total Beneficios:     300+
-Bancos Incluidos:     2 (Banco Chile, Falabella)
-Restaurantes únicos:  250+
-Descuento máximo:     40-50%
-Descuento promedio:   25-30%
-```
-
-### Actualización
-- 🔄 **Diaria** a las 5 AM UTC (2 AM Chile)
-- 📤 Backup automático en GitHub
-- ☁️ Sincronización con Pinecone (opcional)
-
----
-
-## 🌐 DEPLOYMENT
-
-### Opción 1: Render (Recomendado - Gratuito)
-```bash
-# Ver: SETUP_GUIDE.md > Deployment > Render
-```
-
-**Resultado:**
-- API: `https://api-beneficios-xxxx.onrender.com`
-- Bot: `https://bot-beneficios-xxxx.onrender.com`
-
-### Opción 2: Vercel
-```bash
-# Funciona solo para API sin servidores
-vercel deploy
-```
-
-### Opción 3: Heroku/Railway
-```bash
-# Ver guía de setup
-```
-
----
-
-## 🧪 TESTING
-
-```bash
-# Instalar pytest
-pip install pytest
-
-# Ejecutar tests
-pytest tests/
-
-# Coverage
-pytest --cov=.
-```
-
----
-
-## 🐛 TROUBLESHOOTING
-
-### "No se conecta a Banco de Chile"
 ```python
-# Aumentar timeout
-session.get(url, timeout=20)
+# En api.py:
+ACCESO_PUBLICO = False   # Activar login
 
-# O usar proxy
-proxies = {"https": "http://proxy:8080"}
-session.get(url, proxies=proxies)
+TOKENS_ACCESO = {
+    "prueba": datetime(2026, 3, 20, 23, 59, 59),  # caduca 20 marzo
+    "demo":   datetime(2026, 4, 1, 23, 59, 59),   # caduca 1 abril
+}
 ```
 
-### "WhatsApp no recibe mensajes"
+Link para compartir: `https://api-beneficios-chile.onrender.com/ver?key=prueba`
+
+Actualmente **desactivado** (`ACCESO_PUBLICO = True`).
+
+---
+
+## 🏷️ Versionamiento
+
+| Tag | Fecha | Descripción |
+|-----|-------|-------------|
+| `v_01` | 14-Mar-2026 | Versión inicial completa. 15 scrapers, 985 beneficios, web con filtros + mapa, bot WhatsApp con flujo conversacional, RAG. |
+
 ```bash
-# 1. Verificar webhook en Twilio
-# 2. Usar ngrok para tunelizar
-ngrok http 5000
+# Ver versión
+git show v_01
 
-# 3. Copiar URL de ngrok a Twilio webhook
-```
+# Restaurar esta versión
+git checkout v_01
 
-### "Error de rate limit"
-```python
-import time
-time.sleep(2)  # Agregar delay entre requests
+# Crear rama desde esta versión
+git checkout -b hotfix v_01
 ```
 
 ---
 
-## 📈 ROADMAP
+## 🧩 Decisiones técnicas
 
-### ✅ COMPLETADO
-- [x] Scrapers Banco Chile + Falabella
-- [x] API REST FastAPI
-- [x] Bot WhatsApp
-- [x] GitHub Actions
-- [x] Deploy Render
-
-### 🚧 EN PROGRESO
-- [ ] Dashboard web
-- [ ] Más bancos (Santander, Itaú, BCI)
-- [ ] Filtros avanzados (región, ciudad)
-- [ ] Notificaciones push
-- [ ] Mobile app
-
-### 📋 PLANEADO
-- [ ] Integración con Telegram
-- [ ] Telegram Bot
-- [ ] Cache distribuido (Redis)
-- [ ] Analytics avanzados
-- [ ] Recomendaciones personalizadas
+| Decisión | Razón |
+|----------|-------|
+| HTML embebido en api.py (f-string) | No necesita archivos estáticos, simplifica deploy |
+| `{{` y `}}` en JS | Escapar llaves dentro de f-strings Python |
+| Multi-select custom (clase MS) | No hay framework frontend, componente ligero |
+| Coordenadas por región (no geocoding) | Evita dependencia de API de geocoding |
+| Comunas solo Metropolitana | Mayor concentración de datos |
+| RAG dual (memoria + Pinecone) | Consultas por día/banco: memoria. Consultas libres: semántico |
+| Estado del bot en memoria | Suficiente para MVP, se pierde al reiniciar |
 
 ---
 
-## 🤝 CONTRIBUIR
-
-1. Fork el proyecto
-2. Crea una rama (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push a rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
----
-
-## 📜 LICENCIA
-
-Este proyecto está bajo la Licencia MIT. Ver archivo `LICENSE`.
-
----
-
-## 📞 CONTACTO
-
-- 💬 **Issues**: GitHub Issues
-- 💌 **Email**: soporte@beneficiosbancarios.cl
-- 🐦 **Twitter**: @BeneficiosChile
-
----
-
-## ⭐ CRÉDITOS
-
-Desarrollado con ❤️ para ayudarte a encontrar los mejores descuentos bancarios en Chile.
+## 📋 Dependencias
 
 ```
-Banco de Chile   📊
-Banco Falabella  💳
-FastAPI         🚀
-OpenAI          🧠
-Pinecone        🔍
-Twilio          💬
+# Scraping
+requests, beautifulsoup4, lxml, playwright
+
+# API
+fastapi, uvicorn, pydantic, python-multipart
+
+# Bot WhatsApp
+twilio, flask, python-dotenv
+
+# RAG / IA
+openai, pinecone
+
+# Deploy
+gunicorn
 ```
 
 ---
 
-**Última actualización**: Marzo 2026  
-**Versión**: 1.0.0  
-**Estado**: ✅ Producción
+**Versión**: v_01
+**Última actualización**: Marzo 2026
+**Autor**: Fernando Estay Pérez
+**Estado**: ✅ En producción
