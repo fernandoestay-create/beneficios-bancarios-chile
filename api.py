@@ -726,6 +726,15 @@ height:22px;display:flex;align-items:center;justify-content:center}}
 .popup-bank img{{height:14px}}
 .popup-desc{{color:var(--muted);margin:4px 0}}
 .popup-link{{display:inline-block;background:var(--primary);color:#fff;padding:4px 10px;border-radius:6px;text-decoration:none;font-weight:600;font-size:12px;margin-top:4px}}
+/* Geolocation */
+.geo-bar{{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}}
+.geo-btn{{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;
+border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13px;
+font-weight:600;cursor:pointer;transition:all .2s}}
+.geo-btn:hover{{border-color:var(--primary);background:#f5f3ff;color:var(--primary)}}
+.geo-btn.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border-color:transparent}}
+.geo-btn.loading{{opacity:.7;cursor:wait}}
+.geo-status{{font-size:12px;color:var(--muted)}}
 @media(max-width:980px){{.hero,.layout,.grid{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
 .filters{{position:static}}.deal-img{{height:140px}}#map{{height:60vh}}
 .day-circle{{width:24px;height:24px;font-size:10px}}.day-bar{{gap:4px;padding:6px 8px}}}}
@@ -792,12 +801,12 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <button class="view-btn active" data-view="tarjetas">🍽️ Tarjetas</button>
 <button class="view-btn" data-view="mapa">📍 Mapa</button>
 </div>
+<div id="summaryBar" class="summary-bar"></div>
 <div id="view-tarjetas" class="view-content active">
 <div class="toolbar">
 <h2>Resultados</h2>
 <span class="pill" id="count">0</span>
 </div>
-<div id="summaryBar" class="summary-bar"></div>
 <div class="grid" id="grid"></div>
 <div class="empty" id="empty">No hay descuentos con esos filtros 🤷</div>
 </div>
@@ -806,8 +815,12 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <h2>Mapa</h2>
 <span class="pill" id="mapCount">0 en mapa</span>
 </div>
+<div class="geo-bar">
+<button class="geo-btn" id="geoBtn" onclick="toggleGeolocation()">📍 Mi ubicación</button>
+<span class="geo-status" id="geoStatus"></span>
+</div>
 <div id="map"></div>
-<p style="color:var(--muted);font-size:11px;margin-top:8px;text-align:center">📍 Solo se muestran restaurantes con dirección conocida</p>
+<p style="color:var(--muted);font-size:11px;margin-top:8px;text-align:center">📍 Ubicaciones aproximadas por región · Activa tu GPS para verte en el mapa</p>
 </div>
 </main>
 </section>
@@ -883,7 +896,7 @@ document.querySelectorAll('.multi-select.open').forEach(x=>{{if(x!==this.el)x.cl
 this.el.classList.toggle('open')}});
 this.el.querySelectorAll('.ms-option input').forEach(cb=>{{cb.addEventListener('change',()=>{{
 if(cb.checked)this.sel.add(cb.value);else this.sel.delete(cb.value);
-this._tags();render()}})}});
+this._tags();renderAll()}})}});
 const si=this.el.querySelector('.ms-search-input');
 if(si){{si.addEventListener('input',()=>{{const q=si.value.toLowerCase();
 this.el.querySelectorAll('.ms-option').forEach(o=>{{o.style.display=o.textContent.toLowerCase().includes(q)?'':'none'}})}});
@@ -896,7 +909,7 @@ t.innerHTML=[...this.sel].map(v=>`<span class="ms-tag">${{v}}<span class="ms-rem
 t.querySelectorAll('.ms-remove').forEach(x=>{{x.addEventListener('click',e=>{{
 e.stopPropagation();this.sel.delete(x.dataset.v);
 const c=[...this.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===x.dataset.v);
-if(c)c.checked=false;this._tags();render()}})}})}}
+if(c)c.checked=false;this._tags();renderAll()}})}})}}
 vals(){{return this.sel.size?[...this.sel]:null}}
 reset(){{this.sel.clear();this.el.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);this._tags()}}
 }}
@@ -973,7 +986,7 @@ return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}"
 summaryBar.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
 const banco=pill.dataset.banco;
 const cb=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===banco);
-if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.sel.delete(banco);bankMS._tags();render()}}
+if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.sel.delete(banco);bankMS._tags();renderAll()}}
 }})}});
 }}else{{summaryBar.style.display='none';summaryBar.innerHTML=''}}
 grid.innerHTML='';
@@ -1101,6 +1114,44 @@ L.marker(coords,{{icon}}).bindPopup(popup,{{maxWidth:280}}).addTo(markers);
 }});
 document.getElementById('mapCount').textContent=count+' en mapa';
 }}
+
+// ── Geolocation ──
+let geoMarker=null,geoActive=false;
+function toggleGeolocation(){{
+const btn=document.getElementById('geoBtn'),status=document.getElementById('geoStatus');
+if(geoActive){{
+  // Desactivar
+  geoActive=false;btn.classList.remove('active');
+  if(geoMarker){{mapObj.removeLayer(geoMarker);geoMarker=null}}
+  status.textContent='';return;
+}}
+if(!navigator.geolocation){{status.textContent='Tu navegador no soporta geolocalización';return}}
+btn.classList.add('loading');status.textContent='Obteniendo ubicación...';
+navigator.geolocation.getCurrentPosition(
+  pos=>{{
+    geoActive=true;btn.classList.remove('loading');btn.classList.add('active');
+    const lat=pos.coords.latitude,lng=pos.coords.longitude;
+    status.textContent=`📍 ${{lat.toFixed(4)}}, ${{lng.toFixed(4)}}`;
+    if(!mapObj)initMap();
+    if(geoMarker)mapObj.removeLayer(geoMarker);
+    // Blue pulsing marker for user location
+    const geoIcon=L.divIcon({{className:'',html:`<div style="position:relative"><div style="width:18px;height:18px;background:#4285F4;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(66,133,244,.5)"></div><div style="position:absolute;top:-6px;left:-6px;width:30px;height:30px;border-radius:50%;background:rgba(66,133,244,.15);animation:geoPulse 2s infinite"></div></div>`,
+    iconSize:[18,18],iconAnchor:[9,9]}});
+    geoMarker=L.marker([lat,lng],{{icon:geoIcon,zIndex:9999}}).addTo(mapObj)
+      .bindPopup('<div style="text-align:center"><strong>📍 Estás aquí</strong><br><span style="color:#6b7280;font-size:12px">Tu ubicación actual</span></div>');
+    mapObj.setView([lat,lng],13);
+    geoMarker.openPopup();
+  }},
+  err=>{{
+    btn.classList.remove('loading');
+    const msgs={{1:'Permiso denegado — activa la ubicación en tu navegador',2:'Ubicación no disponible',3:'Tiempo agotado'}};
+    status.textContent='⚠️ '+(msgs[err.code]||'Error desconocido');
+  }},
+  {{enableHighAccuracy:true,timeout:10000,maximumAge:60000}}
+);
+}}
+// CSS animation for geo pulse
+(function(){{const s=document.createElement('style');s.textContent='@keyframes geoPulse{{0%{{transform:scale(1);opacity:.6}}100%{{transform:scale(2.5);opacity:0}}}}';document.head.appendChild(s)}})();
 </script>
 </body></html>"""
     # Si llegó por ?key=xxx, setear cookie para sesión
