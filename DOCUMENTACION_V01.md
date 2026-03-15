@@ -383,18 +383,102 @@ git checkout -b fix-desde-v01 v_01
 
 ---
 
-## 12. DECISIONES TÉCNICAS IMPORTANTES
+## 12. VISTA MAPA (Leaflet)
 
-1. **HTML embebido en api.py**: Toda la página `/ver` es un f-string Python (~600 líneas de HTML/CSS/JS). Esto simplifica el deploy (no necesita archivos estáticos) pero hace el archivo grande.
+### 12.1 Tecnología
+- **Leaflet** 1.9.4 (librería JS de mapas open-source)
+- **Tiles**: CARTO light (`basemaps.cartocdn.com`)
+- Vista inicial: Chile centrado (-33.45, -70.65), zoom 6
 
-2. **f-strings con `{{` y `}}`**: Como el JS está dentro de un f-string Python, todas las llaves JS deben duplicarse: `{{` para `{` literal.
+### 12.2 Markers
+- Círculos coloreados por banco (28px)
+- Color: cada banco tiene un color asignado en `BANK_COLORS`
+- Texto: % de descuento dentro del círculo
+- Popup al click: restaurante, banco (logo), descuento, dirección, días, link
 
-3. **Multi-Select (MS class) en JS**: Componente custom porque no hay framework frontend. Construye dropdowns con checkboxes, tags, búsqueda interna.
+### 12.3 Coordenadas
+- **NO usa geocoding real** (no depende de Google Maps ni otra API)
+- Coordenadas aproximadas mapeadas por región en `REGION_COORDS`
+- Random offset (±0.02°) para evitar que markers se superpongan
+- Ejemplo: "Metropolitana" → [-33.4489, -70.6693] + jitter random
 
-4. **Coordenadas del mapa aproximadas**: No se usa geocoding real. Las coordenadas se mapean por región con un random offset para que no se superpongan.
+### 12.4 Filtros del mapa
+- **Usa los mismos filtros** que la vista de tarjetas (panel izquierdo)
+- `renderMapMarkers()` lee: search, bankMS, regionMS, comunaMS, minDisc, days, mode
+- Cuando cambia un filtro → `renderAll()` actualiza tarjetas Y mapa simultáneamente
 
-5. **Comunas solo Metropolitana**: El filtro de comunas solo muestra comunas de RM porque es donde se concentran los datos.
+### 12.5 Coordenadas por región (REGION_COORDS)
+```
+Metropolitana:    -33.4489, -70.6693
+Valparaíso:       -33.0472, -71.6127
+Biobío:           -36.8201, -73.0444
+Araucanía:        -38.7359, -72.5904
+Antofagasta:      -23.6509, -70.3954
+Coquimbo:         -29.9533, -71.3395
+Maule:            -35.4264, -71.6554
+Los Lagos:        -41.4693, -72.9424
+Los Ríos:         -39.8142, -73.2459
+Atacama:          -27.3668, -70.3323
+Tarapacá:         -20.2133, -69.9553
+Arica:            -18.4783, -70.3126
+Magallanes:       -53.1548, -70.9113
+Aysén:            -45.5712, -72.0685
+Ñuble:            -36.6096, -72.1034
+O'Higgins:        -34.1654, -70.7399
+```
 
-6. **RAG dual**: Para consultas por día/banco usa búsqueda en memoria. Para consultas generales usa Pinecone (semántico).
+---
 
-7. **Estado conversacional en memoria**: El flujo de 3 pasos del bot se pierde si el servidor reinicia. Esto es aceptable para un MVP.
+## 13. FILTROS UNIFICADOS (diseño actual)
+
+### 13.1 Diseño
+- **UN solo panel de filtros** a la izquierda (280px)
+- **Toggle arriba del contenido**: [🍽️ Tarjetas] [📍 Mapa]
+- Ambas vistas usan los MISMOS filtros
+- No hay filtros duplicados para el mapa
+
+### 13.2 Componente Multi-Select (MS)
+```javascript
+class MS {
+    constructor(id, opts, placeholder)
+    // Genera: trigger (box con tags) + dropdown (checkboxes + búsqueda)
+    vals()    // → ["BCI", "Scotiabank"] o null si ninguno seleccionado
+    reset()   // Limpia toda la selección
+    _tags()   // Regenera los tags visuales
+}
+```
+
+### 13.3 Selector de días
+- 7 círculos (L M X J V S D) + pill "Todos"
+- Multi-selección: click activa/desactiva cada día
+- Si ninguno seleccionado → vuelve a "Todos" automáticamente
+- CSS: 24px círculos, gap 2px, nowrap (no se desborda del panel)
+
+### 13.4 Renderizado
+```
+Filtro cambia → renderAll()
+    ├── render()           → regenera grid de cards + summary bar
+    └── renderMapMarkers() → limpia y re-crea markers del mapa
+```
+
+---
+
+## 14. DECISIONES TÉCNICAS IMPORTANTES
+
+1. **HTML embebido en api.py**: Toda la página `/ver` es un f-string Python (~600 líneas de HTML/CSS/JS). Esto simplifica el deploy (no necesita archivos estáticos) pero hace el archivo grande (~1586 líneas total).
+
+2. **f-strings con `{{` y `}}`**: Como el JS está dentro de un f-string Python, todas las llaves JS deben duplicarse: `{{` para `{` literal. Esto aplica a TODO el JavaScript de la página.
+
+3. **Multi-Select (MS class) en JS**: Componente custom porque no hay framework frontend. Construye dropdowns con checkboxes, tags, búsqueda interna. Si el elemento HTML no existe, el constructor crashea (lección aprendida al quitar el sidebar del mapa).
+
+4. **Coordenadas del mapa aproximadas**: No se usa geocoding real. Las coordenadas se mapean por región con un random offset para que no se superpongan. Esto evita dependencia de APIs externas.
+
+5. **Comunas solo Metropolitana**: El filtro de comunas solo muestra comunas de RM (filtrado: `b.ubicacion == 'Metropolitana'`). Es donde se concentran los datos.
+
+6. **RAG dual**: Para consultas por día/banco usa búsqueda en memoria (más rápido). Para consultas generales/semánticas usa Pinecone + OpenAI embeddings.
+
+7. **Estado conversacional en memoria**: El flujo de 3 pasos del bot (`user_flow` dict) se pierde si el servidor reinicia. Aceptable para MVP.
+
+8. **Filtros unificados**: Un solo panel controla tarjetas Y mapa. Intentos anteriores con filtros separados causaron bugs (MS class crasheaba al no encontrar elementos, desincronización de filtros).
+
+9. **Logos de bancos**: URLs de Wikipedia Commons. Fallback con `onerror` a texto si la imagen no carga.

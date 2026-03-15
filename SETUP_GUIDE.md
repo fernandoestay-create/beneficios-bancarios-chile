@@ -1,194 +1,169 @@
-# 🚀 GUÍA COMPLETA: SISTEMA DE SCRAPING DE BENEFICIOS BANCARIOS CHILE
+# 🚀 Guía de Setup Completa
 
-## 📋 ÍNDICE
-1. [Requisitos](#requisitos)
-2. [Instalación Local](#instalación-local)
-3. [Configuración de APIs](#configuración-de-apis)
-4. [Ejecución](#ejecución)
-5. [Deployment](#deployment)
-6. [Troubleshooting](#troubleshooting)
+> Actualizado: 15 Marzo 2026 · v_01
 
 ---
 
-## 📦 REQUISITOS
+## 📋 Índice
+
+1. [Requisitos](#-requisitos)
+2. [Instalación local](#-instalación-local)
+3. [Configuración de APIs](#-configuración-de-apis)
+4. [Ejecución paso a paso](#-ejecución-paso-a-paso)
+5. [Deploy en Render](#-deploy-en-render)
+6. [Configurar WhatsApp (Twilio)](#-configurar-whatsapp-twilio)
+7. [Actualización de datos](#-actualización-de-datos)
+8. [Troubleshooting](#-troubleshooting)
+
+---
+
+## 📦 Requisitos
 
 ### Software
-- Python 3.9+
-- Git
-- pip (gestor de paquetes Python)
+- **Python 3.9+** (recomendado 3.11+)
+- **Git**
+- **pip** (gestor de paquetes Python)
 
 ### Cuentas necesarias
-- GitHub (para repo + Actions)
-- Twilio (para WhatsApp) - OPCIONAL
-- OpenAI (para ChatGPT RAG) - OPCIONAL
-- Pinecone (para vectores) - OPCIONAL
+
+| Servicio | Para qué | ¿Obligatorio? |
+|----------|----------|----------------|
+| GitHub | Repo + deploy automático | ✅ Sí |
+| Render | Hosting en producción | ✅ Sí |
+| OpenAI | RAG con GPT-4o-mini | ⚠️ Solo para IA del bot |
+| Pinecone | Búsqueda semántica | ⚠️ Solo para RAG |
+| Twilio | Bot WhatsApp | ⚠️ Solo para WhatsApp |
+
+> Sin OpenAI/Pinecone: la página web funciona 100%. El bot funciona con flujo de 3 pasos pero NO con consultas libres de IA.
 
 ---
 
-## 🔧 INSTALACIÓN LOCAL
+## 🔧 Instalación local
 
-### PASO 1: Clonar o descargar el proyecto
+### Paso 1: Clonar repositorio
 
 ```bash
-# Si tienes Git
-git clone https://github.com/tuusuario/beneficios-bancarios.git
-cd beneficios-bancarios
-
-# O descargar ZIP y extraer
-unzip beneficios-bancarios.zip
-cd beneficios-bancarios
+git clone https://github.com/fernandoestay-create/beneficios-bancarios-chile.git
+cd beneficios-bancarios-chile
 ```
 
-### PASO 2: Crear entorno virtual
+### Paso 2: Crear entorno virtual
 
 ```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
 # Mac/Linux
 python3 -m venv venv
 source venv/bin/activate
+
+# Windows
+python -m venv venv
+venv\Scripts\activate
 ```
 
-### PASO 3: Instalar dependencias
+### Paso 3: Instalar dependencias
 
 ```bash
-# Dependencias básicas
-pip install requests beautifulsoup4 lxml
-
-# Para API REST
-pip install fastapi uvicorn
-
-# Para WhatsApp Bot
-pip install twilio flask
-
-# Para RAG (OpenAI + Pinecone)
-pip install openai pinecone-client
-
-# Todas juntas
 pip install -r requirements.txt
 ```
 
-### PASO 4: Estructura de carpetas
-
+**Dependencias instaladas:**
 ```
-beneficios-bancarios/
-├── scrapers.py              # Scrapers de Banco Chile + Falabella
-├── api.py                   # API REST FastAPI
-├── whatsapp_bot.py          # Bot WhatsApp
-├── requirements.txt         # Dependencias
-├── .env.example             # Variables de entorno ejemplo
-├── .github/
-│   └── workflows/
-│       └── scraper.yml      # GitHub Actions
-├── beneficios.json          # Base de datos (generado)
-└── README.md
-```
+# Scraping
+requests          → HTTP requests a los bancos
+beautifulsoup4    → Parsear HTML
+lxml              → Parser rápido para BS4
+playwright        → Para sitios con JS (no usado actualmente)
 
----
+# API REST
+fastapi           → Framework web
+uvicorn           → Servidor ASGI
+pydantic          → Validación de datos
+python-multipart  → Parsear form data (Twilio webhook)
 
-## ⚙️ CONFIGURACIÓN DE APIs
+# Bot WhatsApp
+twilio            → SDK de Twilio
+flask             → Framework para bot alternativo
+python-dotenv     → Leer .env
 
-### 🟦 TWILIO (WhatsApp Bot)
+# RAG / IA
+openai            → GPT-4o-mini + embeddings
+pinecone          → Base de datos vectorial
 
-#### 1. Crear cuenta
-- Ir a https://www.twilio.com/
-- Crear cuenta gratuita
-- Verificar número de teléfono
-
-#### 2. Obtener credenciales
-```
-Dashboard > Account > API Keys & Tokens
-Copiar:
-- Account SID
-- Auth Token
+# Deploy
+gunicorn          → Servidor WSGI (para Flask bot)
 ```
 
-#### 3. Configurar WhatsApp Sandbox
-```
-Messaging > WhatsApp > Sandbox
-Guardar número: whatsapp:+XXXXXXXXXXXX
-```
+### Paso 4: Configurar variables de entorno
 
-#### 4. Variables de entorno
 ```bash
-# Crear archivo .env
-cat > .env << EOF
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_WHATSAPP_NUMBER=whatsapp:+1234567890
+# Crear archivo .env en la raíz del proyecto
+cat > .env << 'EOF'
+# OpenAI (para RAG del bot)
 OPENAI_API_KEY=sk-...
-PINECONE_API_KEY=pcn-...
+
+# Pinecone (para búsqueda semántica)
+PINECONE_API_KEY=...
+PINECONE_ENV=us-east-1
+PINECONE_INDEX=beneficios-bancarios
+PINECONE_HOST=beneficios-bancarios-XXXXX.svc.aped-4627-b74a.pinecone.io
+
+# Twilio (solo si usas whatsapp_bot.py)
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_WHATSAPP_NUMBER=whatsapp:+...
 EOF
 ```
 
-#### 5. Cargar en Python
-```python
-from dotenv import load_dotenv
-load_dotenv()
-
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")
-```
-
-### 🟪 OPENAI (ChatGPT RAG)
-
-#### 1. Crear API Key
-- https://platform.openai.com/api-keys
-- Crear nueva key
-- Copiar y guardar
-
-#### 2. Agregar a .env
-```bash
-OPENAI_API_KEY=sk-your-key-here
-```
-
-#### 3. Usar en código
-```python
-import openai
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-response = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[{"role": "user", "content": "tu pregunta"}]
-)
-```
-
-### 🟦 PINECONE (Vector Database)
-
-#### 1. Crear cuenta
-- https://www.pinecone.io/
-- Crear proyecto gratuito
-
-#### 2. Obtener credenciales
-```
-Settings > API Keys
-Copiar:
-- API Key
-- Environment (p.ej: gcp-starter)
-```
-
-#### 3. Script de upload
-```python
-# scripts/upload_pinecone.py
-import pinecone
-from openai.embeddings_utils import get_embedding
-
-pinecone.init(api_key=os.getenv("PINECONE_API_KEY"))
-index = pinecone.Index("beneficios")
-
-for beneficio in beneficios_db:
-    embedding = get_embedding(beneficio.restaurante)
-    index.upsert([(beneficio.id, embedding)])
-```
+> ⚠️ El archivo `.env` NO se sube a Git (está en `.gitignore`).
 
 ---
 
-## ▶️ EJECUCIÓN
+## ⚙️ Configuración de APIs
 
-### 1️⃣ Ejecutar Scrapers
+### 🟢 OpenAI
+
+1. Ir a https://platform.openai.com/api-keys
+2. Crear nueva API Key
+3. Copiar y pegar en `.env` como `OPENAI_API_KEY=sk-...`
+
+**Uso en el proyecto:**
+- Modelo: `gpt-4o-mini` (respuestas del bot WhatsApp)
+- Embeddings: `text-embedding-3-small` (vectorización para Pinecone)
+- Costo estimado: ~$0.50/mes con uso moderado
+
+### 🟣 Pinecone
+
+1. Ir a https://www.pinecone.io/ → crear cuenta (free tier)
+2. Crear índice:
+   - Nombre: `beneficios-bancarios`
+   - Dimensión: `1536` (para text-embedding-3-small)
+   - Métrica: `cosine`
+3. Copiar: API Key + Host del índice
+4. Pegar en `.env`
+
+**Uso en el proyecto:**
+- Namespace: `beneficios-bancarios`
+- Vectores: 985 (uno por beneficio)
+- Búsqueda semántica top_k=15
+
+### 🔵 Twilio (WhatsApp)
+
+1. Crear cuenta en https://www.twilio.com/
+2. Ir a Messaging > WhatsApp > Sandbox
+3. Unirse al sandbox siguiendo instrucciones
+4. Configurar webhook URL:
+   ```
+   https://api-beneficios-chile.onrender.com/webhook
+   ```
+   Método: POST
+5. Copiar Account SID + Auth Token
+
+> El webhook de Twilio apunta a `api.py` (FastAPI), NO a `whatsapp_bot.py`.
+
+---
+
+## ▶️ Ejecución paso a paso
+
+### 1. Scrapear beneficios (genera los datos)
 
 ```bash
 python scrapers.py
@@ -200,322 +175,303 @@ python scrapers.py
 🚀 INICIANDO SCRAPING DE BENEFICIOS BANCARIOS
 ==================================================
 
-📡 Scrapeando Banco de Chile...
-✅ Encontrados: 229 beneficios disponibles
-🔍 Procesando 229 beneficios...
-   ✓ 10/229
-   ✓ 20/229
-   ...
-✅ Scraping completado: 229 beneficios
+📡 Scrapeando Banco de Chile (API CMS)...
+✅ Banco de Chile: 229 beneficios extraídos
 
-📡 Scrapeando Banco Falabella...
-✅ Restaurantes (71)
-🔍 Procesando 71 elementos...
-✅ Scraping completado: 71 beneficios
+📡 Scrapeando Banco Falabella (API CMS v2)...
+✅ Banco Falabella: 150 beneficios extraídos
+
+📡 Scrapeando BCI (HTML)...
+✅ BCI: 98 beneficios extraídos
+
+... (15 bancos en total)
+
+🔧 Normalizando datos...
 
 ==================================================
-✅ TOTAL BENEFICIOS EXTRAÍDOS: 300
+✅ TOTAL BENEFICIOS EXTRAÍDOS: 985
    • Banco de Chile: 229
-   • Banco Falabella: 71
+   • Banco Falabella: 150
+   • BCI: 98
+   • Scotiabank: 61
+   • ... (11 bancos más)
 ==================================================
+
+💾 Datos guardados en: beneficios.json (985 beneficios)
+💾 Datos guardados en: beneficios.csv
 ```
 
 **Archivos generados:**
-- `beneficios.json` - Base de datos completa
-- `beneficios.csv` - Backup en CSV
+- `beneficios.json` — 985 beneficios (~1.2MB)
+- `beneficios.csv` — mismo data para Excel/BI
 
-### 2️⃣ Ejecutar API REST
+### 2. (Opcional) Subir vectores a Pinecone
 
 ```bash
-python api.py
+python upload_pinecone.py
 ```
 
 **Output esperado:**
 ```
-🚀 Iniciando API en http://localhost:8000
-📖 Documentación en http://localhost:8000/docs
+🚀 Subiendo beneficios a Pinecone...
+📦 985 beneficios cargados
+🗑️  Namespace anterior limpiado
+   ✅ 50/985 vectores subidos
+   ✅ 100/985 vectores subidos
+   ...
+   ✅ 985/985 vectores subidos
+
+✅ COMPLETADO: 985 vectores en Pinecone
+   Index: beneficios-bancarios
+   Namespace: beneficios-bancarios
 ```
 
-**Pruebas rápidas:**
+> Solo necesario si quieres usar RAG (consultas libres con IA en el bot).
+
+### 3. Iniciar API (servidor web + bot)
+
+```bash
+uvicorn api:app --reload --port 8000
+```
+
+**Output esperado:**
+```
+INFO:     Started server process
+INFO:     Waiting for application startup
+  Cargados 985 beneficios desde beneficios.json
+INFO:     Application startup complete
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+### 4. Abrir en navegador
+
+| URL | Qué es |
+|-----|--------|
+| `http://localhost:8000/ver` | Página web con filtros + mapa |
+| `http://localhost:8000/docs` | Swagger API docs |
+| `http://localhost:8000/` | Health check (JSON) |
+| `http://localhost:8000/beneficios` | Todos los beneficios (JSON) |
+
+### 5. Probar API desde terminal
+
 ```bash
 # Health check
 curl http://localhost:8000/
 
-# Listar beneficios
-curl http://localhost:8000/beneficios
-
-# Buscar
-curl "http://localhost:8000/beneficios/buscar?restaurante=starbucks"
+# Buscar sushi en BCI
+curl "http://localhost:8000/beneficios/buscar?restaurante=sushi&banco=BCI"
 
 # Estadísticas
 curl http://localhost:8000/estadisticas
 
-# RAG Query
+# Consultar con IA
 curl -X POST http://localhost:8000/rag \
   -H "Content-Type: application/json" \
-  -d '{"pregunta": "¿Qué descuentos hay los lunes?"}'
+  -d '{"pregunta": "mejores descuentos para hoy"}'
 ```
 
-### 3️⃣ Ejecutar Bot WhatsApp
+### 6. Probar bot sin WhatsApp
 
 ```bash
-python whatsapp_bot.py
+# Simular mensaje de WhatsApp
+curl -X POST http://localhost:8000/webhook \
+  -d "From=whatsapp:+56912345678" \
+  -d "Body=hola"
 ```
-
-**Output esperado:**
-```
-🚀 Cargando beneficios...
-✅ Cargados 300 beneficios
-📱 Bot WhatsApp iniciado
-🌐 Servidor en http://localhost:5000
-🔗 Webhook en http://localhost:5000/webhook
-```
-
-**Para tunelizar a internet (desarrollo):**
-```bash
-# Instalar ngrok
-# https://ngrok.com/download
-
-ngrok http 5000
-# Te da una URL pública: https://xxxx-xx-xxx-xx-x.ngrok.io
-
-# En Twilio Sandbox:
-# Webhook URL: https://xxxx-xx-xxx-xx-x.ngrok.io/webhook
-```
-
-**Probar en WhatsApp:**
-1. Ir a https://www.twilio.com/console/sms/whatsapp/learn
-2. Seguir instrucciones para unirse al sandbox
-3. Enviar mensaje a tu número de Twilio
-4. Probar comandos:
-   - `/`
-   - `/restaurante starbucks`
-   - `/banco "Banco de Chile"`
-   - `/dia lunes`
-   - `/stats`
 
 ---
 
-## 🌐 DEPLOYMENT
+## 🌐 Deploy en Render
 
-### En Render (Gratuito)
-
-#### 1. Preparar proyecto
+### Paso 1: Preparar repo en GitHub
 
 ```bash
-# Crear requirements.txt
-pip freeze > requirements.txt
+git add .
+git commit -m "Ready for deploy"
+git push origin main
+```
 
-# Crear Procfile
-cat > Procfile << EOF
-web: python api.py
-worker: python whatsapp_bot.py
-EOF
+### Paso 2: Crear servicio en Render
 
-# Crear render.yaml
-cat > render.yaml << EOF
+1. Ir a https://render.com → Sign in con GitHub
+2. **New +** → **Web Service**
+3. Conectar repo `beneficios-bancarios-chile`
+4. Configurar:
+   - **Name**: `api-beneficios-chile`
+   - **Runtime**: Python
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn api:app --host 0.0.0.0 --port $PORT`
+
+### Paso 3: Variables de entorno en Render
+
+En el dashboard del servicio → **Environment**:
+
+```
+OPENAI_API_KEY    = sk-...
+PINECONE_API_KEY  = ...
+PINECONE_ENV      = us-east-1
+PINECONE_INDEX    = beneficios-bancarios
+PINECONE_HOST     = beneficios-bancarios-XXXXX.svc.aped-4627-b74a.pinecone.io
+```
+
+### Paso 4: Deploy automático
+
+Cada `git push origin main` → Render despliega automáticamente (~2-3 min).
+
+### URLs de producción
+
+```
+https://api-beneficios-chile.onrender.com/          ← API health check
+https://api-beneficios-chile.onrender.com/ver        ← Página web
+https://api-beneficios-chile.onrender.com/webhook    ← WhatsApp bot
+https://api-beneficios-chile.onrender.com/docs       ← Swagger
+```
+
+### render.yaml (ya incluido en el repo)
+
+```yaml
 services:
   - type: web
-    name: api-beneficios
-    env: python
+    name: api-beneficios-chile
+    runtime: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python api.py"
+    startCommand: "uvicorn api:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: OPENAI_API_KEY
         sync: false
-
-  - type: web
-    name: whatsapp-bot
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python whatsapp_bot.py"
-    envVars:
-      - key: TWILIO_ACCOUNT_SID
+      - key: PINECONE_API_KEY
         sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_WHATSAPP_NUMBER
-        sync: false
-EOF
+      - key: PINECONE_ENV
+        value: us-east-1
+      - key: PINECONE_INDEX
+        value: beneficios-bancarios
+      - key: PINECONE_HOST
+        value: beneficios-bancarios-XXXXX.svc.aped-4627-b74a.pinecone.io
 ```
-
-#### 2. Subir a GitHub
-```bash
-git add .
-git commit -m "Prep for Render deployment"
-git push origin main
-```
-
-#### 3. Deployer en Render
-- Ir a https://render.com
-- Crear cuenta
-- "New +" > "Web Service"
-- Conectar GitHub repo
-- Configurar variables de entorno
-- Deploy
-
-**URLs después del deploy:**
-- API: `https://api-beneficios-xxxx.onrender.com`
-- Bot: `https://whatsapp-bot-xxxx.onrender.com`
-
-### En GitHub Actions (Scraping automático)
-
-#### 1. Copiar workflow
-```bash
-mkdir -p .github/workflows
-cp .github_workflows_scraper.yml .github/workflows/scraper.yml
-```
-
-#### 2. Subir a GitHub
-```bash
-git add .github/workflows/scraper.yml
-git commit -m "Add daily scraper workflow"
-git push origin main
-```
-
-#### 3. Configurar secretos
-En GitHub:
-- Settings > Secrets and variables > Actions
-- Agregar secretos:
-  - `PINECONE_API_KEY`
-  - `OPENAI_API_KEY`
-
-#### 4. El workflow se ejecutará automáticamente:
-- **Diariamente a las 5 AM UTC** (2 AM Chile)
-- **Manualmente**: Actions > Scraping Diario > Run workflow
 
 ---
 
-## 🐛 TROUBLESHOOTING
+## 📱 Configurar WhatsApp (Twilio)
 
-### ❌ Error: "ModuleNotFoundError: No module named 'requests'"
+### Con Twilio Sandbox (desarrollo/testing)
+
+1. **Twilio Console** → Messaging → WhatsApp → Sandbox
+2. Escanear QR o enviar mensaje de activación al número sandbox
+3. Configurar webhook:
+   - **WHEN A MESSAGE COMES IN**: `https://api-beneficios-chile.onrender.com/webhook`
+   - **Method**: POST
+
+### Para desarrollo local (ngrok)
 
 ```bash
-pip install requests beautifulsoup4
+# Terminal 1: iniciar API
+uvicorn api:app --reload --port 8000
+
+# Terminal 2: tunelizar con ngrok
+ngrok http 8000
+# Te da: https://abc123.ngrok-free.app
+
+# En Twilio Sandbox: poner URL de ngrok
+# https://abc123.ngrok-free.app/webhook (POST)
 ```
 
-### ❌ Error: "Connection refused" en puerto 5000/8000
+### Probar el flujo
+
+1. Enviar "hola" al número de WhatsApp
+2. Bot pregunta: ¿Qué banco(s)?
+3. Responder: "Falabella, BCI"
+4. Bot pregunta: ¿Qué día?
+5. Responder: "viernes"
+6. Bot pregunta: ¿Tipo de comida?
+7. Responder: "sushi" (o "todos")
+8. Bot muestra resultados + link a la web
+
+---
+
+## 🔄 Actualización de datos
+
+### Proceso completo
 
 ```bash
-# El puerto ya está en uso. Cambiar en código:
-# api.py: uvicorn.run(app, host="0.0.0.0", port=8001)
-# whatsapp_bot.py: app.run(debug=True, port=5001)
+# 1. Activar entorno
+source venv/bin/activate
+
+# 2. Re-scrapear (toma ~2-3 minutos)
+python scrapers.py
+
+# 3. (Opcional) Actualizar vectores en Pinecone
+python upload_pinecone.py
+
+# 4. Commit y push (Render despliega automáticamente)
+git add beneficios.json beneficios.csv
+git commit -m "Actualizar datos $(date +%d-%m-%Y)"
+git push origin main
+
+# 5. Esperar ~2-3 min para que Render despliegue
 ```
 
-### ❌ Error: "403 Forbidden" al hacer scrape
+### Frecuencia recomendada
 
-Algunos sitios bloquean scrapers. Soluciones:
+- **Datos (scrapers)**: cada 1-2 semanas
+- **Pinecone**: cada vez que se re-scrapea
+- **Documentación (.md)**: cada vez que se hacen cambios al código
 
-```python
-# 1. Cambiar User-Agent
-session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-})
+---
 
-# 2. Usar delays
-import time
-time.sleep(2)
+## 🐛 Troubleshooting
 
-# 3. Usar proxies (si está disponible)
-proxies = {"https": "https://proxy.example.com:8080"}
-response = session.get(url, proxies=proxies)
+### "No se ve nada en /ver"
+
+```bash
+# Verificar que beneficios.json existe y tiene datos
+python -c "import json; d=json.load(open('beneficios.json')); print(f'{len(d)} beneficios')"
+
+# Verificar que la API carga los datos
+curl http://localhost:8000/ | python -m json.tool
+# Debe mostrar "total_beneficios": 985
 ```
 
-### ❌ WhatsApp: "No estoy recibiendo mensajes"
+### "El bot no responde en WhatsApp"
 
-1. Verificar que el webhook URL esté correcto en Twilio
-2. Usar ngrok para tunelar (desarrollo)
-3. Revisar logs: `twilio logs`
-4. Probar el webhook:
+1. Verificar webhook URL en Twilio → debe ser `https://api-beneficios-chile.onrender.com/webhook`
+2. Verificar método → POST
+3. Probar webhook directo:
    ```bash
-   curl -X POST http://localhost:5000/webhook \
-     -d "From=whatsapp:+56912345678" \
-     -d "Body=/help"
+   curl -X POST https://api-beneficios-chile.onrender.com/webhook \
+     -d "From=whatsapp:+56912345678" -d "Body=hola"
    ```
+4. Ver logs en Render Dashboard → servicio → Logs
 
-### ❌ GitHub Actions: Workflow no ejecuta
+### "Error 403 al scrapear"
 
-1. Verificar que `.github/workflows/scraper.yml` exista
-2. Ir a Actions tab y habilitar workflows
-3. Ejecutar manualmente primero: "Run workflow"
-4. Revisar logs de ejecución
-
----
-
-## 📈 MONITOREO
-
-### Ver logs en Render
+Algunos bancos bloquean requests. Las clases scraper ya incluyen User-Agent y headers apropiados. Si falla:
 ```bash
-# API
-Render Dashboard > api-beneficios > Logs
-
-# Bot
-Render Dashboard > whatsapp-bot > Logs
+# Ver qué banco falló
+python scrapers.py 2>&1 | grep "❌"
 ```
+El OrquestadorScrapers continúa con los demás bancos si uno falla.
 
-### Ver ejecuciones de GitHub Actions
-```
-GitHub > Actions > Scraping Diario > Ver workflow
-```
+### "Render no despliega"
 
-### Monitorear API
-```bash
-# Health check
-curl -s http://api-beneficios-xxxx.onrender.com/ | jq
+1. Verificar que `requirements.txt` está actualizado
+2. Ver Build Logs en Render Dashboard
+3. Error común: paquete no encontrado → verificar nombre en requirements.txt
 
-# Estadísticas
-curl -s http://api-beneficios-xxxx.onrender.com/estadisticas | jq
-```
+### "Los filtros no funcionan"
+
+1. Abrir DevTools del navegador (F12) → Console
+2. Buscar errores JS (rojo)
+3. Verificar que `deals` tiene datos: escribir `deals.length` en console
+4. Verificar que los Multi-Select (MS) se inicializaron: `bankMS.vals()`
+
+### "El mapa no muestra markers"
+
+- El mapa usa coordenadas aproximadas por región, NO geocoding real
+- Solo muestra restaurantes que tienen `ubicacion` definida
+- Si todos los markers se agrupan en un punto: es porque son de la misma región
+- Zoom in para ver markers individuales
 
 ---
 
-## 🔐 SEGURIDAD
-
-### En Producción:
-```python
-# 1. NO guardar secrets en código
-import os
-api_key = os.environ.get("API_KEY")
-
-# 2. Usar .env solo en desarrollo
-from dotenv import load_dotenv
-load_dotenv()  # Solo en desarrollo
-
-# 3. En Render/GitHub: usar Secrets
-
-# 4. Validar entrada de usuarios
-from fastapi import Query
-@app.get("/search")
-def search(q: str = Query(..., min_length=1, max_length=100)):
-    ...
-
-# 5. Rate limiting
-from slowapi import Limiter
-limiter = Limiter(key_func=get_remote_address)
-
-@app.get("/beneficios")
-@limiter.limit("100/minute")
-def get_beneficios(request: Request):
-    ...
-```
-
----
-
-## 📞 SOPORTE
-
-### Recursos útiles:
-- [Documentación FastAPI](https://fastapi.tiangolo.com/)
-- [Documentación Twilio](https://www.twilio.com/docs)
-- [Documentación OpenAI](https://platform.openai.com/docs)
-- [Documentación Pinecone](https://docs.pinecone.io/)
-
-### Contacto:
-- Email: soporte@beneficiosbancarios.cl
-- Issues: GitHub Issues
-- Discussions: GitHub Discussions
-
----
-
-**Última actualización**: Marzo 2026
-**Versión**: 1.0.0
-**Autores**: Equipo de Desarrollo
+**Última actualización**: 15 Marzo 2026
+**Versión**: v_01
