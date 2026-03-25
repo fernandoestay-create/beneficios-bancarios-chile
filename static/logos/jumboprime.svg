@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 70">
+  <text x="0" y="28" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="26" fill="#4CAF50" letter-spacing="2">JUMBO</text>
+  <text x="0" y="62" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="40" fill="#444" letter-spacing="1">prime</text>
+  <circle cx="232" cy="42" r="10" fill="#E91E90"/>
+  <path d="M228 42 L232 38 L236 42 L232 46Z" fill="#fff"/>
+</svg>

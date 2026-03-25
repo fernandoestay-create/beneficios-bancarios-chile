@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120">
+  <ellipse cx="100" cy="38" rx="32" ry="28" fill="#00AAFF" stroke="#1A237E" stroke-width="3"/>
+  <ellipse cx="100" cy="38" rx="22" ry="18" fill="#fff"/>
+  <path d="M82 38 C86 32 94 30 100 34 C106 30 114 32 118 38" stroke="#1A237E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <circle cx="84" cy="40" r="3" fill="#1A237E"/>
+  <circle cx="116" cy="40" r="3" fill="#1A237E"/>
+  <text x="100" y="85" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="22" fill="#1A237E">mercado</text>
+  <text x="100" y="110" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="22" fill="#1A237E">pago</text>
+</svg>

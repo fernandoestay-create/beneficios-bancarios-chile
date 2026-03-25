@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 90">
+  <rect x="40" y="5" width="70" height="70" rx="16" fill="#0052FF"/>
+  <text x="75" y="38" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="16" fill="#fff" letter-spacing="2">COPEC</text>
+  <text x="75" y="58" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="18" fill="#00E676" letter-spacing="2">PAY</text>
+  <circle cx="105" cy="65" r="10" fill="#00C853"/>
+  <circle cx="101" cy="61" r="2" fill="#fff"/>
+  <circle cx="109" cy="61" r="2" fill="#fff"/>
+  <circle cx="105" cy="69" r="2" fill="#fff"/>
+  <line x1="101" y1="61" x2="109" y2="61" stroke="#fff" stroke-width="1.2"/>
+  <line x1="105" y1="69" x2="109" y2="61" stroke="#fff" stroke-width="1.2"/>
+  <line x1="105" y1="69" x2="101" y2="61" stroke="#fff" stroke-width="1.2"/>
+</svg>

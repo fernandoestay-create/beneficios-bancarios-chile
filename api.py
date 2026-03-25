@@ -6,6 +6,7 @@ FastAPI + OpenAI RAG
 
 from fastapi import FastAPI, HTTPException, Query, Form, Response, Cookie
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import quote_plus
 from pydantic import BaseModel
@@ -18,7 +19,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Importar scrapers
-from scrapers import Beneficio, OrquestadorScrapers
+from scrapers import Beneficio, OrquestadorScrapers, DescuentoBencina, EstacionBencina
 
 # ============================================
 # MODELOS PYDANTIC
@@ -47,6 +48,38 @@ class BeneficioResponse(BaseModel):
     imagen_url: str = ""
     logo_url: str = ""
     direccion: str = ""
+
+    class Config:
+        from_attributes = True
+
+class DescuentoBencinaResponse(BaseModel):
+    id: str
+    cadena: str
+    banco: str
+    tarjeta: str
+    descuento_por_litro: int
+    descuento_texto: str
+    dias_validos: List[str]
+    condicion: str = ""
+    tope_litros: int = 0
+    tope_monto: int = 0
+    vigencia_mes: str = ""
+    valido_hasta: str = ""
+    restricciones_texto: str = ""
+    activo: bool = True
+
+    class Config:
+        from_attributes = True
+
+class EstacionBencinaResponse(BaseModel):
+    id: str
+    nombre: str
+    cadena: str
+    direccion: str = ""
+    comuna: str = ""
+    region: str = ""
+    latitud: float = 0.0
+    longitud: float = 0.0
 
     class Config:
         from_attributes = True
@@ -80,7 +113,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files for logos
+_static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if os.path.isdir(_static_dir):
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
 beneficios_db: List[Beneficio] = []
+bencinas_descuentos: List[DescuentoBencina] = []
+bencinas_estaciones: List[EstacionBencina] = []
+bencinas_meta: dict = {}
 timestamp_ultimo_scrape = None
 
 # ============================================
@@ -88,7 +129,7 @@ timestamp_ultimo_scrape = None
 # ============================================
 
 def inicializar_datos():
-    global beneficios_db, timestamp_ultimo_scrape
+    global beneficios_db, bencinas_descuentos, bencinas_estaciones, bencinas_meta, timestamp_ultimo_scrape
 
     # Resolver ruta relativa al directorio del script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -108,6 +149,19 @@ def inicializar_datos():
         scraper = ScraperBancoChile()
         beneficios_db = scraper.scrapear()
         timestamp_ultimo_scrape = datetime.now().isoformat()
+
+    # Cargar datos de bencinas
+    bencinas_path = os.path.join(script_dir, "bencinas.json")
+    if os.path.exists(bencinas_path):
+        print(f"⛽ Cargando bencinas desde {bencinas_path}...")
+        with open(bencinas_path, 'r', encoding='utf-8') as f:
+            bdata = json.load(f)
+            bencinas_descuentos = [DescuentoBencina(**d) for d in bdata.get("descuentos", [])]
+            bencinas_estaciones = [EstacionBencina(**e) for e in bdata.get("estaciones", [])]
+            bencinas_meta = bdata.get("meta", {})
+            print(f"✅ Bencinas: {len(bencinas_descuentos)} descuentos, {len(bencinas_estaciones)} estaciones")
+    else:
+        print("⚠️ bencinas.json no encontrado. Ejecuta scraping de bencinas.")
 
 
 def buscar_beneficios(
@@ -441,6 +495,111 @@ async def scrape_status():
 
 
 # ============================================
+# ENDPOINTS BENCINAS
+# ============================================
+
+@app.get("/bencinas")
+async def listar_bencinas(
+    cadena: Optional[str] = None,
+    banco: Optional[str] = None,
+    dia: Optional[str] = None,
+):
+    """Lista descuentos de bencina con filtros opcionales"""
+    resultados = bencinas_descuentos
+
+    if cadena:
+        cadena_lower = cadena.lower()
+        resultados = [d for d in resultados if cadena_lower in d.cadena.lower()]
+
+    if banco:
+        banco_lower = banco.lower()
+        resultados = [d for d in resultados if banco_lower in d.banco.lower()]
+
+    if dia:
+        dia_lower = dia.lower()
+        resultados = [d for d in resultados if dia_lower in [x.lower() for x in d.dias_validos]]
+
+    return {
+        "total": len(resultados),
+        "vigencia_mes": bencinas_meta.get("vigencia_mes", ""),
+        "descuentos": [d.to_dict() for d in resultados],
+    }
+
+
+@app.get("/bencinas/estaciones")
+async def listar_estaciones(
+    cadena: Optional[str] = None,
+    comuna: Optional[str] = None,
+):
+    """Lista estaciones de servicio con coordenadas"""
+    resultados = bencinas_estaciones
+
+    if cadena:
+        cadena_lower = cadena.lower()
+        resultados = [e for e in resultados if cadena_lower in e.cadena.lower()]
+
+    if comuna:
+        comuna_lower = comuna.lower()
+        resultados = [e for e in resultados if comuna_lower in e.comuna.lower()]
+
+    return {
+        "total": len(resultados),
+        "estaciones": [e.to_dict() for e in resultados],
+    }
+
+
+@app.get("/bencinas/mapa")
+async def bencinas_mapa():
+    """Datos combinados: estaciones + descuentos para el mapa"""
+    # Agrupar descuentos por cadena
+    descuentos_por_cadena = {}
+    for d in bencinas_descuentos:
+        if d.cadena not in descuentos_por_cadena:
+            descuentos_por_cadena[d.cadena] = []
+        descuentos_por_cadena[d.cadena].append(d.to_dict())
+
+    # Combinar estaciones con sus descuentos
+    estaciones_con_descuentos = []
+    for e in bencinas_estaciones:
+        est_dict = e.to_dict()
+        est_dict["descuentos"] = descuentos_por_cadena.get(e.cadena, [])
+        estaciones_con_descuentos.append(est_dict)
+
+    return {
+        "total_estaciones": len(estaciones_con_descuentos),
+        "total_descuentos": len(bencinas_descuentos),
+        "vigencia_mes": bencinas_meta.get("vigencia_mes", ""),
+        "estaciones": estaciones_con_descuentos,
+    }
+
+
+@app.post("/scrape/bencinas")
+async def ejecutar_scrape_bencinas():
+    """Ejecuta scraping de descuentos de bencina"""
+    global bencinas_descuentos, bencinas_estaciones, bencinas_meta
+
+    orquestador = OrquestadorScrapers()
+    desc, est = orquestador.scrapear_bencinas()
+    orquestador.guardar_bencinas_json(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "bencinas.json")
+    )
+
+    bencinas_descuentos = desc
+    bencinas_estaciones = est
+    bencinas_meta = {
+        "fecha_scrape": datetime.now().isoformat(),
+        "vigencia_mes": datetime.now().strftime("%Y-%m"),
+    }
+
+    return {
+        "status": "Scraping de bencinas completado",
+        "total_descuentos": len(desc),
+        "total_estaciones": len(est),
+        "vigencia_mes": bencinas_meta["vigencia_mes"],
+    }
+
+
+# ============================================
 # ACCESO TEMPORAL — tokens con fecha de expiración
 # ============================================
 
@@ -742,6 +901,10 @@ font-weight:600;cursor:pointer;transition:all .2s}}
 </head>
 <body>
 <div class="container">
+<nav style="display:flex;gap:4px;margin-bottom:20px;background:var(--panel);padding:4px;border-radius:14px;box-shadow:var(--shadow);width:fit-content">
+<a href="/ver" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3)">🍽️ Restaurantes</a>
+<a href="/ver/bencinas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">⛽ Bencina</a>
+</nav>
 <section class="hero">
 <div class="card hero-main">
 <div class="eyebrow">🍽️ Desde tu bot de WhatsApp</div>
@@ -838,14 +1001,14 @@ const BANK_LOGOS={{
 'Banco Itaú':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Ita%C3%BA_Unibanco_logo_2023.svg/200px-Ita%C3%BA_Unibanco_logo_2023.svg.png',
 'Scotiabank':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Scotiabank_logo.svg/200px-Scotiabank_logo.svg.png',
 'Santander':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Banco_Santander_Logotipo.svg/200px-Banco_Santander_Logotipo.svg.png',
-'Banco Consorcio':'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Logo_consorcio.svg/200px-Logo_consorcio.svg.png',
+'Banco Consorcio':'/static/logos/consorcio.svg',
 'BancoEstado':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Logo_BancoEstado.svg/200px-Logo_BancoEstado.svg.png',
 'Banco Security':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Logo_empresa_banco_security.png/200px-Logo_empresa_banco_security.png',
 'Banco Ripley':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Logo_Ripley_banco_2.png/200px-Logo_Ripley_banco_2.png',
 'Entel':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/EntelChile_Logo.svg/200px-EntelChile_Logo.svg.png',
 'Tenpo':'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Logotipo_Tenpo.svg/200px-Logotipo_Tenpo.svg.png',
 'Lider BCI':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Lider_2025.svg/200px-Lider_2025.svg.png',
-'Banco BICE':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Bice-logo.svg/200px-Bice-logo.svg.png',
+'Banco BICE':'/static/logos/bice.svg',
 'Mach':'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Logotipo_MACH.svg/200px-Logotipo_MACH.svg.png'
 }};
 const BANK_COLORS={{
@@ -1172,7 +1335,7 @@ def _detectar_dia_hoy() -> str:
 
 
 # ── Estado conversacional por usuario ──
-# {phone: {"step": "ask_banco"|"ask_dia"|"ask_comida", "bancos": [], "dia": "", "comida": ""}}
+# {phone: {"mode": "restaurantes"|"bencinas", "step": "ask_mode"|"ask_banco"|"ask_dia"|"ask_comida", ...}}
 user_flow = {}
 
 BANCOS_ALIAS = {
@@ -1298,6 +1461,44 @@ def _generar_resultado_flow(bancos: list, dia: str, comida: str) -> str:
     return texto[:1500]
 
 
+def _generar_resultado_bencinas(dia: str) -> str:
+    """Genera resultado de descuentos de bencina filtrado por día"""
+    resultados = list(bencinas_descuentos)
+
+    if dia:
+        resultados = [d for d in resultados
+                      if dia in d.dias_validos or 'todos' in d.dias_validos]
+
+    resultados.sort(key=lambda d: d.descuento_por_litro, reverse=True)
+
+    if not resultados:
+        return "No encontré descuentos de bencina para ese día 🤷\n\nEscribe *hola* para buscar de nuevo."
+
+    # Agrupar por cadena
+    por_cadena = {}
+    for d in resultados:
+        if d.cadena not in por_cadena:
+            por_cadena[d.cadena] = []
+        por_cadena[d.cadena].append(d)
+
+    dia_txt = dia.capitalize() if dia else "Todos los días"
+    texto = f"⛽ *{len(resultados)} descuentos de bencina*\n📅 {dia_txt}\n\n"
+
+    for cadena, items in sorted(por_cadena.items(), key=lambda x: -max(i.descuento_por_litro for i in x[1])):
+        texto += f"*⛽ {cadena}*\n"
+        for d in items[:5]:
+            texto += f"  • {d.banco} ({d.tarjeta}) — *${d.descuento_por_litro}/L*\n"
+            if d.tope_monto:
+                texto += f"    _Tope ${d.tope_monto:,}/mes_\n"
+        if len(items) > 5:
+            texto += f"  _...y {len(items)-5} más_\n"
+        texto += "\n"
+
+    BASE_URL = "https://api-beneficios-chile.onrender.com/ver/bencinas"
+    texto += f"📋 *Ver todos con mapa:*\n{BASE_URL}"
+    return texto[:1500]
+
+
 async def procesar_comando_whatsapp(texto: str, usuario: str = "") -> str:
     """Procesa mensajes de WhatsApp con IA (RAG) o comandos rápidos"""
     texto_original = texto.strip()
@@ -1307,52 +1508,100 @@ async def procesar_comando_whatsapp(texto: str, usuario: str = "") -> str:
     if usuario and usuario in user_flow:
         state = user_flow[usuario]
 
+        # PASO 1: ¿Restaurantes o Bencinas?
+        if state["step"] == "ask_mode":
+            if texto in ['2', 'bencina', 'bencinas', 'combustible', 'gasolina', 'fuel', 'gas']:
+                state["mode"] = "bencinas"
+                state["step"] = "ask_dia_bencina"
+                dia_hoy = _detectar_dia_hoy()
+                return f"""⛽ *Bencinas*
+
+📅 *¿Qué día?*
+_1._ Hoy ({dia_hoy})
+_2._ Lunes
+_3._ Martes
+_4._ Miércoles
+_5._ Jueves
+_6._ Viernes
+_7._ Sábado
+_8._ Domingo
+_9._ Todos"""
+            else:
+                # 1, restaurantes, o cualquier otra cosa -> restaurantes
+                state["mode"] = "restaurantes"
+                state["step"] = "ask_banco"
+                bancos = sorted(set(b.banco for b in beneficios_db))
+                lista = "\n".join(f"_{i+1}._ {b}" for i, b in enumerate(bancos))
+                return f"""🍽️ *Restaurantes*
+
+💳 *¿Qué banco?* (número o nombre)
+{lista}
+_{len(bancos)+1}._ Todos"""
+
+        # ── BENCINAS: día → resultado ──
+        if state["step"] == "ask_dia_bencina":
+            dia_map = {'1': _detectar_dia_hoy(), '2': 'lunes', '3': 'martes', '4': 'miercoles',
+                       '5': 'jueves', '6': 'viernes', '7': 'sabado', '8': 'domingo', '9': ''}
+            dia = dia_map.get(texto.strip(), _parse_dia(texto))
+            resultado = _generar_resultado_bencinas(dia)
+            del user_flow[usuario]
+            return resultado
+
+        # ── RESTAURANTES: banco → día → comida ──
         if state["step"] == "ask_banco":
-            state["bancos"] = _parse_bancos(texto)
+            bancos = sorted(set(b.banco for b in beneficios_db))
+            # Intentar por número
+            try:
+                num = int(texto.strip())
+                if 1 <= num <= len(bancos):
+                    state["bancos"] = [bancos[num - 1]]
+                elif num == len(bancos) + 1:
+                    state["bancos"] = []  # todos
+            except ValueError:
+                state["bancos"] = _parse_bancos(texto)
             state["step"] = "ask_dia"
             bancos_txt = ", ".join(state["bancos"]) if state["bancos"] else "Todos"
             dia_hoy = _detectar_dia_hoy()
-            return f"""✅ Banco(s): *{bancos_txt}*
+            return f"""✅ *{bancos_txt}*
 
 📅 *¿Qué día?*
-Ej: _lunes_, _viernes_, _hoy_ ({dia_hoy})
-O escribe *todos*"""
+_1._ Hoy ({dia_hoy})
+_2._ Lunes
+_3._ Martes
+_4._ Miércoles
+_5._ Jueves
+_6._ Viernes
+_7._ Sábado
+_8._ Domingo
+_9._ Todos"""
 
         if state["step"] == "ask_dia":
-            state["dia"] = _parse_dia(texto)
+            dia_map = {'1': _detectar_dia_hoy(), '2': 'lunes', '3': 'martes', '4': 'miercoles',
+                       '5': 'jueves', '6': 'viernes', '7': 'sabado', '8': 'domingo', '9': ''}
+            state["dia"] = dia_map.get(texto.strip(), _parse_dia(texto))
             state["step"] = "ask_comida"
             dia_txt = state["dia"].capitalize() if state["dia"] else "Todos"
-            return f"""✅ Día: *{dia_txt}*
+            return f"""✅ *{dia_txt}*
 
-🍕 *¿Qué tipo de comida?*
-Ej: _sushi_, _pizza_, _italiana_, _hamburguesa_
+🍕 *¿Qué comida?*
+Ej: _sushi_, _pizza_, _hamburguesa_
 O escribe *todos*"""
 
         if state["step"] == "ask_comida":
-            comida = '' if texto in ['todos', 'todo', 'all', 'cualquiera', 'da igual'] else texto_original
+            comida = '' if texto in ['todos', 'todo', 'all', 'cualquiera', 'da igual', '0'] else texto_original
             state["comida"] = comida
-            # Generar resultado y limpiar estado
             resultado = _generar_resultado_flow(state["bancos"], state["dia"], comida)
             del user_flow[usuario]
             return resultado
 
-    # ── Comandos rápidos (atajos) ──
+    # ── Comandos rápidos ──
     if texto in ['/', 'hola', 'hi', 'hello', 'help', 'menu', 'comandos', 'inicio']:
-        # Iniciar flujo conversacional
         if usuario:
-            user_flow[usuario] = {"step": "ask_banco", "bancos": [], "dia": "", "comida": ""}
-        bancos_disponibles = sorted(set(b.banco for b in beneficios_db))
-        bancos_txt = ", ".join(bancos_disponibles)
-        return f"""¡Hola! 👋🍽️ Te ayudo a encontrar descuentos en restaurantes 🇨🇱
+            user_flow[usuario] = {"step": "ask_mode", "mode": "", "bancos": [], "dia": "", "comida": ""}
+        return f"""👋 *¿Qué buscas?*
 
-Vamos a buscar en *{len(beneficios_db)} descuentos* de *{len(bancos_disponibles)} bancos*.
-
-💳 *¿Qué banco(s) tienes?*
-Puedes poner varios separados por coma.
-Ej: _Falabella, BCI, Scotiabank_
-O escribe *todos*
-
-_{bancos_txt}_"""
+*1.* 🍽️ Restaurantes ({len(beneficios_db)})
+*2.* ⛽ Bencinas ({len(bencinas_descuentos)})"""
 
     if texto == '/top':
         rest_max = {}
@@ -1602,6 +1851,713 @@ def _formatear_wa(beneficios, max_items=3):
     if len(beneficios) > max_items:
         texto += f"... y {len(beneficios) - max_items} mas."
     return texto[:1500]
+
+
+# ============================================
+# PAGINA WEB - BENCINAS CON MAPA
+# ============================================
+
+@app.get("/ver/bencinas", response_class=HTMLResponse)
+async def ver_bencinas():
+    """Pagina de descuentos de bencina con mapa de estaciones - estilo visual restaurantes"""
+    import html as html_lib
+
+    # Serializar datos para JS
+    bencina_deals_json = json.dumps([d.to_dict() for d in bencinas_descuentos], ensure_ascii=False)
+    estaciones_json = json.dumps([e.to_dict() for e in bencinas_estaciones], ensure_ascii=False)
+
+    # Stats
+    total_desc = len(bencinas_descuentos)
+    total_est = len(bencinas_estaciones)
+    cadenas = sorted(set(d.cadena for d in bencinas_descuentos))
+    bancos_list = sorted(set(d.banco for d in bencinas_descuentos))
+    max_dcto = max((d.descuento_por_litro for d in bencinas_descuentos), default=0)
+    vigencia = bencinas_meta.get("vigencia_mes", datetime.now().strftime("%Y-%m"))
+
+    # Mes en espanol
+    meses_es = {1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio',
+                7:'Julio',8:'Agosto',9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre'}
+    try:
+        y, m = vigencia.split('-')
+        mes_texto = f"{meses_es[int(m)]} {y}"
+    except Exception:
+        mes_texto = vigencia
+
+    bancos_json_list = json.dumps(bancos_list, ensure_ascii=False)
+    cadenas_json_list = json.dumps(cadenas, ensure_ascii=False)
+
+    page = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Descuentos Bencina Chile - {mes_texto}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<style>
+:root{{--bg:#f8f7f4;--panel:#fff;--panel2:#f3f1ed;--text:#1a1a2e;--muted:#6b7280;--line:#e5e2da;
+--primary:#ea580c;--primary2:#dc2626;--ok:#16a34a;--warn:#ea580c;--radius:16px;
+--shadow:0 4px 20px rgba(0,0,0,.06);}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);}}
+.container{{width:min(1260px,calc(100% - 24px));margin:0 auto;padding:20px 0 60px}}
+.hero{{display:grid;grid-template-columns:1.4fr .8fr;gap:16px;margin-bottom:20px}}
+.card{{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}}
+.hero-main{{padding:28px;background:linear-gradient(135deg,#fff7ed,#fef2f2)}}
+.eyebrow{{display:inline-flex;align-items:center;gap:6px;background:rgba(234,88,12,.08);
+border:1px solid rgba(234,88,12,.15);color:var(--primary);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600}}
+h1{{margin:12px 0 6px;font-size:clamp(24px,4vw,38px);line-height:1.1;font-weight:800;
+background:linear-gradient(135deg,var(--primary),var(--primary2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}}
+.sub{{color:var(--muted);font-size:14px;line-height:1.6}}
+.stats-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px}}
+.stat{{background:var(--panel2);border-radius:14px;padding:16px;text-align:center}}
+.stat .val{{font-size:28px;font-weight:800;color:var(--primary)}}
+.stat .lbl{{color:var(--muted);font-size:12px;margin-top:2px}}
+/* View toggle */
+.view-toggle{{display:flex;gap:4px;margin-bottom:16px;background:var(--panel2);padding:4px;border-radius:12px;width:fit-content}}
+.view-btn{{border:0;background:transparent;color:var(--muted);padding:10px 20px;border-radius:10px;
+font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}}
+.view-btn.active{{background:var(--panel);color:var(--primary);box-shadow:var(--shadow)}}
+.view-btn:hover:not(.active){{color:var(--text)}}
+.view-content{{display:none}}.view-content.active{{display:block}}
+.layout{{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}}
+.filters{{position:sticky;top:12px;padding:18px}}
+.filters h2{{font-size:16px;margin-bottom:14px;font-weight:700}}
+.group{{margin-bottom:14px}}
+.group label{{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}}
+.input,select{{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+color:var(--text);font-size:13px;outline:none;transition:border .2s}}
+.input:focus,select:focus{{border-color:var(--primary)}}
+.chips{{display:flex;flex-wrap:wrap;gap:6px}}
+.chip{{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:6px 11px;border-radius:999px;
+font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}}
+.chip:hover{{border-color:var(--primary);background:#fff7ed}}
+.chip.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+/* Day circle multi-select */
+.day-select{{display:flex;align-items:center;gap:2px;flex-wrap:nowrap}}
+.day-sel{{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:9px;font-weight:700;border:1.5px solid var(--line);color:var(--muted);background:var(--panel2);
+cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
+.day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
+.day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.day-sel-all{{width:auto;padding:0 8px;border-radius:999px;font-size:9px;letter-spacing:.3px;flex-shrink:0}}
+button{{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}}
+.btn-primary{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;flex:1}}
+.btn-secondary{{background:var(--panel2);color:var(--text);border:1px solid var(--line)}}
+.results{{padding:18px}}
+.toolbar{{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}}
+.pill{{padding:6px 12px;border-radius:999px;background:rgba(22,163,74,.08);color:var(--ok);
+border:1px solid rgba(22,163,74,.15);font-size:12px;font-weight:600}}
+.grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}}
+.deal{{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+display:flex;flex-direction:column;transition:box-shadow .2s,transform .15s}}
+.deal:hover{{box-shadow:0 8px 30px rgba(0,0,0,.1);transform:translateY(-2px)}}
+.deal-img{{height:200px;position:relative;overflow:hidden}}
+.deal-img img.hero-bg{{width:100%;height:100%;object-fit:cover;filter:brightness(.85)}}
+.deal-img .hero-overlay{{position:absolute;inset:0;background:linear-gradient(180deg,transparent 0%,transparent 40%,rgba(0,0,0,.45) 100%)}}
+.deal-img .chain-logo-hero{{position:absolute;top:12px;left:12px;background:rgba(255,255,255,.95);padding:5px 8px;border-radius:10px;display:flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,.15)}}
+.deal-img .chain-logo-hero img{{height:36px;width:auto}}
+.deal-img .badge{{position:absolute;top:14px;right:14px;background:linear-gradient(135deg,#00c853,#009624);
+color:#fff;padding:8px 16px;border-radius:12px;font-weight:900;font-size:20px;letter-spacing:.5px;box-shadow:0 3px 12px rgba(0,0,0,.25)}}
+.deal-header{{background:var(--panel);padding:10px 14px;border-bottom:1px solid var(--line)}}
+.deal-header h3{{font-size:17px;font-weight:800;margin:0;color:var(--text)}}
+.deal-header .hero-sub{{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap}}
+.deal-header .hero-sub img{{height:18px;border-radius:3px}}
+.deal-header .hero-sub .sub-tag{{font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;display:flex;align-items:center;gap:4px}}
+.deal-header .hero-sub .sub-tag.bank{{background:#f0f4ff;color:#1a56db}}
+.deal-header .hero-sub .sub-tag.mode{{background:#fff7ed;color:#ea580c}}
+.deal-header .hero-sub .sub-tag.chain{{background:#f0fdf4;color:#166534}}
+.deal-body{{padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:8px}}
+.deal-title{{font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}}
+.deal-desc{{color:var(--muted);font-size:13px;line-height:1.4}}
+.day-bar{{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fafafa}}
+.day-circles{{display:flex;gap:3px;flex:1}}
+.day-circle{{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+font-size:10px;font-weight:700;border:2px solid #e2e2e2;color:#ccc;background:#fff;transition:all .2s}}
+.day-circle.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.mode-badge{{font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap}}
+.mode-badge.presencial{{background:#fff7ed;color:#ea580c}}
+.deal-info{{display:flex;flex-direction:column;gap:4px}}
+.deal-info-row{{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}}
+.deal-info-row .info-icon{{width:15px;flex-shrink:0}}
+.cta-row{{display:flex;justify-content:center;padding-top:8px}}
+.link{{color:#fff;text-decoration:none;background:linear-gradient(135deg,var(--primary),var(--primary2));
+padding:10px 24px;border-radius:12px;font-weight:700;font-size:14px;transition:all .2s}}
+.link:hover{{opacity:.85;transform:translateY(-1px)}}
+.deal-footer{{background:#fafaf9;border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-direction:column;gap:2px}}
+.deal-footer .validity{{color:var(--muted);font-size:10px}}
+.deal-footer .disclaimer{{color:#bbb;font-size:9px;font-style:italic}}
+.empty{{display:none;text-align:center;padding:40px;color:var(--muted);border:2px dashed var(--line);border-radius:var(--radius)}}
+.no-img{{width:100%;height:100%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:48px}}
+.deal-visuals{{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--line);background:#fafaf9;gap:8px}}
+.deal-chain-logo{{height:32px;width:auto;object-fit:contain}}
+.tarjeta-row{{display:flex;align-items:center;gap:12px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;margin:3px 0}}
+.tarjeta-row img{{height:30px;border-radius:4px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.12))}}
+.tarjeta-row .tarjeta-dcto{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:5px 12px;border-radius:8px;font-weight:800;font-size:15px;white-space:nowrap}}
+.footer{{text-align:center;margin-top:24px;color:var(--muted);font-size:12px}}
+/* Multi-select */
+.multi-select{{position:relative}}
+.ms-trigger{{width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+cursor:pointer;display:flex;align-items:center;min-height:40px;gap:4px;flex-wrap:wrap}}
+.ms-placeholder{{color:var(--muted);font-size:13px}}
+.ms-tags{{display:flex;flex-wrap:wrap;gap:4px;flex:1}}
+.ms-tag{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:2px 8px;
+border-radius:6px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}}
+.ms-remove{{cursor:pointer;font-size:14px;line-height:1;opacity:.8}}.ms-remove:hover{{opacity:1}}
+.ms-arrow{{margin-left:auto;color:var(--muted);font-size:12px;flex-shrink:0}}
+.ms-dropdown{{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);
+border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:100;
+max-height:220px;overflow-y:auto;padding:4px}}
+.multi-select.open .ms-dropdown{{display:block}}
+.ms-option{{padding:7px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;border-radius:6px}}
+.ms-option:hover{{background:var(--panel2)}}
+.ms-option input{{accent-color:var(--primary);width:16px;height:16px;cursor:pointer}}
+.ms-search-input{{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);
+font-size:12px;outline:none;background:var(--panel2)}}.ms-search-input:focus{{border-color:var(--primary)}}
+/* Summary bar */
+.summary-bar{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:stretch;justify-content:center}}
+.summary-pill{{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+padding:8px 6px 6px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
+min-width:72px;max-width:100px;cursor:pointer;transition:all .15s;user-select:none}}
+.summary-pill:hover{{border-color:var(--primary);background:#fff7ed}}
+.summary-pill.active{{background:linear-gradient(135deg,rgba(234,88,12,.1),rgba(220,38,38,.1));
+border-color:var(--primary);box-shadow:0 0 0 2px rgba(234,88,12,.2)}}
+.summary-pill .sp-logo{{height:22px;display:flex;align-items:center;justify-content:center;flex:1}}
+.summary-pill .sp-logo img{{height:100%;width:auto;max-width:64px;object-fit:contain}}
+.summary-pill .sp-nologo{{font-size:8px;font-weight:700;color:var(--muted);
+text-align:center;line-height:1.2;max-width:88px;overflow:hidden;
+height:22px;display:flex;align-items:center;justify-content:center;word-break:break-word;white-space:normal}}
+.summary-pill .sp-ct{{font-weight:800;font-size:14px;color:var(--primary);margin-top:4px}}
+/* Map */
+#bencina-map{{height:calc(100vh - 260px);min-height:450px;border-radius:var(--radius);border:1px solid var(--line)}}
+.leaflet-popup-content{{font-family:Inter,sans-serif;font-size:13px;line-height:1.5}}
+.popup-title{{font-weight:700;font-size:15px;margin-bottom:4px}}
+.popup-bank{{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:4px}}
+.popup-bank img{{height:14px}}
+.popup-desc{{color:var(--muted);margin:4px 0}}
+.popup-link{{display:inline-block;background:var(--primary);color:#fff;padding:4px 10px;border-radius:6px;text-decoration:none;font-weight:600;font-size:12px;margin-top:4px}}
+/* Geolocation */
+.geo-bar{{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}}
+.geo-btn{{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;
+border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:13px;
+font-weight:600;cursor:pointer;transition:all .2s}}
+.geo-btn:hover{{border-color:var(--primary);background:#fff7ed;color:var(--primary)}}
+.geo-btn.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border-color:transparent}}
+.geo-btn.loading{{opacity:.7;cursor:wait}}
+.geo-status{{font-size:12px;color:var(--muted)}}
+@media(max-width:980px){{.hero,.layout,.grid{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
+.filters{{position:static}}.deal-img{{height:140px}}#bencina-map{{height:60vh}}
+.day-circle{{width:24px;height:24px;font-size:10px}}.day-bar{{gap:4px;padding:6px 8px}}}}
+.deal-visuals{{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-top:1px solid var(--line);background:#fafaf9;gap:6px;min-height:40px}}
+.deal-chain-logo{{height:28px;width:auto;object-fit:contain}}
+.deal-tarjeta{{height:38px;width:auto;max-width:120px;object-fit:contain;border-radius:4px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.15))}}
+.deal-chain-logo{{height:30px;width:auto;max-width:80px;object-fit:contain}}
+.deal-tarjeta-placeholder{{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px}}
+</style>
+</head>
+<body>
+<div class="container">
+<nav style="display:flex;gap:4px;margin-bottom:20px;background:var(--panel);padding:4px;border-radius:14px;box-shadow:var(--shadow);width:fit-content">
+<a href="/ver" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">🍽️ Restaurantes</a>
+<a href="/ver/bencinas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#ea580c,#dc2626);color:#fff;box-shadow:0 2px 8px rgba(234,88,12,.3)">⛽ Bencina</a>
+</nav>
+<section class="hero">
+<div class="card hero-main">
+<div class="eyebrow">⛽ Descuentos Bencina</div>
+<h1>Descuentos en Combustible de Chile</h1>
+<p class="sub">Todos los beneficios en estaciones Copec, Shell y Aramco, actualizados.
+Filtra por cadena, banco, dia y descuento minimo.</p>
+<p class="sub" style="margin-top:8px;font-weight:600;color:var(--primary)">Vigencia: {mes_texto}</p>
+</div>
+<div class="card stats-grid">
+<div class="stat"><div class="val">{total_desc}</div><div class="lbl">Descuentos activos</div></div>
+<div class="stat"><div class="val">${max_dcto}/L</div><div class="lbl">Mejor descuento</div></div>
+<div class="stat"><div class="val">{total_est}</div><div class="lbl">Estaciones RM</div></div>
+</div>
+</section>
+<section class="layout">
+<aside class="card filters">
+<h2>Filtros</h2>
+<button class="btn-secondary" id="resetBtn" style="width:100%;margin-bottom:10px;font-size:12px;padding:7px 0">Limpiar filtros</button>
+<div class="group"><label>Buscar</label>
+<input id="search" class="input" type="text" placeholder="Ej: Copec, BCI..."></div>
+<div class="group"><label>Banco / App</label>
+<div class="multi-select" id="bankMS"></div></div>
+<div class="group"><label>Dia</label>
+<div class="day-select" id="daySelect">
+<div class="day-sel day-sel-all active" data-day="all">Todos</div>
+<div class="day-sel" data-day="lunes">L</div>
+<div class="day-sel" data-day="martes">M</div>
+<div class="day-sel" data-day="miercoles">X</div>
+<div class="day-sel" data-day="jueves">J</div>
+<div class="day-sel" data-day="viernes">V</div>
+<div class="day-sel" data-day="sabado">S</div>
+<div class="day-sel" data-day="domingo">D</div>
+</div></div>
+<div class="group"><label>Cadena</label>
+<div class="chips" id="cadenaChips">
+<button class="chip active" data-cadena="all">Todas</button>
+<button class="chip" data-cadena="Copec">Copec</button>
+<button class="chip" data-cadena="Shell">Shell</button>
+<button class="chip" data-cadena="Aramco">Aramco</button>
+</div></div>
+<div class="group"><label>Ordenar</label>
+<select id="sortFilter">
+<option value="desc-desc">Mayor descuento</option>
+<option value="desc-asc">Menor descuento</option>
+<option value="name">Cadena A-Z</option>
+<option value="bank">Banco A-Z</option>
+</select></div>
+<button class="btn-secondary" id="resetBtn2" style="width:100%;margin-top:10px;font-size:12px;padding:7px 0">Limpiar filtros</button>
+</aside>
+<main class="card results">
+<div class="view-toggle">
+<button class="view-btn active" data-view="tarjetas">⛽ Tarjetas</button>
+<button class="view-btn" data-view="mapa">📍 Mapa</button>
+</div>
+<div id="summaryBar" class="summary-bar"></div>
+<div id="view-tarjetas" class="view-content active">
+<div class="toolbar">
+<h2>Resultados</h2>
+<span class="pill" id="count">0</span>
+</div>
+<div class="grid" id="grid"></div>
+<div class="empty" id="empty">No hay descuentos con esos filtros</div>
+</div>
+<div id="view-mapa" class="view-content">
+<div class="toolbar">
+<h2>Mapa</h2>
+<span class="pill" id="mapCount">0 estaciones</span>
+</div>
+<div class="geo-bar">
+<button class="geo-btn" id="geoBtn" onclick="toggleGeolocation()">📍 Mi ubicacion</button>
+<span class="geo-status" id="geoStatus"></span>
+</div>
+<div id="bencina-map"></div>
+<p style="color:var(--muted);font-size:11px;margin-top:8px;text-align:center">📍 Estaciones reales en la RM · Activa tu GPS para verte en el mapa</p>
+</div>
+</main>
+</section>
+<div class="footer">Vigencia: {mes_texto} · Beneficios Bancarios Chile</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const deals={bencina_deals_json};
+const stations={estaciones_json};
+
+const DIAS_SEMANA=['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+const HOY=DIAS_SEMANA[new Date().getDay()];
+
+// ── Chain images ──
+const CHAIN_IMAGES={{
+'Copec':'/static/logos/copec_station.jpg',
+'Shell':'/static/logos/shell_station.jpg',
+'Aramco':'/static/logos/aramco_station.jpg'
+}};
+const CHAIN_COLORS={{Copec:'#dc2626',Shell:'#FFD500',Aramco:'#003B71'}};
+const CHAIN_LOGOS={{
+'Copec':'/static/logos/copec.svg',
+'Shell':'/static/logos/shell.svg',
+'Aramco':'/static/logos/aramco_logo.png'
+}};
+const TARJETA_IMAGES={{
+'Visa Crédito Singular':'https://www.scotiabank.cl/content/dam/scotiabank/cl/images/tarjetas/visa-singular.png',
+'Visa Crédito Platinum':'https://www.scotiabank.cl/content/dam/scotiabank/cl/images/tarjetas/visa-platinum.png',
+'Visa Crédito Tradicional':'https://www.scotiabank.cl/content/dam/scotiabank/cl/images/tarjetas/visa-clasica.png',
+'Black':'https://www.scotiabank.cl/content/dam/scotiabank/cl/images/tarjetas/cencosud-black.png',
+'Crédito Consorcio':'https://www.bancoconsorcio.cl/assets/img/tarjetas/credito.png',
+'Crédito Ripley Gold':'https://www.bancoripley.cl/assets/img/tarjetas/gold.png',
+'Crédito Ripley Silver':'https://www.bancoripley.cl/assets/img/tarjetas/silver.png',
+'Crédito Ripley Plus':'https://www.bancoripley.cl/assets/img/tarjetas/plus.png',
+'Crédito BCI':'https://www.bci.cl/assets/img/tarjetas/bci-visa.png',
+'Crédito Legend Itaú':'https://www.itau.cl/assets/img/tarjetas/legend.png',
+'Limitless BICE':'https://www.bice.cl/assets/img/tarjetas/limitless.png',
+'Crédito BICE':'https://www.bice.cl/assets/img/tarjetas/credito.png',
+'Crédito Security':'https://www.bancosecurity.cl/assets/img/tarjetas/credito.png',
+'Rutpay':'https://www.bancoestado.cl/assets/img/tarjetas/rutpay.png',
+'Crédito MACHBANK':'https://www.machbank.cl/assets/img/tarjetas/credito.png',
+'Jumbo Prime':'https://www.scotiabank.cl/content/dam/scotiabank/cl/images/tarjetas/jumbo-prime.png'
+}};
+
+// ── Bank logos ──
+const BANK_LOGOS={{
+'Banco de Chile':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Banco_de_Chile_Logotipo.svg/200px-Banco_de_Chile_Logotipo.svg.png',
+'Banco Falabella':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Logotipo_Banco_Falabella.svg/200px-Logotipo_Banco_Falabella.svg.png',
+'BCI':'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Bci_Logotype.svg/200px-Bci_Logotype.svg.png',
+'Banco Itau':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Ita%C3%BA_Unibanco_logo_2023.svg/200px-Ita%C3%BA_Unibanco_logo_2023.svg.png',
+'Itau':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Ita%C3%BA_Unibanco_logo_2023.svg/200px-Ita%C3%BA_Unibanco_logo_2023.svg.png',
+'Scotiabank':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Scotiabank_logo.svg/200px-Scotiabank_logo.svg.png',
+'Santander':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Banco_Santander_Logotipo.svg/200px-Banco_Santander_Logotipo.svg.png',
+'Banco Consorcio':'/static/logos/consorcio.svg',
+'BancoEstado':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Logo_BancoEstado.svg/200px-Logo_BancoEstado.svg.png',
+'Banco Security':'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Logo_empresa_banco_security.png/200px-Logo_empresa_banco_security.png',
+'Banco Ripley':'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Logo_Ripley_banco_2.png/200px-Logo_Ripley_banco_2.png',
+'Entel':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/EntelChile_Logo.svg/200px-EntelChile_Logo.svg.png',
+'Tenpo':'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Logotipo_Tenpo.svg/200px-Logotipo_Tenpo.svg.png',
+'Lider BCI':'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Lider_2025.svg/200px-Lider_2025.svg.png',
+'Banco BICE':'/static/logos/bice.svg',
+'Mach':'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Logotipo_MACH.svg/200px-Logotipo_MACH.svg.png',
+'MACHBANK':'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Logotipo_MACH.svg/200px-Logotipo_MACH.svg.png',
+'Santander Consumer':'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Banco_Santander_Logotipo.svg/200px-Banco_Santander_Logotipo.svg.png',
+'Cencosud Scotiabank':'/static/logos/cencosud_scotiabank.svg',
+'Banco Internacional':'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Logo_banco_internacional.svg/200px-Logo_banco_internacional.svg.png',
+'Mercado Pago':'/static/logos/mercadopago.svg',
+'ABC Visa':'/static/logos/abcvisa.svg',
+'SBPay':'https://play-lh.googleusercontent.com/SBPay-logo.png',
+'SPIN':'https://play-lh.googleusercontent.com/SPIN-logo.png',
+'Coopeuch':'/static/logos/coopeuch.svg',
+'Copec Pay':'/static/logos/copecpay.svg',
+'Jumbo Prime':'/static/logos/jumboprime.svg',
+'Micopiloto':'/static/logos/micopiloto.svg'
+}};
+const BANK_COLORS={{
+'Banco de Chile':'#003DA5','Banco Falabella':'#00B140',
+'BCI':'#E31837','Banco Itau':'#003399','Itau':'#003399','Scotiabank':'#EC111A',
+'Santander':'#EC0000','Banco Consorcio':'#003366','BancoEstado':'#00A651',
+'Banco Security':'#1B3A5C','Banco Ripley':'#7B2D8E','Entel':'#FF6B00',
+'Tenpo':'#00C389','Lider BCI':'#E31837','Banco BICE':'#002F6C','Mach':'#6B21A8',
+'MACHBANK':'#6B21A8','Mercado Pago':'#009EE3','ABC Visa':'#1A1F71',
+'SBPay':'#FF6B00','SPIN':'#00B8D4','Micopiloto':'#FF5722','Coopeuch':'#0D47A1',
+'Copec Pay':'#dc2626','Jumbo Prime':'#E31837','Santander Consumer':'#EC0000',
+'Banco Internacional':'#003366','Cencosud Scotiabank':'#EC111A','Rutpay':'#4CAF50'
+}};
+const BANK_URLS={{
+'Banco Consorcio':'https://sitio.consorcio.cl/beneficios',
+'Banco Ripley':'https://www.bancoripley.cl/beneficios',
+'BCI':'https://www.bci.cl/beneficios',
+'Scotiabank':'https://www.scotiabankchile.cl/Personas/beneficios-scotia',
+'Cencosud Scotiabank':'https://www.tarjetacencosud.cl/publico/beneficios/landing/inicio',
+'Tenpo':'https://www.tenpo.cl/beneficios',
+'MACHBANK':'https://www.machbank.cl/beneficios',
+'Mach':'https://www.machbank.cl/beneficios',
+'Banco BICE':'https://banco.bice.cl/personas/beneficios',
+'BancoEstado':'https://www.bancoestado.cl/beneficios',
+'Banco Security':'https://www.bancosecurity.cl/beneficios',
+'Lider BCI':'https://www.bci.cl/beneficios',
+'Itau':'https://itaubeneficios.cl/',
+'Banco Itau':'https://itaubeneficios.cl/',
+'Mercado Pago':'https://www.mercadopago.cl/',
+'ABC Visa':'https://www.visa.cl/es_CL/promociones/',
+'SBPay':'https://www.sbpay.cl/beneficios/',
+'SPIN':'https://www.spinbyoxxo.com.mx/',
+'Micopiloto':'https://www.micopiloto.cl',
+'Coopeuch':'https://www.coopeuch.cl/beneficios',
+'Copec Pay':'https://appcopec.cl/',
+'Jumbo Prime':'https://jumboprime.cl/',
+'Santander Consumer':'https://banco.santander.cl/beneficios',
+'Banco Internacional':'https://beneficios.internacional.cl/'
+}};
+// Cadena URLs (Shell, Copec, Aramco) as fallback
+const CADENA_URLS={{
+'Copec':'https://appcopec.cl/',
+'Shell':'https://www.shell.cl/estaciones-de-servicio/promociones-y-campanas.html',
+'Aramco':'https://www.aramcoestaciones.cl/'
+}};
+
+function bankBadgeHtml(banco){{
+const logo=BANK_LOGOS[banco];
+if(logo)return `<img src="${{logo}}" alt="${{banco}}" onerror="this.style.display='none';this.nextElementSibling.style.fontSize='11px'"><span>${{banco}}</span>`;
+return `<span style="font-size:11px;font-weight:700">${{banco}}</span>`;
+}}
+function getBankUrl(banco,cadena){{
+return BANK_URLS[banco]||CADENA_URLS[cadena]||'#';
+}}
+
+// ── View toggle ──
+let currentView='tarjetas';
+document.querySelectorAll('.view-btn').forEach(btn=>{{btn.addEventListener('click',()=>{{
+document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+document.querySelectorAll('.view-content').forEach(c=>c.classList.remove('active'));
+btn.classList.add('active');
+currentView=btn.dataset.view;
+document.getElementById('view-'+currentView).classList.add('active');
+if(currentView==='mapa'){{initMap();setTimeout(()=>{{if(mapObj)mapObj.invalidateSize();renderMapMarkers()}},80)}}
+}})}});
+
+// ── Card grid ──
+const grid=document.getElementById('grid'),empty=document.getElementById('empty'),
+countEl=document.getElementById('count'),search=document.getElementById('search'),
+sortF=document.getElementById('sortFilter'),summaryBar=document.getElementById('summaryBar');
+
+// ── Multi-Select Component ──
+const bankOpts={bancos_json_list};
+class MS{{
+constructor(id,opts,ph){{this.el=document.getElementById(id);this.opts=opts;this.sel=new Set();this.ph=ph;this._build()}}
+_build(){{
+const hs=this.opts.length>5;
+this.el.innerHTML=`<div class="ms-trigger"><div class="ms-tags"><span class="ms-placeholder">${{this.ph}}</span></div><span class="ms-arrow">▾</span></div><div class="ms-dropdown">${{hs?'<input class="ms-search-input" placeholder="Buscar...">':''}}<div class="ms-opts">${{this.opts.map(o=>`<label class="ms-option"><input type="checkbox" value="${{o}}"> ${{o}}</label>`).join('')}}</div></div>`;
+this.el.querySelector('.ms-trigger').addEventListener('click',e=>{{
+if(e.target.closest('.ms-remove'))return;
+document.querySelectorAll('.multi-select.open').forEach(x=>{{if(x!==this.el)x.classList.remove('open')}});
+this.el.classList.toggle('open')}});
+this.el.querySelectorAll('.ms-option input').forEach(cb=>{{cb.addEventListener('change',()=>{{
+if(cb.checked)this.sel.add(cb.value);else this.sel.delete(cb.value);
+this._tags();renderAll()}})}});
+const si=this.el.querySelector('.ms-search-input');
+if(si){{si.addEventListener('input',()=>{{const q=si.value.toLowerCase();
+this.el.querySelectorAll('.ms-option').forEach(o=>{{o.style.display=o.textContent.toLowerCase().includes(q)?'':'none'}})}});
+si.addEventListener('click',e=>e.stopPropagation())}}
+document.addEventListener('click',e=>{{if(!this.el.contains(e.target))this.el.classList.remove('open')}})}}
+_tags(){{
+const t=this.el.querySelector('.ms-tags');
+if(!this.sel.size){{t.innerHTML=`<span class="ms-placeholder">${{this.ph}}</span>`;return}}
+t.innerHTML=[...this.sel].map(v=>`<span class="ms-tag">${{v}}<span class="ms-remove" data-v="${{v}}">x</span></span>`).join('');
+t.querySelectorAll('.ms-remove').forEach(x=>{{x.addEventListener('click',e=>{{
+e.stopPropagation();this.sel.delete(x.dataset.v);
+const c=[...this.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===x.dataset.v);
+if(c)c.checked=false;this._tags();renderAll()}})}})}}
+vals(){{return this.sel.size?[...this.sel]:null}}
+reset(){{this.sel.clear();this.el.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);this._tags()}}
+}}
+const bankMS=new MS('bankMS',bankOpts,'Todos los bancos');
+
+function chipVal(id,attr){{const a=document.querySelector('#'+id+' .chip.active');return a?a.dataset[attr]:'all'}}
+function initChips(id,attr){{document.getElementById(id).addEventListener('click',e=>{{
+const c=e.target.closest('.chip');if(!c)return;
+document.querySelectorAll('#'+id+' .chip').forEach(x=>x.classList.remove('active'));c.classList.add('active')}})}}
+initChips('cadenaChips','cadena');
+
+// ── Day multi-select circles ──
+const daySelect=document.getElementById('daySelect');
+const dayAll=daySelect.querySelector('[data-day="all"]');
+const daySels=[...daySelect.querySelectorAll('.day-sel:not(.day-sel-all)')];
+function getSelectedDays(){{
+  if(dayAll.classList.contains('active'))return null;
+  const sel=daySels.filter(d=>d.classList.contains('active')).map(d=>d.dataset.day);
+  return sel.length?sel:null;
+}}
+daySelect.addEventListener('click',e=>{{
+  const d=e.target.closest('.day-sel');if(!d)return;
+  if(d===dayAll){{
+    dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));
+  }}else{{
+    dayAll.classList.remove('active');d.classList.toggle('active');
+    if(!daySels.some(s=>s.classList.contains('active')))dayAll.classList.add('active');
+  }}
+}});
+
+// ── Normalize for search ──
+function norm(s){{return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9\\s]/g,'')}}
+
+function render(){{
+const qRaw=search.value.trim();
+const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
+const banks=bankMS.vals();
+const sort=sortF.value,selDays=getSelectedDays(),cadena=chipVal('cadenaChips','cadena');
+let f=deals.filter(d=>{{
+const txt=norm([d.cadena,d.banco,d.tarjeta,d.condicion||'',d.descuento_texto||''].join(' '));
+const mS=!qWords.length||qWords.every(w=>txt.includes(w));
+const mB=!banks||banks.includes(d.banco);
+const mCad=cadena==='all'||d.cadena===cadena;
+const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
+return mS&&mB&&mCad&&mDay}});
+f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_por_litro-b.descuento_por_litro;
+case'name':return a.cadena.localeCompare(b.cadena);
+case'bank':return a.banco.localeCompare(b.banco);
+default:return b.descuento_por_litro-a.descuento_por_litro}}}});
+// ── Summary bar (count per bank) ──
+const byBank={{}};f.forEach(d=>{{byBank[d.banco]=(byBank[d.banco]||0)+1}});
+const bankEntries=Object.entries(byBank).sort((a,b)=>b[1]-a[1]);
+if(bankEntries.length>0){{
+summaryBar.style.display='flex';
+const selBanks=bankMS.vals();
+summaryBar.innerHTML=bankEntries.map(([b,c])=>{{
+const logo=BANK_LOGOS[b];
+const isActive=selBanks&&selBanks.includes(b);
+const lh=logo?`<div class="sp-logo"><img src="${{logo}}" alt="${{b}}" onerror="this.parentNode.innerHTML='<span class=sp-nologo>${{b}}</span>'"></div>`
+:`<span class="sp-nologo">${{b}}</span>`;
+return `<span class="summary-pill${{isActive?' active':''}}" data-banco="${{b}}" title="${{b}}">${{lh}}<span class="sp-ct">${{c}}</span></span>`}}).join('');
+summaryBar.querySelectorAll('.summary-pill').forEach(pill=>{{pill.addEventListener('click',()=>{{
+const banco=pill.dataset.banco;
+const cb=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===banco);
+if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.sel.delete(banco);bankMS._tags();renderAll()}}
+}})}});
+}}else{{summaryBar.style.display='none';summaryBar.innerHTML=''}}
+grid.innerHTML='';
+if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
+empty.style.display='none';
+// ── Group deals by banco+cadena+day (one card per group) ──
+const groups={{}};
+f.forEach(d=>{{
+const dayKey=d.dias_validos.sort().join(',');
+const key=d.banco+'||'+d.cadena+'||'+dayKey;
+if(!groups[key])groups[key]={{deals:[],banco:d.banco,cadena:d.cadena,dias_validos:d.dias_validos,
+condicion:d.condicion,valido_hasta:d.valido_hasta,vigencia_mes:d.vigencia_mes}};
+groups[key].deals.push(d)}});
+const grouped=Object.values(groups);
+// Sort groups by best descuento
+grouped.sort((a,b)=>{{
+const aMax=Math.max(...a.deals.map(d=>d.descuento_por_litro));
+const bMax=Math.max(...b.deals.map(d=>d.descuento_por_litro));
+switch(sort){{case'desc-asc':return aMax-bMax;case'name':return a.cadena.localeCompare(b.cadena);
+case'bank':return a.banco.localeCompare(b.banco);default:return bMax-aMax}}}});
+countEl.textContent=grouped.length+' beneficios ('+f.length+' variantes)';
+const DAY_MAP=[['lunes','L'],['martes','M'],['miercoles','X'],['jueves','J'],['viernes','V'],['sabado','S'],['domingo','D']];
+grouped.forEach(g=>{{
+const bestDeal=g.deals.reduce((a,b)=>b.descuento_por_litro>a.descuento_por_litro?b:a);
+// Hero card with station background image
+const chainImg=CHAIN_IMAGES[g.cadena];
+const chainLg=CHAIN_LOGOS[g.cadena];
+const bgHtml=chainImg?`<img class="hero-bg" src="${{chainImg}}" alt="${{g.cadena}}" loading="lazy" onerror="this.parentNode.querySelector('.hero-overlay').style.background='linear-gradient(135deg,#667eea,#764ba2)';this.style.display='none'">`:'';
+const chainBadge=chainLg?`<div class="chain-logo-hero"><img src="${{chainLg}}" alt="${{g.cadena}}"></div>`:`<div class="chain-logo-hero"><span style="font-weight:800;font-size:14px">⛽ ${{g.cadena}}</span></div>`;
+const bankLogo=BANK_LOGOS[g.banco];
+const dayCircles=DAY_MAP.map(([k,l])=>{{
+const on=g.dias_validos.includes(k)||g.dias_validos.includes('todos');
+return `<div class="day-circle${{on?' active':''}}">${{l}}</div>`}}).join('');
+const detailUrl=getBankUrl(g.banco,g.cadena);
+const linkHtml=`<a class="link" href="${{detailUrl}}" target="_blank">Ver detalle</a>`;
+// Badge: show range if multiple
+const maxD=Math.max(...g.deals.map(d=>d.descuento_por_litro));
+const minD=Math.min(...g.deals.map(d=>d.descuento_por_litro));
+const badgeText=maxD===minD?'$'+maxD+'/L':'$'+minD+'-$'+maxD+'/L';
+// Tarjeta breakdown rows
+const tarjetaRows=g.deals.sort((a,b)=>b.descuento_por_litro-a.descuento_por_litro).map(d=>{{
+const tImg=TARJETA_IMAGES[d.tarjeta];
+const imgTag=tImg?`<img src="${{tImg}}" onerror="this.style.display='none'" alt="${{d.tarjeta}}">`:'<span style="font-size:22px">💳</span>';
+let topeInfo='';
+if(d.tope_monto)topeInfo=`<div style="color:var(--muted);font-size:11px;margin-top:2px">Tope ${{d.tope_monto.toLocaleString()}}/mes</div>`;
+return `<div class="tarjeta-row">
+${{imgTag}}
+<div style="flex:1"><div style="font-size:14px;font-weight:600">${{d.tarjeta}}</div>${{topeInfo}}</div>
+<div class="tarjeta-dcto">${{d.descuento_texto||'$'+d.descuento_por_litro+'/L'}}</div>
+</div>`}}).join('');
+const condText=g.condicion?`<div class="deal-desc">📱 ${{g.condicion}}</div>`:'';
+// Chain logo
+const chainLogo=CHAIN_LOGOS[g.cadena];
+const chainLogoHtml=chainLogo?`<img class="deal-chain-logo" src="${{chainLogo}}" alt="${{g.cadena}}" onerror="this.style.display='none'">`
+:`<span style="font-weight:700;font-size:13px">${{g.cadena}}</span>`;
+const el=document.createElement('article');el.className='deal';
+const bankLogoTag=bankLogo?`<img src="${{bankLogo}}" style="height:16px;border-radius:2px" onerror="this.style.display='none'">`:''
+;const bankLogoSub=bankLogo?`<img src="${{bankLogo}}" onerror="this.style.display='none'">`:''
+;const chainLogoSub=CHAIN_LOGOS[g.cadena]?`<img src="${{CHAIN_LOGOS[g.cadena]}}" onerror="this.style.display='none'">`:''
+;el.innerHTML=`<div class="deal-img">${{bgHtml}}<div class="hero-overlay"></div>
+${{chainBadge}}
+<div class="badge">${{badgeText}}</div></div>
+<div class="deal-header"><h3>${{g.cadena}} · ${{g.banco}}</h3>
+<div class="hero-sub">
+<span class="sub-tag bank">${{bankLogoSub}}${{g.banco}}</span>
+<span class="sub-tag mode">⛽ Presencial</span>
+<span class="sub-tag chain">${{chainLogoSub}}${{g.cadena}}</span>
+</div></div>
+<div class="deal-body">
+<div class="day-bar"><div class="day-circles">${{dayCircles}}</div><span class="mode-badge presencial">⛽ Presencial</span></div>
+<div style="display:flex;flex-direction:column;gap:4px">${{tarjetaRows}}</div>
+<div class="cta-row">${{linkHtml}}</div></div>
+<div class="deal-footer">
+<div class="validity">⏳ Vigencia: ${{g.valido_hasta||g.vigencia_mes||'Sin fecha'}}</div>
+<div class="disclaimer">⚠️ Condiciones sujetas al banco o app</div></div>`;
+grid.appendChild(el)}})}}
+
+function renderAll(){{render();if(currentView==='mapa'&&mapObj)renderMapMarkers()}}
+function resetAll(){{
+search.value='';bankMS.reset();
+sortF.value='desc-desc';
+document.querySelectorAll('#cadenaChips .chip').forEach(c=>c.classList.remove('active'));
+document.querySelector('#cadenaChips .chip[data-cadena="all"]').classList.add('active');
+dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));renderAll()}}
+document.getElementById('resetBtn').addEventListener('click',resetAll);
+document.getElementById('resetBtn2').addEventListener('click',resetAll);
+render();
+search.addEventListener('input',renderAll);sortF.addEventListener('change',renderAll);
+daySelect.addEventListener('click',()=>setTimeout(renderAll,10));
+document.getElementById('cadenaChips').addEventListener('click',()=>setTimeout(renderAll,10));
+
+// ── MAP ──
+let mapObj=null,clusterGroup=null;
+function initMap(){{
+if(mapObj){{mapObj.invalidateSize();renderMapMarkers();return}}
+mapObj=L.map('bencina-map').setView([-33.45,-70.65],11);
+L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}@2x.png',{{
+attribution:'&copy; <a href="https://carto.com">CARTO</a>',maxZoom:19}}).addTo(mapObj);
+clusterGroup=L.markerClusterGroup({{maxClusterRadius:40}});
+mapObj.addLayer(clusterGroup);
+renderMapMarkers();
+}}
+function renderMapMarkers(){{
+if(!clusterGroup)return;
+clusterGroup.clearLayers();
+const cadena=chipVal('cadenaChips','cadena');
+const banks=bankMS.vals();
+const selDays=getSelectedDays();
+const qRaw=search.value.trim();
+const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
+// Filter stations by cadena
+let filtSt=stations;
+if(cadena!=='all')filtSt=filtSt.filter(s=>s.cadena===cadena);
+// Filter deals
+let filtDeals=deals.filter(d=>{{
+const mB=!banks||banks.includes(d.banco);
+const mCad=cadena==='all'||d.cadena===cadena;
+const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
+const txt=norm([d.cadena,d.banco,d.tarjeta].join(' '));
+const mS=!qWords.length||qWords.every(w=>txt.includes(w));
+return mB&&mCad&&mDay&&mS}});
+const dealsByChain={{}};
+filtDeals.forEach(d=>{{if(!dealsByChain[d.cadena])dealsByChain[d.cadena]=[];dealsByChain[d.cadena].push(d)}});
+let count=0;
+filtSt.forEach(s=>{{
+if(!s.latitud||!s.longitud)return;
+const stDeals=dealsByChain[s.cadena]||[];
+const color=CHAIN_COLORS[s.cadena]||'#6b7280';
+const icon=L.divIcon({{className:'',html:`<div style="background:${{color}};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
+iconSize:[14,14],iconAnchor:[7,7]}});
+let popup=`<div style="min-width:220px;font-family:Inter,sans-serif">
+<div class="popup-title">${{s.nombre}}</div>
+<div style="font-size:12px;color:#6b7280">📍 ${{s.direccion}} - ${{s.comuna}}</div>`;
+if(stDeals.length>0){{
+popup+=`<hr style="margin:8px 0;border:0;border-top:1px solid #e5e2da">`;
+popup+=`<div style="font-weight:600;font-size:12px;margin-bottom:4px">Descuentos:</div>`;
+stDeals.forEach(d=>{{
+const isToday=d.dias_validos.includes(HOY);
+const blogo=BANK_LOGOS[d.banco]?`<img src="${{BANK_LOGOS[d.banco]}}" style="height:14px">`:'';
+popup+=`<div style="padding:3px 0;font-size:12px;${{isToday?'color:#ea580c;font-weight:600':''}}">
+<strong>${{d.descuento_texto}}</strong> ${{blogo}} ${{d.banco}} ${{isToday?'🎯 HOY':''}}</div>`}})}}
+popup+=`</div>`;
+L.marker([s.latitud,s.longitud],{{icon}}).bindPopup(popup,{{maxWidth:300}}).addTo(clusterGroup);
+count++}});
+document.getElementById('mapCount').textContent=count+' estaciones';
+}}
+
+// ── Geolocation ──
+let geoMarker=null,geoActive=false;
+function toggleGeolocation(){{
+const btn=document.getElementById('geoBtn'),status=document.getElementById('geoStatus');
+if(geoActive){{
+  geoActive=false;btn.classList.remove('active');
+  if(geoMarker){{mapObj.removeLayer(geoMarker);geoMarker=null}}
+  status.textContent='';return;
+}}
+if(!navigator.geolocation){{status.textContent='Tu navegador no soporta geolocalizacion';return}}
+btn.classList.add('loading');status.textContent='Obteniendo ubicacion...';
+navigator.geolocation.getCurrentPosition(
+  pos=>{{
+    geoActive=true;btn.classList.remove('loading');btn.classList.add('active');
+    const lat=pos.coords.latitude,lng=pos.coords.longitude;
+    status.textContent=`📍 ${{lat.toFixed(4)}}, ${{lng.toFixed(4)}}`;
+    if(!mapObj)initMap();
+    if(geoMarker)mapObj.removeLayer(geoMarker);
+    const geoIcon=L.divIcon({{className:'',html:`<div style="position:relative"><div style="width:18px;height:18px;background:#4285F4;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(66,133,244,.5)"></div><div style="position:absolute;top:-6px;left:-6px;width:30px;height:30px;border-radius:50%;background:rgba(66,133,244,.15);animation:geoPulse 2s infinite"></div></div>`,
+    iconSize:[18,18],iconAnchor:[9,9]}});
+    geoMarker=L.marker([lat,lng],{{icon:geoIcon,zIndex:9999}}).addTo(mapObj)
+      .bindPopup('<div style="text-align:center"><strong>📍 Estas aqui</strong><br><span style="color:#6b7280;font-size:12px">Tu ubicacion actual</span></div>');
+    mapObj.setView([lat,lng],14);
+    geoMarker.openPopup();
+  }},
+  err=>{{
+    btn.classList.remove('loading');
+    const msgs={{1:'Permiso denegado',2:'Ubicacion no disponible',3:'Tiempo agotado'}};
+    status.textContent='⚠️ '+(msgs[err.code]||'Error desconocido');
+  }},
+  {{enableHighAccuracy:true,timeout:10000,maximumAge:60000}}
+);
+}}
+(function(){{const s=document.createElement('style');s.textContent='@keyframes geoPulse{{0%{{transform:scale(1);opacity:.6}}100%{{transform:scale(2.5);opacity:0}}}}';document.head.appendChild(s)}})();
+</script>
+</body></html>"""
+
+    return HTMLResponse(page)
 
 
 @app.post("/webhook")

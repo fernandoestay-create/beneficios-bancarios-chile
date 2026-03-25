@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80">
+  <defs>
+    <clipPath id="c"><rect x="85" y="2" width="32" height="32" rx="6"/></clipPath>
+  </defs>
+  <rect x="80" y="2" width="38" height="38" rx="8" fill="#ED1C24"/>
+  <path d="M100 6 C112 10 116 22 112 32 C108 22 98 18 90 20 C96 14 100 8 100 6Z" fill="#fff" opacity=".9"/>
+  <text x="120" y="65" font-family="Arial,sans-serif" font-weight="700" font-size="28" fill="#ED1C24" text-anchor="middle" letter-spacing="3">COOPEUCH</text>
+</svg>

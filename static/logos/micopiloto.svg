@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+  <rect x="55" y="2" width="44" height="44" rx="10" fill="#FFD500" stroke="#E0C000" stroke-width="1"/>
+  <text x="77" y="22" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="13" fill="#DD1D21">upa!</text>
+  <circle cx="77" cy="34" r="8" fill="#DD1D21"/>
+  <path d="M71 34 C73 28 81 28 83 34 C81 30 73 30 71 34Z" fill="#FFD500"/>
+  <text x="100" y="80" text-anchor="middle" font-family="Arial Rounded MT Bold,Arial,sans-serif" font-weight="700" font-size="24" fill="#555">micopiloto</text>
+</svg>

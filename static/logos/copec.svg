@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 180">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1565C0"/>
+      <stop offset="50%" stop-color="#42A5F5"/>
+      <stop offset="100%" stop-color="#90CAF9"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="70" r="55" fill="url(#sky)"/>
+  <ellipse cx="75" cy="75" rx="20" ry="8" fill="#fff" opacity=".8"/>
+  <ellipse cx="120" cy="60" rx="15" ry="6" fill="#fff" opacity=".7"/>
+  <ellipse cx="90" cy="85" rx="12" ry="5" fill="#fff" opacity=".6"/>
+  <text x="100" y="160" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="36" fill="#DC2626" letter-spacing="4">COPEC</text>
+</svg>

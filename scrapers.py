@@ -57,6 +57,54 @@ class Beneficio:
         return asdict(self)
 
 
+@dataclass
+class DescuentoBencina:
+    """Modelo de un descuento de combustible"""
+    id: str
+    cadena: str              # "Copec", "Shell", "Aramco"
+    banco: str               # "Banco Consorcio", "Mercado Pago", etc.
+    tarjeta: str             # nombre de tarjeta/app
+    descuento_por_litro: int # CLP por litro (ej: 100)
+    descuento_texto: str     # "$100/L", "$50-$300/L"
+    dias_validos: List[str]  # ["lunes"], ["lunes","martes","miercoles","jueves","viernes"]
+    condicion: str = ""      # "App Aramco", "Micopiloto", etc.
+    tope_litros: int = 0     # max litros por transaccion
+    tope_monto: int = 0      # max CLP por mes
+    combustible: str = ""    # "Bencina", "Diesel", "Todos"
+    vigencia_mes: str = ""   # "2026-03" (YYYY-MM)
+    valido_hasta: str = ""   # "31-Mar-2026"
+    restricciones_texto: str = ""
+    url_fuente: str = ""
+    fecha_scrape: str = ""
+    activo: bool = True
+    tags: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.fecha_scrape = self.fecha_scrape or datetime.now().isoformat()
+        if not self.vigencia_mes:
+            self.vigencia_mes = datetime.now().strftime("%Y-%m")
+
+    def to_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class EstacionBencina:
+    """Ubicacion de una estacion de servicio"""
+    id: str
+    nombre: str           # "Copec Av. Providencia"
+    cadena: str           # "Copec", "Shell", "Aramco"
+    direccion: str = ""
+    comuna: str = ""
+    region: str = ""
+    latitud: float = 0.0
+    longitud: float = 0.0
+    servicios: List[str] = field(default_factory=list)
+
+    def to_dict(self):
+        return asdict(self)
+
+
 # ============================================
 # SCRAPER BANCO DE CHILE (API CMS)
 # ============================================
@@ -2839,6 +2887,348 @@ class ScraperMach:
 
 
 # ============================================
+# SCRAPER DE DESCUENTOS EN BENCINA
+# ============================================
+
+class ScraperBencina:
+    """Scraper de descuentos en bencina/combustible.
+
+    Fuente primaria: descuentosrata.com/bencina
+    Fallback: datos estáticos mensuales (biobiochile, chocale, etc.)
+    """
+
+    URL_DESCUENTOSRATA = "https://descuentosrata.com/bencina"
+    CADENAS = ["Copec", "Shell", "Aramco"]
+
+    # Logos de cadenas de gasolineras
+    LOGOS = {
+        "Copec": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Copec_logo.svg/200px-Copec_logo.svg.png",
+        "Shell": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/Shell_logo.svg/200px-Shell_logo.svg.png",
+        "Aramco": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Aramco_logo.svg/200px-Aramco_logo.svg.png",
+    }
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml',
+        })
+        self.descuentos: List[DescuentoBencina] = []
+
+    def scrapear(self) -> List[DescuentoBencina]:
+        """Extrae descuentos de bencina. Intenta web scraping, usa fallback si falla."""
+        print("⛽ Scrapeando descuentos de bencina...")
+        try:
+            self._scrapear_descuentosrata()
+            if len(self.descuentos) >= 15:
+                print(f"  ✅ descuentosrata.com: {len(self.descuentos)} descuentos")
+            else:
+                print(f"  ⚠️ Solo {len(self.descuentos)} descuentos de web, cargando fallback...")
+                self.descuentos = []
+                self._cargar_datos_estaticos()
+        except Exception as e:
+            print(f"  ⚠️ descuentosrata falló ({e}), usando datos estáticos...")
+            self.descuentos = []
+            self._cargar_datos_estaticos()
+
+        print(f"  ⛽ Total descuentos bencina: {len(self.descuentos)}")
+        return self.descuentos
+
+    def _scrapear_descuentosrata(self):
+        """Scrapea descuentosrata.com/bencina"""
+        from bs4 import BeautifulSoup
+
+        resp = self.session.get(self.URL_DESCUENTOSRATA, timeout=30)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, 'html.parser')
+
+        # descuentosrata organiza por secciones de cadena con cards
+        cards = soup.select('.card, .discount-card, article, .benefit-card, [class*="descuento"]')
+
+        for card in cards:
+            try:
+                texto = card.get_text(separator=' ', strip=True)
+                # Intentar extraer cadena
+                cadena = ""
+                texto_lower = texto.lower()
+                for c in self.CADENAS:
+                    if c.lower() in texto_lower:
+                        cadena = c
+                        break
+                if not cadena:
+                    continue
+
+                # Extraer monto descuento
+                match_monto = re.search(r'\$\s*(\d+)', texto)
+                if not match_monto:
+                    continue
+                monto = int(match_monto.group(1))
+
+                # Extraer banco/medio de pago
+                banco = self._extraer_banco(texto)
+
+                # Extraer dias
+                dias = self._extraer_dias(texto)
+
+                self.descuentos.append(DescuentoBencina(
+                    id=f"bencina_{cadena.lower()}_{banco.lower().replace(' ', '_')}_{'-'.join(dias) if dias else 'todos'}",
+                    cadena=cadena,
+                    banco=banco,
+                    tarjeta=banco,
+                    descuento_por_litro=monto,
+                    descuento_texto=f"${monto}/L",
+                    dias_validos=dias if dias else ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"],
+                    condicion="",
+                    url_fuente=self.URL_DESCUENTOSRATA,
+                ))
+            except Exception:
+                continue
+
+    def _extraer_banco(self, texto: str) -> str:
+        """Extrae nombre del banco/medio de pago del texto"""
+        bancos_conocidos = [
+            "Banco Consorcio", "Consorcio", "Mercado Pago", "Banco Ripley", "Ripley",
+            "ABC Visa", "Tenpo", "SBPay", "SPIN", "Lider BCI", "Lider Bci",
+            "Micopiloto", "BICE", "Bice", "Security", "Cencosud Scotiabank",
+            "Scotiabank", "Jumbo Prime", "Santander Consumer", "Santander",
+            "Banco Internacional", "Internacional", "Itaú", "Itau",
+            "Coopeuch", "BCI", "Bci", "Rutpay", "BancoEstado", "MACHBANK",
+            "Machbank", "Mach", "Copec Pay",
+        ]
+        texto_lower = texto.lower()
+        for banco in bancos_conocidos:
+            if banco.lower() in texto_lower:
+                return banco
+        return "Varios"
+
+    def _extraer_dias(self, texto: str) -> List[str]:
+        """Extrae dias de la semana del texto"""
+        dias_map = {
+            'lunes': 'lunes', 'martes': 'martes', 'miércoles': 'miercoles',
+            'miercoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+            'sábado': 'sabado', 'sabado': 'sabado', 'domingo': 'domingo',
+        }
+        encontrados = []
+        texto_lower = texto.lower()
+        for nombre, dia in dias_map.items():
+            if nombre in texto_lower and dia not in encontrados:
+                encontrados.append(dia)
+        return encontrados
+
+    def _cargar_datos_estaticos(self):
+        """Datos de descuentos bencina marzo 2026 (fallback)"""
+        import calendar
+        now = datetime.now()
+        ultimo_dia = calendar.monthrange(now.year, now.month)[1]
+        mes_abrev = {1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',
+                     7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'}[now.month]
+        valido_hasta = f"{ultimo_dia:02d}-{mes_abrev}-{now.year}"
+
+        # Fuente: biobiochile.cl, chocale.cl, descuentosrata.com - Marzo 2026
+        datos = [
+            # ARAMCO
+            ("Aramco", "Banco Consorcio", "Crédito Consorcio", 150, ["lunes"], "App Aramco", 0, 10000),
+            ("Aramco", "Mercado Pago", "Prepago Mercado Pago", 50, ["martes"], "", 0, 5000),
+            ("Aramco", "Banco Ripley", "Crédito Ripley Gold", 150, ["miercoles"], "", 0, 0),
+            ("Aramco", "Banco Ripley", "Crédito Ripley Silver", 125, ["miercoles"], "", 0, 0),
+            ("Aramco", "Banco Ripley", "Crédito Ripley Plus", 100, ["miercoles"], "", 0, 0),
+            ("Aramco", "ABC Visa", "Crédito ABC Visa", 150, ["jueves"], "", 0, 0),
+            ("Aramco", "Tenpo", "Crédito/Prepago Tenpo", 300, ["viernes"], "Min $5.000, máx 2 tx/mes", 0, 4000),
+            ("Aramco", "SBPay", "Crédito SBPay", 150, ["sabado"], "App Aramco", 0, 10000),
+            ("Aramco", "SPIN", "Crédito SPIN", 150, ["domingo"], "", 0, 10000),
+
+            # SHELL
+            ("Shell", "Lider BCI", "Crédito Lider BCI", 100, ["martes"], "App Micopiloto, máx $4.000/carga", 0, 8000),
+            ("Shell", "Micopiloto", "Cualquier tarjeta", 15, ["miercoles"], 'Código "MIDCTO", 1x/día, 70L', 70, 0),
+            ("Shell", "Banco BICE", "Crédito BICE", 100, ["domingo"], "Máx 1 carga/mes", 0, 5000),
+            ("Shell", "Banco Security", "Crédito Security", 100, ["domingo"], "", 0, 5000),
+
+            # COPEC
+            ("Copec", "Cencosud Scotiabank", "Black", 100, ["lunes"], "App Copec", 0, 0),
+            ("Copec", "Cencosud Scotiabank", "Clásica/Platinum", 50, ["lunes"], "App Copec", 0, 0),
+            ("Copec", "Jumbo Prime", "Jumbo Prime", 100, ["lunes"], "Máx 100 litros", 100, 0),
+            ("Copec", "Santander Consumer", "Crédito Auto Santander", 100, ["lunes", "martes", "miercoles", "jueves", "viernes"], "70L máx", 70, 0),
+            ("Copec", "Banco Internacional", "MC Clásica/Gold/Black", 100, ["martes"], "App Copec", 0, 0),
+            ("Copec", "Scotiabank", "Visa Crédito Singular", 100, ["miercoles"], "App Copec", 0, 0),
+            ("Copec", "Scotiabank", "Visa Crédito Platinum", 50, ["miercoles"], "App Copec", 0, 0),
+            ("Copec", "Scotiabank", "Visa Crédito Tradicional", 25, ["miercoles"], "App Copec", 0, 0),
+            ("Copec", "Coopeuch", "Crédito Coopeuch", 100, ["jueves"], "", 0, 0),
+            ("Copec", "BCI", "Crédito BCI", 100, ["jueves"], "Cashback 7%", 0, 0),
+            ("Copec", "Itaú", "Crédito Legend Itaú", 100, ["viernes"], "Código desde Itaú Beneficios", 0, 0),
+            ("Copec", "BancoEstado", "Rutpay", 100, ["viernes"], "50L máx, estaciones participantes", 50, 0),
+            ("Copec", "MACHBANK", "Crédito MACHBANK", 100, ["sabado"], "", 0, 0),
+            ("Copec", "Banco BICE", "Limitless BICE", 100, ["domingo"], "", 0, 0),
+            ("Copec", "Copec Pay", "Copec Pay", 10, ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"], "+50% puntos bonus", 0, 0),
+        ]
+
+        for (cadena, banco, tarjeta, monto, dias, condicion, tope_l, tope_m) in datos:
+            dias_id = '-'.join(dias) if len(dias) <= 2 else 'semana'
+            self.descuentos.append(DescuentoBencina(
+                id=f"bencina_{cadena.lower()}_{banco.lower().replace(' ', '_')}_{dias_id}",
+                cadena=cadena,
+                banco=banco,
+                tarjeta=tarjeta,
+                descuento_por_litro=monto,
+                descuento_texto=f"${monto}/L",
+                dias_validos=dias,
+                condicion=condicion,
+                tope_litros=tope_l,
+                tope_monto=tope_m,
+                valido_hasta=valido_hasta,
+                url_fuente="https://descuentosrata.com/bencina",
+                tags=[cadena.lower(), banco.lower(), "bencina", "combustible"],
+            ))
+
+
+# ============================================
+# SCRAPER DE ESTACIONES DE SERVICIO (CNE)
+# ============================================
+
+class ScraperEstacionesCNE:
+    """Obtiene ubicaciones de estaciones de servicio desde OpenStreetMap Overpass API.
+
+    Fuente primaria: OpenStreetMap Overpass API (datos publicos, ~220 estaciones en RM)
+    Filtro: Solo cadenas con descuentos (Copec, Shell, Aramco)
+    """
+
+    # Overpass API mirrors - datos publicos de OpenStreetMap
+    OVERPASS_URLS = [
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://overpass-api.de/api/interpreter",
+    ]
+
+    # Bounding boxes por region (sur, oeste, norte, este)
+    REGION_BBOX = {
+        "Metropolitana": (-33.7, -70.9, -33.2, -70.4),
+        "Valparaiso": (-33.3, -71.8, -32.6, -71.0),
+        "Biobio": (-37.2, -73.3, -36.4, -72.4),
+    }
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'BeneficiosBancarios/1.0 (scraper educativo)',
+            'Accept': 'application/json',
+        })
+        self.estaciones: List[EstacionBencina] = []
+
+    def scrapear(self, region: str = "Metropolitana") -> List[EstacionBencina]:
+        """Obtiene TODAS las estaciones de servicio de una region via OpenStreetMap."""
+        print(f"📍 Obteniendo estaciones de servicio ({region}) desde OpenStreetMap...")
+
+        try:
+            self._scrapear_overpass(region)
+            if len(self.estaciones) >= 20:
+                print(f"  ✅ OpenStreetMap: {len(self.estaciones)} estaciones")
+                return self.estaciones
+            else:
+                print(f"  ⚠️ Solo {len(self.estaciones)} estaciones de OSM")
+        except Exception as e:
+            print(f"  ⚠️ Overpass API fallo: {e}")
+
+        print(f"  📍 Total estaciones: {len(self.estaciones)}")
+        return self.estaciones
+
+    def _scrapear_overpass(self, region: str):
+        """Obtiene estaciones de OpenStreetMap Overpass API"""
+        bbox = self.REGION_BBOX.get(region)
+        if not bbox:
+            # Para regiones no mapeadas, usar solo RM por defecto
+            bbox = self.REGION_BBOX["Metropolitana"]
+
+        s, w, n, e = bbox
+        # Query Overpass: todas las estaciones de servicio en el bounding box
+        # Incluye nodos y ways (algunos son areas poligonales)
+        query = f"""[out:json][timeout:60];
+(
+  node["amenity"="fuel"]({s},{w},{n},{e});
+  way["amenity"="fuel"]({s},{w},{n},{e});
+);
+out center body;"""
+
+        resp = None
+        for url in self.OVERPASS_URLS:
+            try:
+                resp = self.session.post(url, data={'data': query}, timeout=90)
+                resp.raise_for_status()
+                break
+            except Exception as err:
+                print(f"    ⚠️ Mirror {url.split('/')[2]} fallo: {err}")
+                continue
+        if not resp or resp.status_code != 200:
+            raise Exception("Todos los mirrors de Overpass fallaron")
+        data = resp.json()
+
+        elements = data.get('elements', [])
+        print(f"  📡 Overpass retorno {len(elements)} estaciones brutas")
+
+        for elem in elements:
+            try:
+                tags = elem.get('tags', {})
+
+                # Coordenadas: para nodos es directo, para ways usar 'center'
+                lat = elem.get('lat') or (elem.get('center', {}).get('lat'))
+                lon = elem.get('lon') or (elem.get('center', {}).get('lon'))
+                if not lat or not lon:
+                    continue
+
+                # Detectar cadena
+                brand = tags.get('brand', '')
+                operator = tags.get('operator', '')
+                name = tags.get('name', '')
+                cadena = self._detectar_cadena(brand or operator or name)
+
+                # Solo incluir cadenas principales con descuentos
+                if cadena not in ('Copec', 'Shell', 'Aramco'):
+                    continue
+
+                # Nombre de la estacion
+                nombre = name or f"{cadena} {tags.get('addr:street', '')}"
+                if not nombre or nombre == cadena:
+                    nombre = f"{cadena} #{elem.get('id', '')}"
+
+                # Direccion
+                calle = tags.get('addr:street', '')
+                numero = tags.get('addr:housenumber', '')
+                direccion = f"{calle} {numero}".strip() if calle else ''
+
+                # Comuna
+                comuna = tags.get('addr:city', '') or tags.get('addr:suburb', '')
+
+                self.estaciones.append(EstacionBencina(
+                    id=f"osm_{elem.get('id', len(self.estaciones))}",
+                    nombre=nombre,
+                    cadena=cadena,
+                    direccion=direccion,
+                    comuna=comuna,
+                    region=region,
+                    latitud=float(lat),
+                    longitud=float(lon),
+                ))
+            except Exception:
+                continue
+
+        # Stats por cadena
+        cadena_count = {}
+        for e in self.estaciones:
+            cadena_count[e.cadena] = cadena_count.get(e.cadena, 0) + 1
+        for c, n in sorted(cadena_count.items(), key=lambda x: -x[1]):
+            print(f"    {c}: {n} estaciones")
+
+    def _detectar_cadena(self, nombre: str) -> str:
+        """Detecta la cadena de la estacion por nombre/brand"""
+        nombre_lower = nombre.lower()
+        cadenas = {
+            'copec': 'Copec', 'shell': 'Shell', 'aramco': 'Aramco',
+            'petrobras': 'Petrobras', 'terpel': 'Terpel',
+        }
+        for key, value in cadenas.items():
+            if key in nombre_lower:
+                return value
+        return "Otra"
+
+
+# ============================================
 # ORQUESTADOR PRINCIPAL
 # ============================================
 
@@ -2921,6 +3311,41 @@ class OrquestadorScrapers:
 
     def __init__(self):
         self.all_beneficios: List[Beneficio] = []
+        self.descuentos_bencina: List[DescuentoBencina] = []
+        self.estaciones_bencina: List[EstacionBencina] = []
+
+    def scrapear_bencinas(self) -> tuple:
+        """Scrapea descuentos de bencina y ubicaciones de estaciones"""
+        print("\n" + "=" * 50)
+        print("⛽ INICIANDO SCRAPING DE BENCINAS")
+        print("=" * 50 + "\n")
+
+        # 1. Descuentos
+        scraper_desc = ScraperBencina()
+        self.descuentos_bencina = scraper_desc.scrapear()
+
+        # 2. Estaciones
+        scraper_est = ScraperEstacionesCNE()
+        self.estaciones_bencina = scraper_est.scrapear(region="Metropolitana")
+
+        print(f"\n✅ BENCINAS: {len(self.descuentos_bencina)} descuentos, {len(self.estaciones_bencina)} estaciones\n")
+        return self.descuentos_bencina, self.estaciones_bencina
+
+    def guardar_bencinas_json(self, filename: str = "bencinas.json"):
+        """Guarda descuentos de bencina y estaciones en JSON"""
+        data = {
+            "descuentos": [d.to_dict() for d in self.descuentos_bencina],
+            "estaciones": [e.to_dict() for e in self.estaciones_bencina],
+            "meta": {
+                "fecha_scrape": datetime.now().isoformat(),
+                "vigencia_mes": datetime.now().strftime("%Y-%m"),
+                "total_descuentos": len(self.descuentos_bencina),
+                "total_estaciones": len(self.estaciones_bencina),
+            }
+        }
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"💾 Bencinas guardadas en: {filename}")
 
     def scrapear_todo(self) -> List[Beneficio]:
         """Ejecuta todos los scrapers y normaliza datos"""
@@ -3148,15 +3573,28 @@ class OrquestadorScrapers:
 
 if __name__ == "__main__":
     orquestador = OrquestadorScrapers()
-    beneficios = orquestador.scrapear_todo()
 
+    # Scraping de beneficios bancarios (restaurantes)
+    beneficios = orquestador.scrapear_todo()
     orquestador.guardar_json("beneficios.json")
     orquestador.guardar_csv("beneficios.csv")
 
-    # Mostrar muestra
+    # Scraping de bencinas
+    descuentos_bencina, estaciones = orquestador.scrapear_bencinas()
+    orquestador.guardar_bencinas_json("bencinas.json")
+
+    # Mostrar muestra de beneficios
     print("\n📋 MUESTRA DE BENEFICIOS:\n")
     for b in beneficios[:5]:
         print(f"  • {b.restaurante} ({b.banco})")
         print(f"    Descuento: {b.descuento_texto}")
         print(f"    Días: {', '.join(b.dias_validos)}")
         print(f"    Ubicación: {b.ubicacion}\n")
+
+    # Mostrar muestra de bencinas
+    print("⛽ MUESTRA DE DESCUENTOS BENCINA:\n")
+    for d in descuentos_bencina[:5]:
+        print(f"  • {d.cadena} - {d.banco}")
+        print(f"    Descuento: {d.descuento_texto}")
+        print(f"    Días: {', '.join(d.dias_validos)}")
+        print(f"    Condición: {d.condicion}\n")
