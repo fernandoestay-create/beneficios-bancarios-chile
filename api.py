@@ -670,7 +670,7 @@ async def ver_login(clave: str = Form(...)):
 @app.get("/ver", response_class=HTMLResponse)
 async def ver_resultados(
     dia: Optional[str] = Query(None, description="Día de la semana"),
-    banco: Optional[str] = Query(None, description="Nombre del banco"),
+    banco: Optional[List[str]] = Query(None, description="Nombre del banco (puede ser múltiple)"),
     q: Optional[str] = Query(None, description="Búsqueda libre"),
     key: Optional[str] = Query(None, description="Clave de acceso temporal"),
     acceso_key: Optional[str] = Cookie(None),
@@ -731,7 +731,7 @@ async def ver_resultados(
 
     # Pre-selección de filtros desde URL
     init_dia = f'"{dia}"' if dia else 'null'
-    init_banco = f'"{banco}"' if banco else 'null'
+    init_bancos = json.dumps(banco, ensure_ascii=False) if banco else 'null'
     init_q = f'"{q}"' if q else 'null'
 
     total = len(all_data)
@@ -1193,10 +1193,12 @@ dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));
 document.getElementById('resetBtn').addEventListener('click',resetAll);
 document.getElementById('resetBtn2').addEventListener('click',resetAll);
 
-const initDia={init_dia},initBanco={init_banco},initQ={init_q};
+const initDia={init_dia},initBancos={init_bancos},initQ={init_q};
 if(initQ)search.value=initQ;
-if(initBanco){{const c=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===initBanco);
-if(c){{c.checked=true;bankMS.sel.add(initBanco);bankMS._tags()}}}}
+if(initBancos&&initBancos.length){{initBancos.forEach(b=>{{
+const c=[...bankMS.el.querySelectorAll('input[type=checkbox]')].find(c=>c.value===b);
+if(c){{c.checked=true;bankMS.sel.add(b)}}
+}});bankMS._tags()}}
 if(initDia){{dayAll.classList.remove('active');
 daySels.forEach(s=>{{if(s.dataset.day===initDia)s.classList.add('active')}});}}
 render();
@@ -1446,15 +1448,14 @@ def _generar_resultado_flow(bancos: list, dia: str, comida: str) -> str:
         texto += "\n"
         bancos_mostrados += 1
 
-    # Link
+    # Link con TODOS los filtros
     BASE_URL = "https://api-beneficios-chile.onrender.com/ver"
     params = []
     if dia:
         params.append(f"dia={quote_plus(dia)}")
-    if bancos and len(bancos) == 1:
-        params.append(f"banco={quote_plus(bancos[0])}")
-    if comida:
-        params.append(f"q={quote_plus(comida)}")
+    if bancos:
+        for b in bancos:
+            params.append(f"banco={quote_plus(b)}")
     link = BASE_URL + ("?" + "&".join(params) if params else "")
 
     texto += f"📋 *Ver todos con filtros:*\n{link}"
