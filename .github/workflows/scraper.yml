@@ -25,12 +25,20 @@ jobs:
           playwright install chromium
 
       - name: Run scrapers (restaurantes + bencinas)
+        id: scrape
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_HOST: ${{ secrets.PINECONE_HOST }}
           PINECONE_INDEX: beneficios-bancarios
-        run: python scrapers.py
+        run: |
+          python scrapers.py 2>&1 | tee scrape_output.txt
+          # Extract stats for report
+          echo "SCRAPE_DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+          echo "BENEFICIOS=$(python -c "import json;d=json.load(open('beneficios.json'));print(len(d))")" >> $GITHUB_ENV
+          echo "BENCINAS_DCTOS=$(python -c "import json;d=json.load(open('bencinas.json'));print(len(d.get('descuentos',[])))")" >> $GITHUB_ENV
+          echo "BENCINAS_EST=$(python -c "import json;d=json.load(open('bencinas.json'));print(len(d.get('estaciones',[])))")" >> $GITHUB_ENV
+          echo "BANCOS=$(python -c "import json;d=json.load(open('beneficios.json'));print(len(set(b['banco'] for b in d)))")" >> $GITHUB_ENV
 
       - name: Upload to Pinecone
         env:
@@ -47,3 +55,67 @@ jobs:
           git add beneficios.json beneficios.csv bencinas.json
           git diff --staged --quiet || git commit -m "🔄 Actualizar beneficios y bencinas $(date +%Y-%m-%d)"
           git push
+
+      - name: Send email report
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "🔄 Scraping ${{ env.SCRAPE_DATE }} - ${{ env.BENEFICIOS }} beneficios | ${{ env.BENCINAS_DCTOS }} bencinas"
+          to: fernando.estay@gmail.com
+          from: Beneficios Bot <${{ secrets.GMAIL_USER }}>
+          html_body: |
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+              <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:20px;border-radius:12px 12px 0 0">
+                <h1 style="color:#fff;margin:0;font-size:20px">🔄 Reporte Scraping</h1>
+                <p style="color:rgba(255,255,255,.8);margin:5px 0 0;font-size:14px">${{ env.SCRAPE_DATE }}</p>
+              </div>
+              <div style="background:#fff;padding:20px;border:1px solid #e5e7eb">
+                <h2 style="color:#1f2937;font-size:16px;margin-top:0">📊 Resultados</h2>
+                <table style="width:100%;border-collapse:collapse;font-size:14px">
+                  <tr style="border-bottom:1px solid #f3f4f6">
+                    <td style="padding:8px 0">🍽️ Beneficios restaurantes</td>
+                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#6366f1">${{ env.BENEFICIOS }}</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid #f3f4f6">
+                    <td style="padding:8px 0">🏦 Bancos</td>
+                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#6366f1">${{ env.BANCOS }}</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid #f3f4f6">
+                    <td style="padding:8px 0">⛽ Descuentos bencina</td>
+                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_DCTOS }}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0">📍 Estaciones mapeadas</td>
+                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_EST }}</td>
+                  </tr>
+                </table>
+                <div style="margin-top:16px;display:flex;gap:8px">
+                  <a href="https://api-beneficios-chile.onrender.com/ver" style="background:#6366f1;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">🍽️ Ver Restaurantes</a>
+                  <a href="https://api-beneficios-chile.onrender.com/ver/bencinas" style="background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⛽ Ver Bencinas</a>
+                </div>
+              </div>
+              <div style="background:#f9fafb;padding:12px 20px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
+                <p style="color:#9ca3af;font-size:11px;margin:0">Ejecución automática GitHub Actions · <a href="https://github.com/fernandoestay-create/beneficios-bancarios-chile/actions" style="color:#6366f1">Ver logs</a></p>
+              </div>
+            </div>
+
+      - name: Send failure email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "❌ ERROR Scraping ${{ env.SCRAPE_DATE || 'hoy' }}"
+          to: fernando.estay@gmail.com
+          from: Beneficios Bot <${{ secrets.GMAIL_USER }}>
+          html_body: |
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px">
+              <h2 style="color:#dc2626;margin-top:0">❌ Scraping falló</h2>
+              <p>Revisa los logs en GitHub Actions:</p>
+              <a href="https://github.com/fernandoestay-create/beneficios-bancarios-chile/actions" style="background:#dc2626;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">Ver logs</a>
+            </div>
