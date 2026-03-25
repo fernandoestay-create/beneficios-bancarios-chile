@@ -1529,40 +1529,9 @@ _9._ Todos"""
             else:
                 # 1, restaurantes, o cualquier otra cosa -> restaurantes
                 state["mode"] = "restaurantes"
-                state["step"] = "ask_banco"
-                bancos = sorted(set(b.banco for b in beneficios_db))
-                lista = "\n".join(f"_{i+1}._ {b}" for i, b in enumerate(bancos))
+                state["step"] = "ask_dia_rest"
+                dia_hoy = _detectar_dia_hoy()
                 return f"""🍽️ *Restaurantes*
-
-💳 *¿Qué banco?* (número o nombre)
-{lista}
-_{len(bancos)+1}._ Todos"""
-
-        # ── BENCINAS: día → resultado ──
-        if state["step"] == "ask_dia_bencina":
-            dia_map = {'1': _detectar_dia_hoy(), '2': 'lunes', '3': 'martes', '4': 'miercoles',
-                       '5': 'jueves', '6': 'viernes', '7': 'sabado', '8': 'domingo', '9': ''}
-            dia = dia_map.get(texto.strip(), _parse_dia(texto))
-            resultado = _generar_resultado_bencinas(dia)
-            del user_flow[usuario]
-            return resultado
-
-        # ── RESTAURANTES: banco → día → comida ──
-        if state["step"] == "ask_banco":
-            bancos = sorted(set(b.banco for b in beneficios_db))
-            # Intentar por número
-            try:
-                num = int(texto.strip())
-                if 1 <= num <= len(bancos):
-                    state["bancos"] = [bancos[num - 1]]
-                elif num == len(bancos) + 1:
-                    state["bancos"] = []  # todos
-            except ValueError:
-                state["bancos"] = _parse_bancos(texto)
-            state["step"] = "ask_dia"
-            bancos_txt = ", ".join(state["bancos"]) if state["bancos"] else "Todos"
-            dia_hoy = _detectar_dia_hoy()
-            return f"""✅ *{bancos_txt}*
 
 📅 *¿Qué día?*
 _1._ Hoy ({dia_hoy})
@@ -1575,22 +1544,50 @@ _7._ Sábado
 _8._ Domingo
 _9._ Todos"""
 
-        if state["step"] == "ask_dia":
+        # ── BENCINAS: día → resultado ──
+        if state["step"] == "ask_dia_bencina":
+            dia_map = {'1': _detectar_dia_hoy(), '2': 'lunes', '3': 'martes', '4': 'miercoles',
+                       '5': 'jueves', '6': 'viernes', '7': 'sabado', '8': 'domingo', '9': ''}
+            dia = dia_map.get(texto.strip(), _parse_dia(texto))
+            resultado = _generar_resultado_bencinas(dia)
+            del user_flow[usuario]
+            return resultado
+
+        # ── RESTAURANTES: día → banco(s) → resultado ──
+        if state["step"] == "ask_dia_rest":
             dia_map = {'1': _detectar_dia_hoy(), '2': 'lunes', '3': 'martes', '4': 'miercoles',
                        '5': 'jueves', '6': 'viernes', '7': 'sabado', '8': 'domingo', '9': ''}
             state["dia"] = dia_map.get(texto.strip(), _parse_dia(texto))
-            state["step"] = "ask_comida"
             dia_txt = state["dia"].capitalize() if state["dia"] else "Todos"
+            state["step"] = "ask_banco"
+            bancos = sorted(set(b.banco for b in beneficios_db))
+            lista = "\n".join(f"_{i+1}._ {b}" for i, b in enumerate(bancos))
             return f"""✅ *{dia_txt}*
 
-🍕 *¿Qué comida?*
-Ej: _sushi_, _pizza_, _hamburguesa_
-O escribe *todos*"""
+💳 *¿Qué banco(s)?*
+{lista}
+_{len(bancos)+1}._ Todos
 
-        if state["step"] == "ask_comida":
-            comida = '' if texto in ['todos', 'todo', 'all', 'cualquiera', 'da igual', '0'] else texto_original
-            state["comida"] = comida
-            resultado = _generar_resultado_flow(state["bancos"], state["dia"], comida)
+_Ej: 1 o varios: 1,2,4,5_"""
+
+        if state["step"] == "ask_banco":
+            bancos = sorted(set(b.banco for b in beneficios_db))
+            # Intentar por número(s) separados por coma
+            selected = []
+            parts = [p.strip() for p in texto.replace(' ', ',').split(',') if p.strip()]
+            for p in parts:
+                try:
+                    num = int(p)
+                    if 1 <= num <= len(bancos):
+                        selected.append(bancos[num - 1])
+                    elif num == len(bancos) + 1:
+                        selected = []  # todos
+                        break
+                except ValueError:
+                    parsed = _parse_bancos(p)
+                    selected.extend(parsed)
+            state["bancos"] = selected
+            resultado = _generar_resultado_flow(state["bancos"], state["dia"], "")
             del user_flow[usuario]
             return resultado
 
