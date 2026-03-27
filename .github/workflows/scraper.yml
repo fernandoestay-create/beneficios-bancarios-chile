@@ -2,9 +2,8 @@ name: Scraping Mensual - Beneficios y Bencinas
 
 on:
   schedule:
-    # Primeros 5 días del mes (obligatorio) + cada 2 días el resto del mes
-    - cron: '0 5 1-5 * *'     # Días 1-5: todos los días a las 2AM Chile
-    - cron: '0 5 7,9,11,13,15,17,19,21,23,25,27,29,31 * *'  # Resto: cada 2 días
+    - cron: '0 5 1-4 * *'     # Días 1-4: diario a las 2AM Chile (obligatorio)
+    - cron: '0 5 10,20,30 * *' # Días 10, 20, 30: actualización quincenal
   workflow_dispatch:  # Permite ejecución manual desde GitHub
 
 env:
