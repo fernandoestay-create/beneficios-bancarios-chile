@@ -6,6 +6,9 @@ on:
     - cron: '0 5 10,20,30 * *' # Días 10, 20, 30: actualización quincenal
   workflow_dispatch:  # Permite ejecución manual desde GitHub
 
+permissions:
+  contents: write
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
