@@ -2029,7 +2029,25 @@ if(logo)return `<img src="${{logo}}" alt="${{banco}}" onerror="this.style.displa
 return `<span style="font-size:11px;font-weight:700">${{banco}}</span>`;
 }}
 function getBankUrl(banco,cadena){{
-// For bencinas: prefer cadena URL (Shell/Copec/Aramco) over bank URL
+// Specific bank+chain combos first
+const comboKey=banco+'||'+cadena;
+const COMBO_URLS={{
+'Banco BICE||Shell':'https://banco.bice.cl/personas/beneficios/micopiloto-shell',
+'Banco BICE||Copec':'https://banco.bice.cl/personas/beneficios/copec',
+'Scotiabank||Copec':'https://www.scotiabank.cl/personas/beneficios/copec',
+'Cencosud Scotiabank||Copec':'https://www.cencosudscotiabank.cl/beneficios/copec',
+'BCI||Copec':'https://www.bci.cl/beneficios/copec',
+'Lider BCI||Shell':'https://www.bci.cl/beneficios/shell',
+'Banco Security||Shell':'https://www.bancosecurity.cl/personas/beneficios',
+'BancoEstado||Copec':'https://www.bancoestado.cl/beneficios/copec',
+'Itaú||Copec':'https://www.bancoitau.cl/beneficios',
+'MACHBANK||Copec':'https://www.machbank.cl/beneficios',
+'Coopeuch||Copec':'https://www.coopeuch.cl/beneficios',
+'Banco Consorcio||Aramco':'https://www.bancoconsorcio.cl/beneficios',
+'Tenpo||Aramco':'https://www.tenpo.cl/beneficios',
+'Banco Ripley||Aramco':'https://www.bancoripley.cl/beneficios',
+}};
+if(COMBO_URLS[comboKey])return COMBO_URLS[comboKey];
 if(cadena&&CADENA_URLS[cadena])return CADENA_URLS[cadena];
 return BANK_URLS[banco]||'#';
 }}
