@@ -522,8 +522,8 @@
       "cadena": "Copec",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Platinum",
-      "descuento_por_litro": 50,
-      "descuento_texto": "$50/L",
+      "descuento_por_litro": 25,
+      "descuento_texto": "$25/L",
       "dias_validos": [
         "miercoles"
       ],
@@ -548,9 +548,9 @@
       "id": "bencina_copec_scotiabank_miercoles",
       "cadena": "Copec",
       "banco": "Scotiabank",
-      "tarjeta": "Visa Crédito Tradicional",
-      "descuento_por_litro": 25,
-      "descuento_texto": "$25/L",
+      "tarjeta": "Visa Crédito Signature",
+      "descuento_por_litro": 50,
+      "descuento_texto": "$50/L",
       "dias_validos": [
         "miercoles"
       ],
@@ -762,6 +762,33 @@
       "tags": [
         "copec",
         "copec pay",
+        "bencina",
+        "combustible"
+      ]
+    },
+    {
+      "id": "bencina_copec_scotiabank_miercoles_infinite",
+      "cadena": "Copec",
+      "banco": "Scotiabank",
+      "tarjeta": "Visa Crédito Infinite",
+      "descuento_por_litro": 75,
+      "descuento_texto": "$75/L",
+      "dias_validos": [
+        "miercoles"
+      ],
+      "condicion": "App Copec",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-03",
+      "valido_hasta": "31-Mar-2026",
+      "restricciones_texto": "",
+      "url_fuente": "https://www.biobiochile.cl/noticias/servicios/toma-nota/2026/03/04/como-ahorrar-bencina-en-marzo-hasta-300-de-descuento-por-litro-en-las-principales-estaciones.shtml",
+      "fecha_scrape": "2026-03-27T12:00:00",
+      "activo": true,
+      "tags": [
+        "copec",
+        "scotiabank",
         "bencina",
         "combustible"
       ]
