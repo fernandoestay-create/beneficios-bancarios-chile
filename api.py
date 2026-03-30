@@ -2029,7 +2029,9 @@ if(logo)return `<img src="${{logo}}" alt="${{banco}}" onerror="this.style.displa
 return `<span style="font-size:11px;font-weight:700">${{banco}}</span>`;
 }}
 function getBankUrl(banco,cadena){{
-return BANK_URLS[banco]||CADENA_URLS[cadena]||'#';
+// For bencinas: prefer cadena URL (Shell/Copec/Aramco) over bank URL
+if(cadena&&CADENA_URLS[cadena])return CADENA_URLS[cadena];
+return BANK_URLS[banco]||'#';
 }}
 
 // ── View toggle ──
