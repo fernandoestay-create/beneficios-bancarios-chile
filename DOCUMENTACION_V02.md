@@ -1,5 +1,5 @@
-# BENEFICIOS BANCARIOS CHILE — Documentación v_02
-## Actualización: 26 marzo 2026
+# BENEFICIOS BANCARIOS CHILE — Documentación v_03
+## Actualización: 01 abril 2026
 
 ---
 
@@ -8,10 +8,11 @@
 Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**, los almacena y los expone a través de:
 
 1. **Página web restaurantes** (`/ver`) — filtros, tarjetas y mapa
-2. **Página web bencinas** (`/ver/bencinas`) — cards hero con fotos, logos, mapa estaciones
-3. **Bot de WhatsApp** — menús numerados (restaurantes o bencinas)
-4. **API REST** — endpoints JSON
-5. **Reporte por email** — Gmail automático después de cada scraping
+2. **Página web bencinas** (`/ver/bencinas`) — 3 vistas: Tarjetas descuentos, Mapa con logos, **PU Bencina** (comparador de precios)
+3. **Comparador de precios** — 1,750+ estaciones de todo Chile con precios reales (CNE)
+4. **Bot de WhatsApp** — menús numerados (restaurantes o bencinas)
+5. **API REST** — endpoints JSON (incluye precios de combustible)
+6. **Reporte por email** — Gmail automático después de cada scraping
 
 ---
 
@@ -20,9 +21,12 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    SCRAPERS (scrapers.py)                 │
-│  15 bancos restaurantes → beneficios.json (985)          │
-│  3 cadenas bencina → bencinas.json (28 dctos + 367 est) │
-│  Fuentes: sitios bancos + descuentosrata + OpenStreetMap │
+│  15 bancos restaurantes → beneficios.json (~914)         │
+│  Bencinas → bencinas.json:                               │
+│    28 descuentos bancarios (descuentosrata.com)           │
+│    1,462 estaciones Copec/Shell/Aramco con precios        │
+│    1,815 estaciones totales con precios (todo Chile)      │
+│  Fuente precios: bencinaenlinea.cl (CNE)                 │
 └───────────────────────┬──────────────────────────────────┘
                         │
                         ▼
@@ -33,6 +37,9 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 │  ├── GET  /ver/bencinas  → Web bencinas (HTML/JS)        │
 │  ├── GET  /beneficios    → Lista paginada JSON           │
 │  ├── GET  /bencinas      → Descuentos bencina JSON       │
+│  ├── GET  /bencinas/precios → Comparador precios JSON    │
+│  ├── GET  /bencinas/precios/mejores → Top baratas JSON   │
+│  ├── GET  /bencinas/precios/resumen → Stats por cadena   │
 │  ├── POST /webhook       → Bot WhatsApp (Twilio)         │
 │  ├── POST /rag           → Consulta IA                   │
 │  ├── GET  /static/logos/ → SVGs y fotos locales          │
@@ -43,7 +50,7 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 ┌──────────────────────────────────────────────────────────┐
 │                      DEPLOY                              │
 │  Render (free tier) → auto-deploy desde main             │
-│  GitHub Actions → scraping automático + email Gmail      │
+│  GitHub Actions → scraping + precios L/J + email Gmail   │
 │  Twilio Sandbox → WhatsApp gratis                        │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -66,13 +73,16 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 
 | Métrica | Valor |
 |---------|-------|
-| Beneficios restaurantes | 985 |
+| Beneficios restaurantes | ~914 |
 | Bancos scrapeados | 15 |
 | Descuentos bencina | 28 |
-| Cadenas bencina | 3 (Copec, Shell, Aramco) |
-| Estaciones mapeadas | 367 (OpenStreetMap) |
-| Restaurantes únicos | ~700 |
+| Cadenas principales | 3 (Copec, Shell, Aramco) |
+| Estaciones con descuentos | 1,462 |
+| Estaciones totales (todo Chile) | 1,815 |
+| Estaciones con precios | 1,750 |
+| Marcas de combustible | 120+ |
 | Regiones | 16 |
+| Fuente precios | bencinaenlinea.cl (CNE) |
 | Logos locales | 13 SVGs + 4 imágenes |
 
 ---
@@ -97,12 +107,12 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 
 | Archivo | Líneas | Descripción |
 |---------|--------|-------------|
-| `api.py` | ~2,600 | FastAPI: 2 webs + API + webhook + RAG |
-| `scrapers.py` | ~3,600 | 15 scrapers restaurantes + bencinas + modelo |
+| `api.py` | ~2,800 | FastAPI: 2 webs (3 vistas bencinas) + API precios + webhook + RAG |
+| `scrapers.py` | ~3,700 | 15 scrapers restaurantes + ScraperBencinaEnLinea + modelo |
 | `whatsapp_bot.py` | 239 | Bot alternativo Flask (sin IA) |
 | `upload_pinecone.py` | 106 | Carga vectores a Pinecone |
 | `beneficios.json` | ~1.2 MB | 985 beneficios restaurantes |
-| `bencinas.json` | ~200 KB | 28 descuentos + 367 estaciones |
+| `bencinas.json` | ~3.5 MB | 28 descuentos + 1,462 estaciones + 1,815 precios |
 | `static/logos/` | — | 13 SVGs + 3 JPGs estaciones + 1 PNG |
 | `.github/workflows/scraper.yml` | — | Scraping automático + email |
 | `render.yaml` | — | Config deploy (2 servicios) |
@@ -131,12 +141,23 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 | 14 | BICE | HTML scraping | ~30 |
 | 15 | Mach | HTML scraping | ~20 |
 
-### 7b. Bencinas (3 cadenas)
+### 7b. Bencinas — Descuentos bancarios
 
-- **Fuente:** descuentosrata.com/bencina (HTML scraping)
+- **Fuente descuentos:** descuentosrata.com/bencina (HTML scraping + fallback)
 - **Datos:** banco, tarjeta, descuento/litro, día, cadena, tope, condición
-- **Estaciones:** OpenStreetMap Overpass API (367 ubicaciones reales)
-- **Cadenas:** Copec, Shell, Aramco
+- **Cadenas con descuentos:** Copec, Shell, Aramco
+
+### 7c. Bencinas — Estaciones y precios (NUEVO v_03)
+
+- **Fuente:** `api.bencinaenlinea.cl` (Comisión Nacional de Energía - CNE)
+- **Clase:** `ScraperBencinaEnLinea` (reemplaza `ScraperEstacionesCNE` / Overpass API)
+- **Endpoint:** `GET /api/busqueda_estacion_filtro` (público, sin autenticación)
+- **Datos por estación:** cadena, dirección, comuna, región, lat/lon, precios 93/95/97/diesel/kerosene
+- **Estaciones totales:** 1,815 (todo Chile, 120+ marcas)
+- **Estaciones con precios:** 1,750
+- **Estaciones con descuentos (Copec/Shell/Aramco):** 1,462
+- **Actualización:** lunes y jueves 10AM Chile (GitHub Actions)
+- **Disclaimer:** Los precios son de exclusiva responsabilidad de las estaciones informantes
 
 ---
 
@@ -149,13 +170,37 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 - Componente Multi-Select custom (JS puro)
 - Navegación entre restaurantes y bencinas
 
-### 8b. Bencinas (`/ver/bencinas`)
+### 8b. Bencinas (`/ver/bencinas`) — 3 vistas
+
+**Vista 1: Tarjetas** (descuentos bancarios)
 - Cards hero con fotos reales de estaciones
-- Logos de cadenas (Copec/Shell/Aramco) y bancos en cada card
-- Cards agrupadas por banco+cadena+día (evita duplicados)
-- Desglose de tarjetas con descuento individual
-- Mapa con 367 estaciones reales
+- Logos de cadenas y bancos en cada card
+- Cards agrupadas por banco+cadena+día
 - Links "Ver detalle" a páginas oficiales de bancos
+
+**Vista 2: Mapa** (estaciones con descuentos)
+- 1,462 estaciones Copec/Shell/Aramco con logos de cadena en marcadores
+- Popups con: nombre, dirección, precios (93/97/Diesel), descuentos bancarios, botón "Ir" (Google Maps)
+- Geolocalización "Mi ubicación"
+
+**Vista 3: PU Bencina** (comparador de precios — NUEVO v_03)
+- 1,750+ estaciones de todo Chile con precios reales
+- Mapa con marcadores: logo cadena + precio (verde=barato, rojo=caro)
+- Ranking de las 50 más baratas en la zona visible del mapa
+- Stats: más barato, más caro, promedio, total en vista
+- Filtros: combustible (93/95/97/Diesel/Kerosene), botón "Ir" (Google Maps)
+- Ranking se sincroniza con viewport del mapa (mover/zoom actualiza lista)
+- Geolocalización "Mi ubicación"
+
+**Filtros compartidos (sidebar izquierdo, aplican a las 3 vistas):**
+- Buscar (texto libre)
+- Banco/App (multi-select)
+- Día de la semana
+- Cadena (Todas/Copec/Shell/Aramco/Otras)
+- Región (dropdown, centra el mapa automáticamente)
+- Comuna (dinámico según región)
+- Ordenar
+- Limpiar filtros (resetea todo incluyendo PU Bencina)
 
 ---
 
@@ -187,15 +232,16 @@ BENCINAS (2 pasos):
 ## 10. AUTOMATIZACIÓN
 
 ### GitHub Actions (`scraper.yml`)
-- **Días 1-4 del mes:** scraping diario a las 2 AM Chile (obligatorio)
-- **Días 10, 20, 30:** actualización quincenal (3 veces al mes)
-- **Total:** 7 ejecuciones/mes
+- **Días 1-4 del mes:** scraping completo a las 2 AM Chile (beneficios + bencinas + precios)
+- **Días 10, 20, 30:** actualización quincenal
+- **Lunes y jueves:** actualización de precios combustible a las 10 AM Chile (NUEVO v_03)
+- **Total:** ~15 ejecuciones/mes
 - **Pipeline:** scrapers.py → upload_pinecone.py → commit → push → email
 - **Ejecución manual:** disponible desde GitHub Actions
 
 ### Email de reporte (Gmail)
 - Se envía a `fernando.estay@gmail.com` después de cada scraping exitoso
-- Incluye: total beneficios, bancos, descuentos bencina, estaciones
+- Incluye: total beneficios, bancos, descuentos bencina, estaciones con descuentos, **estaciones con precios** (NUEVO)
 - Links directos a /ver y /ver/bencinas
 - Email de error si falla el scraping
 
@@ -232,24 +278,51 @@ BENCINAS (2 pasos):
 
 ---
 
-## 13. PENDIENTES / MEJORAS FUTURAS
+## 13. ENDPOINTS API — PRECIOS (NUEVO v_03)
 
-- [ ] Twilio producción (cuando se necesite WhatsApp público)
-- [ ] Más cadenas bencina si aparecen nuevas
-- [ ] Dashboard de métricas (cuántas consultas, bancos más buscados)
-- [ ] Notificaciones push cuando hay descuentos nuevos
-- [ ] Cache de consultas RAG para reducir costos OpenAI
+| Endpoint | Parámetros | Descripción |
+|----------|-----------|-------------|
+| `GET /bencinas/precios` | `combustible`, `comuna`, `region`, `cadena`, `orden`, `limite` | Buscar estaciones por precio |
+| `GET /bencinas/precios/mejores` | `combustible`, `region`, `limite` | Top N más baratas |
+| `GET /bencinas/precios/resumen` | — | Promedio/min/max por cadena |
+| `GET /bencinas/estaciones` | `cadena`, `comuna` | Lista estaciones con coordenadas |
+| `GET /bencinas/mapa` | — | Estaciones + descuentos combinados |
 
 ---
 
-## 14. CHANGELOG
+## 14. PENDIENTES / MEJORAS FUTURAS
+
+- [ ] Twilio producción (cuando se necesite WhatsApp público)
+- [ ] Dashboard de métricas (cuántas consultas, bancos más buscados)
+- [ ] Notificaciones push cuando hay descuentos nuevos
+- [ ] Cache de consultas RAG para reducir costos OpenAI
+- [ ] Integrar precios de bencina en bot WhatsApp ("¿dónde está la 93 más barata?")
+
+---
+
+## 15. CHANGELOG
 
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
 | v_01 | 14-Mar-2026 | Lanzamiento: 15 scrapers, web, bot, RAG, Pinecone |
 | v_02 | 26-Mar-2026 | Bencinas, cards hero, bot v2 (menús $0), email Gmail, logos locales |
-| v_02.1 | 27-Mar-2026 | GitHub Actions 100% operativo: secrets configurados, permisos write, scraping+Pinecone+commit+email funcionando. Schedule: días 1-4 + 10,20,30 |
+| v_02.1 | 27-Mar-2026 | GitHub Actions 100% operativo |
+| v_02.2 | 30-Mar-2026 | Verificación datos bencinas, URLs "Ver detalle" por banco+cadena |
+| **v_03** | **01-Abr-2026** | **Comparador de precios combustible (PU Bencina):** |
+| | | - Nuevo `ScraperBencinaEnLinea` reemplaza Overpass API (1,815 estaciones, 1,750 con precios) |
+| | | - Fuente: bencinaenlinea.cl (Comisión Nacional de Energía) |
+| | | - Tab "PU Bencina": mapa con logos+precios, ranking sincronizado con viewport |
+| | | - 3 endpoints API nuevos: /bencinas/precios, /mejores, /resumen |
+| | | - Logos de cadena en marcadores del mapa (Copec/Shell/Aramco) |
+| | | - Botón "Ir" en popups y ranking (abre Google Maps con dirección) |
+| | | - Geolocalización "Mi ubicación" en ambos mapas |
+| | | - Filtros compartidos sidebar: Región/Comuna/Cadena aplican a las 3 vistas |
+| | | - Al seleccionar región, mapas se centran automáticamente |
+| | | - Chip "Otras" para cadenas que no son Copec/Shell/Aramco |
+| | | - GitHub Actions: nuevo cron lunes/jueves 10AM para actualizar precios |
+| | | - Email report incluye "Estaciones con precios" |
+| | | - Disclaimer CNE en footer |
 
 ---
 
-*Documentación v_02 — 26 Marzo 2026*
+*Documentación v_03 — 01 Abril 2026*
