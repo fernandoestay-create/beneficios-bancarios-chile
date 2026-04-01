@@ -2044,6 +2044,14 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 <button class="chip" data-cadena="Aramco">Aramco</button>
 <button class="chip" data-cadena="otra">Otras</button>
 </div></div>
+<div class="group" id="regionGroup"><label>Region</label>
+<select id="precioRegion" style="width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff">
+<option value="">Todas las regiones</option>
+</select></div>
+<div class="group" id="comunaGroup"><label>Comuna</label>
+<select id="precioComuna" style="width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff">
+<option value="">Todas las comunas</option>
+</select></div>
 <div class="group"><label>Ordenar</label>
 <select id="sortFilter">
 <option value="desc-desc">Mayor descuento</option>
@@ -2097,28 +2105,7 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 <button class="fuel-chip" data-fuel="kerosene">Kerosene</button>
 </div>
 </div>
-<div class="pf-group">
-<label>Region</label>
-<select id="precioRegion" class="pf-select">
-<option value="">Todas las regiones</option>
-</select>
-</div>
-<div class="pf-group">
-<label>Comuna</label>
-<select id="precioComuna" class="pf-select">
-<option value="">Todas las comunas</option>
-</select>
-</div>
-<div class="pf-group">
-<label>Cadena</label>
-<select id="precioCadena" class="pf-select">
-<option value="">Todas</option>
-<option value="Copec">Copec</option>
-<option value="Shell">Shell</option>
-<option value="Aramco">Aramco</option>
-<option value="otra">Otras</option>
-</select>
-</div>
+<select id="precioCadena" style="display:none"><option value=""></option></select>
 </div>
 <div class="precios-stats" id="preciosStats"></div>
 </div>
@@ -2606,20 +2593,54 @@ navigator.geolocation.getCurrentPosition(
 let preciosMapObj=null,preciosCluster=null,preciosInited=false;
 const FUEL_FIELD={{'93':'precio_93','95':'precio_95','97':'precio_97','diesel':'precio_diesel','kerosene':'precio_kerosene'}};
 
-function initPreciosView(){{
-  if(!preciosInited){{
-    preciosInited=true;
-    const regSel=document.getElementById('precioRegion');
+// Centros de region para centrar mapa
+const REGION_CENTER={{
+'Metropolitana de Santiago':[-33.45,-70.65,10],
+'Valparaíso':[-33.05,-71.6,9],
+'Del Maule':[-35.43,-71.66,9],
+'Del Biobío':[-36.82,-73.05,9],
+'De la Araucanía':[-38.74,-72.6,9],
+"Del Libertador Gral. Bernardo O'Higgins":[-34.17,-70.74,9],
+'De los Lagos':[-41.47,-72.94,9],
+'Coquimbo':[-30.0,-71.34,8],
+'Ñuble':[-36.62,-72.1,9],
+'Antofagasta':[-23.65,-70.4,8],
+'De los Ríos':[-39.81,-73.24,9],
+'Atacama':[-27.37,-70.33,8],
+'Tarapacá':[-20.21,-70.14,8],
+'Magallanes y de la Antártica Chilena':[-53.15,-70.9,7],
+'Arica y Parinacota':[-18.48,-70.33,9],
+'Aysén del Gral. Carlos Ibáñez del Campo':[-45.57,-72.07,7]
+}};
+
+// Init region/comuna dropdowns on page load
+(function(){{
+  const regSel=document.getElementById('precioRegion');
+  if(regSel&&typeof REGIONES!=='undefined'){{
     REGIONES.forEach(r=>{{const o=document.createElement('option');o.value=r;o.textContent=r;regSel.appendChild(o)}});
     regSel.addEventListener('change',()=>{{
       const comSel=document.getElementById('precioComuna');
       comSel.innerHTML='<option value="">Todas las comunas</option>';
       const reg=regSel.value;
       if(reg&&COMUNAS_MAP[reg]){{COMUNAS_MAP[reg].forEach(c=>{{const o=document.createElement('option');o.value=c;o.textContent=c;comSel.appendChild(o)}})}}
-      renderPrecios()
+      // Centrar mapas en la region seleccionada
+      const center=reg?REGION_CENTER[reg]:null;
+      if(center){{
+        if(preciosMapObj)preciosMapObj.setView([center[0],center[1]],center[2]);
+        if(mapObj)mapObj.setView([center[0],center[1]],center[2]);
+      }}else{{
+        if(preciosMapObj)preciosMapObj.setView([-33.45,-70.65],6);
+        if(mapObj)mapObj.setView([-33.45,-70.65],11);
+      }}
+      renderAll()
     }});
-    document.getElementById('precioComuna').addEventListener('change',renderPrecios);
-    document.getElementById('precioCadena').addEventListener('change',renderPrecios);
+    document.getElementById('precioComuna').addEventListener('change',renderAll);
+  }}
+}})();
+
+function initPreciosView(){{
+  if(!preciosInited){{
+    preciosInited=true;
     document.getElementById('fuelChips').addEventListener('click',e=>{{
       if(!e.target.classList.contains('fuel-chip'))return;
       document.querySelectorAll('.fuel-chip').forEach(c=>c.classList.remove('active'));
