@@ -80,6 +80,12 @@ class EstacionBencinaResponse(BaseModel):
     region: str = ""
     latitud: float = 0.0
     longitud: float = 0.0
+    precio_93: int = 0
+    precio_95: int = 0
+    precio_97: int = 0
+    precio_diesel: int = 0
+    precio_kerosene: int = 0
+    precio_fecha: str = ""
 
     class Config:
         from_attributes = True
@@ -121,6 +127,7 @@ if os.path.isdir(_static_dir):
 beneficios_db: List[Beneficio] = []
 bencinas_descuentos: List[DescuentoBencina] = []
 bencinas_estaciones: List[EstacionBencina] = []
+bencinas_precios_todas: List[EstacionBencina] = []
 bencinas_meta: dict = {}
 timestamp_ultimo_scrape = None
 
@@ -129,7 +136,7 @@ timestamp_ultimo_scrape = None
 # ============================================
 
 def inicializar_datos():
-    global beneficios_db, bencinas_descuentos, bencinas_estaciones, bencinas_meta, timestamp_ultimo_scrape
+    global beneficios_db, bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta, timestamp_ultimo_scrape
 
     # Resolver ruta relativa al directorio del script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -158,8 +165,9 @@ def inicializar_datos():
             bdata = json.load(f)
             bencinas_descuentos = [DescuentoBencina(**d) for d in bdata.get("descuentos", [])]
             bencinas_estaciones = [EstacionBencina(**e) for e in bdata.get("estaciones", [])]
+            bencinas_precios_todas = [EstacionBencina(**e) for e in bdata.get("precios_todas", [])]
             bencinas_meta = bdata.get("meta", {})
-            print(f"✅ Bencinas: {len(bencinas_descuentos)} descuentos, {len(bencinas_estaciones)} estaciones")
+            print(f"✅ Bencinas: {len(bencinas_descuentos)} descuentos, {len(bencinas_estaciones)} estaciones, {len(bencinas_precios_todas)} precios")
     else:
         print("⚠️ bencinas.json no encontrado. Ejecuta scraping de bencinas.")
 
@@ -573,10 +581,131 @@ async def bencinas_mapa():
     }
 
 
+@app.get("/bencinas/precios")
+async def precios_bencina(
+    combustible: str = "93",
+    comuna: Optional[str] = None,
+    region: Optional[str] = None,
+    cadena: Optional[str] = None,
+    orden: str = "precio_asc",
+    limite: int = 20,
+):
+    """Busca las estaciones con mejores precios de combustible.
+
+    Fuente: Bencinas en Línea - Comisión Nacional de Energía.
+    Los precios son de exclusiva responsabilidad de las estaciones informantes.
+    """
+    # Mapear combustible a campo
+    campo_map = {
+        '93': 'precio_93', '95': 'precio_95', '97': 'precio_97',
+        'diesel': 'precio_diesel', 'kerosene': 'precio_kerosene',
+    }
+    campo = campo_map.get(combustible.lower(), 'precio_93')
+
+    # Filtrar estaciones con precio > 0
+    resultados = [e for e in bencinas_precios_todas if getattr(e, campo, 0) > 0]
+
+    if comuna:
+        comuna_lower = comuna.lower()
+        resultados = [e for e in resultados if comuna_lower in e.comuna.lower()]
+
+    if region:
+        region_lower = region.lower()
+        resultados = [e for e in resultados if region_lower in e.region.lower()]
+
+    if cadena:
+        cadena_lower = cadena.lower()
+        resultados = [e for e in resultados if cadena_lower in e.cadena.lower()]
+
+    # Ordenar
+    reverse = orden == "precio_desc"
+    resultados.sort(key=lambda e: getattr(e, campo, 0), reverse=reverse)
+
+    # Limitar
+    resultados = resultados[:limite]
+
+    return {
+        "total": len(resultados),
+        "combustible": combustible,
+        "fecha_precios": bencinas_meta.get("fecha_precios", ""),
+        "disclaimer": "Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes. Fuente: Bencinas en Línea - Comisión Nacional de Energía.",
+        "estaciones": [e.to_dict() for e in resultados],
+    }
+
+
+@app.get("/bencinas/precios/mejores")
+async def mejores_precios(
+    combustible: str = "93",
+    region: Optional[str] = None,
+    limite: int = 10,
+):
+    """Top estaciones más baratas por tipo de combustible.
+
+    Fuente: Bencinas en Línea - Comisión Nacional de Energía.
+    """
+    campo_map = {
+        '93': 'precio_93', '95': 'precio_95', '97': 'precio_97',
+        'diesel': 'precio_diesel', 'kerosene': 'precio_kerosene',
+    }
+    campo = campo_map.get(combustible.lower(), 'precio_93')
+
+    resultados = [e for e in bencinas_precios_todas if getattr(e, campo, 0) > 0]
+
+    if region:
+        region_lower = region.lower()
+        resultados = [e for e in resultados if region_lower in e.region.lower()]
+
+    resultados.sort(key=lambda e: getattr(e, campo, 0))
+    resultados = resultados[:limite]
+
+    return {
+        "total": len(resultados),
+        "combustible": combustible,
+        "region": region or "Todo Chile",
+        "fecha_precios": bencinas_meta.get("fecha_precios", ""),
+        "disclaimer": "Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes. Fuente: Bencinas en Línea - Comisión Nacional de Energía.",
+        "estaciones": [e.to_dict() for e in resultados],
+    }
+
+
+@app.get("/bencinas/precios/resumen")
+async def resumen_precios():
+    """Resumen de precios promedio por cadena y combustible"""
+    cadenas_stats = {}
+    for e in bencinas_precios_todas:
+        if e.cadena not in cadenas_stats:
+            cadenas_stats[e.cadena] = {
+                'count': 0, '93': [], '95': [], '97': [], 'diesel': []
+            }
+        cadenas_stats[e.cadena]['count'] += 1
+        if e.precio_93 > 0: cadenas_stats[e.cadena]['93'].append(e.precio_93)
+        if e.precio_95 > 0: cadenas_stats[e.cadena]['95'].append(e.precio_95)
+        if e.precio_97 > 0: cadenas_stats[e.cadena]['97'].append(e.precio_97)
+        if e.precio_diesel > 0: cadenas_stats[e.cadena]['diesel'].append(e.precio_diesel)
+
+    resumen = []
+    for cadena, stats in sorted(cadenas_stats.items(), key=lambda x: -x[1]['count']):
+        entry = {'cadena': cadena, 'estaciones': stats['count']}
+        for tipo in ('93', '95', '97', 'diesel'):
+            precios = stats[tipo]
+            if precios:
+                entry[f'precio_{tipo}_min'] = min(precios)
+                entry[f'precio_{tipo}_max'] = max(precios)
+                entry[f'precio_{tipo}_promedio'] = round(sum(precios) / len(precios))
+        resumen.append(entry)
+
+    return {
+        "total_estaciones": len(bencinas_precios_todas),
+        "fecha_precios": bencinas_meta.get("fecha_precios", ""),
+        "disclaimer": "Fuente: Bencinas en Línea - Comisión Nacional de Energía.",
+        "resumen_por_cadena": resumen,
+    }
+
+
 @app.post("/scrape/bencinas")
 async def ejecutar_scrape_bencinas():
-    """Ejecuta scraping de descuentos de bencina"""
-    global bencinas_descuentos, bencinas_estaciones, bencinas_meta
+    """Ejecuta scraping de descuentos de bencina y precios"""
+    global bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta
 
     orquestador = OrquestadorScrapers()
     desc, est = orquestador.scrapear_bencinas()
@@ -586,8 +715,10 @@ async def ejecutar_scrape_bencinas():
 
     bencinas_descuentos = desc
     bencinas_estaciones = est
+    bencinas_precios_todas = orquestador.precios_todas
     bencinas_meta = {
         "fecha_scrape": datetime.now().isoformat(),
+        "fecha_precios": datetime.now().isoformat(),
         "vigencia_mes": datetime.now().strftime("%Y-%m"),
     }
 
@@ -595,6 +726,7 @@ async def ejecutar_scrape_bencinas():
         "status": "Scraping de bencinas completado",
         "total_descuentos": len(desc),
         "total_estaciones": len(est),
+        "total_con_precios": len(bencinas_precios_todas),
         "vigencia_mes": bencinas_meta["vigencia_mes"],
     }
 
@@ -1906,7 +2038,10 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 </div>
 </main>
 </section>
-<div class="footer">Vigencia: {mes_texto} · Beneficios Bancarios Chile</div>
+<div class="footer">
+Vigencia: {mes_texto} · Beneficios Bancarios Chile
+<br><span style="font-size:10px;color:#aaa">Precios: Bencinas en Línea - Comisión Nacional de Energía. Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes.</span>
+</div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>

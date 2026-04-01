@@ -90,7 +90,7 @@ class DescuentoBencina:
 
 @dataclass
 class EstacionBencina:
-    """Ubicacion de una estacion de servicio"""
+    """Ubicacion de una estacion de servicio con precios de combustible"""
     id: str
     nombre: str           # "Copec Av. Providencia"
     cadena: str           # "Copec", "Shell", "Aramco"
@@ -100,6 +100,13 @@ class EstacionBencina:
     latitud: float = 0.0
     longitud: float = 0.0
     servicios: List[str] = field(default_factory=list)
+    # Precios de combustible (CLP por litro, 0 = no disponible)
+    precio_93: int = 0
+    precio_95: int = 0
+    precio_97: int = 0
+    precio_diesel: int = 0
+    precio_kerosene: int = 0
+    precio_fecha: str = ""    # Fecha ultima actualizacion de precios
 
     def to_dict(self):
         return asdict(self)
@@ -3081,28 +3088,17 @@ class ScraperBencina:
 
 
 # ============================================
-# SCRAPER DE ESTACIONES DE SERVICIO (CNE)
+# SCRAPER DE ESTACIONES Y PRECIOS (bencinaenlinea.cl)
 # ============================================
 
-class ScraperEstacionesCNE:
-    """Obtiene ubicaciones de estaciones de servicio desde OpenStreetMap Overpass API.
+class ScraperBencinaEnLinea:
+    """Obtiene estaciones de servicio y precios de combustible de todo Chile.
 
-    Fuente primaria: OpenStreetMap Overpass API (datos publicos, ~220 estaciones en RM)
-    Filtro: Solo cadenas con descuentos (Copec, Shell, Aramco)
+    Fuente: api.bencinaenlinea.cl (datos publicos, ~1800 estaciones)
+    Incluye: ubicacion, marca, precios 93/95/97/diesel/kerosene
     """
 
-    # Overpass API mirrors - datos publicos de OpenStreetMap
-    OVERPASS_URLS = [
-        "https://overpass.kumi.systems/api/interpreter",
-        "https://overpass-api.de/api/interpreter",
-    ]
-
-    # Bounding boxes por region (sur, oeste, norte, este)
-    REGION_BBOX = {
-        "Metropolitana": (-33.7, -70.9, -33.2, -70.4),
-        "Valparaiso": (-33.3, -71.8, -32.6, -71.0),
-        "Biobio": (-37.2, -73.3, -36.4, -72.4),
-    }
+    API_BASE = "https://api.bencinaenlinea.cl/api"
 
     def __init__(self):
         self.session = requests.Session()
@@ -3111,112 +3107,170 @@ class ScraperEstacionesCNE:
             'Accept': 'application/json',
         })
         self.estaciones: List[EstacionBencina] = []
+        self.marcas: dict = {}  # id -> nombre marca
 
-    def scrapear(self, region: str = "Metropolitana") -> List[EstacionBencina]:
-        """Obtiene TODAS las estaciones de servicio de una region via OpenStreetMap."""
-        print(f"📍 Obteniendo estaciones de servicio ({region}) desde OpenStreetMap...")
+    def scrapear(self, solo_con_descuentos: bool = False) -> List[EstacionBencina]:
+        """Obtiene estaciones con precios desde bencinaenlinea.cl"""
+        print("⛽ Obteniendo estaciones y precios desde bencinaenlinea.cl...")
 
         try:
-            self._scrapear_overpass(region)
-            if len(self.estaciones) >= 20:
-                print(f"  ✅ OpenStreetMap: {len(self.estaciones)} estaciones")
+            self._cargar_marcas()
+            self._scrapear_estaciones(solo_con_descuentos)
+            if len(self.estaciones) >= 10:
+                print(f"  ✅ bencinaenlinea.cl: {len(self.estaciones)} estaciones con precios")
                 return self.estaciones
             else:
-                print(f"  ⚠️ Solo {len(self.estaciones)} estaciones de OSM")
+                print(f"  ⚠️ Solo {len(self.estaciones)} estaciones obtenidas")
         except Exception as e:
-            print(f"  ⚠️ Overpass API fallo: {e}")
+            print(f"  ⚠️ bencinaenlinea.cl fallo: {e}")
 
         print(f"  📍 Total estaciones: {len(self.estaciones)}")
         return self.estaciones
 
-    def _scrapear_overpass(self, region: str):
-        """Obtiene estaciones de OpenStreetMap Overpass API"""
-        bbox = self.REGION_BBOX.get(region)
-        if not bbox:
-            # Para regiones no mapeadas, usar solo RM por defecto
-            bbox = self.REGION_BBOX["Metropolitana"]
+    def _cargar_marcas(self):
+        """Carga catalogo de marcas (id -> nombre)"""
+        try:
+            resp = self.session.get(f"{self.API_BASE}/marca_ciudadano", timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            marcas_list = data if isinstance(data, list) else data.get('data', data.get('marcas', []))
+            for m in marcas_list:
+                mid = m.get('id')
+                nombre = m.get('nombre', m.get('razon_social', ''))
+                if mid and nombre:
+                    self.marcas[mid] = nombre
+            print(f"  📋 {len(self.marcas)} marcas cargadas")
+        except Exception as e:
+            print(f"  ⚠️ No se pudieron cargar marcas: {e}")
+            # Marcas conocidas como fallback
+            self.marcas = {1: 'Copec', 2: 'Shell', 3: 'Petrobras', 4: 'Aramco'}
 
-        s, w, n, e = bbox
-        # Query Overpass: todas las estaciones de servicio en el bounding box
-        # Incluye nodos y ways (algunos son areas poligonales)
-        query = f"""[out:json][timeout:60];
-(
-  node["amenity"="fuel"]({s},{w},{n},{e});
-  way["amenity"="fuel"]({s},{w},{n},{e});
-);
-out center body;"""
-
-        resp = None
-        for url in self.OVERPASS_URLS:
-            try:
-                resp = self.session.post(url, data={'data': query}, timeout=90)
-                resp.raise_for_status()
-                break
-            except Exception as err:
-                print(f"    ⚠️ Mirror {url.split('/')[2]} fallo: {err}")
-                continue
-        if not resp or resp.status_code != 200:
-            raise Exception("Todos los mirrors de Overpass fallaron")
+    def _scrapear_estaciones(self, solo_con_descuentos: bool):
+        """Obtiene todas las estaciones con precios"""
+        resp = self.session.get(
+            f"{self.API_BASE}/busqueda_estacion_filtro",
+            timeout=60
+        )
+        resp.raise_for_status()
         data = resp.json()
 
-        elements = data.get('elements', [])
-        print(f"  📡 Overpass retorno {len(elements)} estaciones brutas")
+        estaciones_raw = data if isinstance(data, list) else data.get('data', data.get('estaciones', []))
+        print(f"  📡 API retorno {len(estaciones_raw)} estaciones brutas")
 
-        for elem in elements:
+        cadenas_con_descuentos = {'copec', 'shell', 'aramco'}
+
+        for est in estaciones_raw:
             try:
-                tags = elem.get('tags', {})
-
-                # Coordenadas: para nodos es directo, para ways usar 'center'
-                lat = elem.get('lat') or (elem.get('center', {}).get('lat'))
-                lon = elem.get('lon') or (elem.get('center', {}).get('lon'))
+                # Coordenadas
+                lat = est.get('latitud')
+                lon = est.get('longitud')
                 if not lat or not lon:
                     continue
-
-                # Detectar cadena
-                brand = tags.get('brand', '')
-                operator = tags.get('operator', '')
-                name = tags.get('name', '')
-                cadena = self._detectar_cadena(brand or operator or name)
-
-                # Solo incluir cadenas principales con descuentos
-                if cadena not in ('Copec', 'Shell', 'Aramco'):
+                lat = float(str(lat).strip())
+                lon = float(str(lon).strip())
+                if lat == 0 or lon == 0:
                     continue
 
-                # Nombre de la estacion
-                nombre = name or f"{cadena} {tags.get('addr:street', '')}"
-                if not nombre or nombre == cadena:
-                    nombre = f"{cadena} #{elem.get('id', '')}"
+                # Marca/cadena
+                marca_id = est.get('marca')
+                marca_nombre = self.marcas.get(marca_id, '')
+                cadena = self._normalizar_cadena(marca_nombre)
 
-                # Direccion
-                calle = tags.get('addr:street', '')
-                numero = tags.get('addr:housenumber', '')
-                direccion = f"{calle} {numero}".strip() if calle else ''
+                # Filtro: solo cadenas con descuentos bancarios si se pide
+                if solo_con_descuentos and cadena.lower() not in cadenas_con_descuentos:
+                    continue
 
-                # Comuna
-                comuna = tags.get('addr:city', '') or tags.get('addr:suburb', '')
+                # Extraer precios de combustibles
+                precios = self._extraer_precios(est.get('combustibles', []))
+
+                # Datos de la estacion
+                direccion = est.get('direccion', '').strip()
+                comuna = est.get('comuna', '').strip()
+                region = est.get('region', '').strip()
+                nombre_est = f"{cadena} {direccion}" if cadena else direccion
+                if not nombre_est.strip():
+                    nombre_est = f"Estacion #{est.get('id', 0)}"
 
                 self.estaciones.append(EstacionBencina(
-                    id=f"osm_{elem.get('id', len(self.estaciones))}",
-                    nombre=nombre,
+                    id=f"bel_{est.get('id', len(self.estaciones))}",
+                    nombre=nombre_est,
                     cadena=cadena,
                     direccion=direccion,
                     comuna=comuna,
                     region=region,
-                    latitud=float(lat),
-                    longitud=float(lon),
+                    latitud=lat,
+                    longitud=lon,
+                    precio_93=precios.get('93', 0),
+                    precio_95=precios.get('95', 0),
+                    precio_97=precios.get('97', 0),
+                    precio_diesel=precios.get('diesel', 0),
+                    precio_kerosene=precios.get('kerosene', 0),
+                    precio_fecha=precios.get('fecha', ''),
                 ))
             except Exception:
                 continue
 
-        # Stats por cadena
+        # Stats
         cadena_count = {}
+        con_precio = 0
         for e in self.estaciones:
             cadena_count[e.cadena] = cadena_count.get(e.cadena, 0) + 1
+            if e.precio_93 > 0 or e.precio_97 > 0 or e.precio_diesel > 0:
+                con_precio += 1
         for c, n in sorted(cadena_count.items(), key=lambda x: -x[1]):
             print(f"    {c}: {n} estaciones")
+        print(f"  💰 {con_precio} estaciones con precios")
 
-    def _detectar_cadena(self, nombre: str) -> str:
-        """Detecta la cadena de la estacion por nombre/brand"""
+    def _extraer_precios(self, combustibles: list) -> dict:
+        """Extrae precios por tipo de combustible"""
+        precios = {}
+        fecha_mas_reciente = ''
+
+        for comb in combustibles:
+            nombre = (comb.get('nombre_corto', '') or '').strip().upper()
+            precio_str = comb.get('precio', '0')
+            suministra = comb.get('suministra', 0)
+
+            if not suministra or not precio_str:
+                continue
+
+            try:
+                precio = int(float(str(precio_str).strip()))
+            except (ValueError, TypeError):
+                continue
+
+            if precio <= 0:
+                continue
+
+            # Mapear nombre a tipo (priorizar asistido sobre autoservicio)
+            if nombre in ('93', 'A93'):
+                if '93' not in precios or nombre == '93':
+                    precios['93'] = precio
+            elif nombre in ('95', 'A95'):
+                if '95' not in precios or nombre == '95':
+                    precios['95'] = precio
+            elif nombre in ('97', 'A97'):
+                if '97' not in precios or nombre == '97':
+                    precios['97'] = precio
+            elif nombre in ('DI', 'ADI', 'DIESEL'):
+                if 'diesel' not in precios or nombre == 'DI':
+                    precios['diesel'] = precio
+            elif nombre in ('KE', 'AKE', 'KEROSENE'):
+                if 'kerosene' not in precios or nombre == 'KE':
+                    precios['kerosene'] = precio
+
+            # Fecha mas reciente
+            fecha = comb.get('precio_fecha', '')
+            if fecha and fecha > fecha_mas_reciente:
+                fecha_mas_reciente = fecha
+
+        precios['fecha'] = fecha_mas_reciente
+        return precios
+
+    def _normalizar_cadena(self, nombre: str) -> str:
+        """Normaliza nombre de marca a cadena conocida"""
+        if not nombre:
+            return "Otra"
         nombre_lower = nombre.lower()
         cadenas = {
             'copec': 'Copec', 'shell': 'Shell', 'aramco': 'Aramco',
@@ -3225,7 +3279,7 @@ out center body;"""
         for key, value in cadenas.items():
             if key in nombre_lower:
                 return value
-        return "Otra"
+        return nombre.strip().title() if nombre.strip() else "Otra"
 
 
 # ============================================
@@ -3313,34 +3367,50 @@ class OrquestadorScrapers:
         self.all_beneficios: List[Beneficio] = []
         self.descuentos_bencina: List[DescuentoBencina] = []
         self.estaciones_bencina: List[EstacionBencina] = []
+        self.precios_todas: List[EstacionBencina] = []
 
     def scrapear_bencinas(self) -> tuple:
-        """Scrapea descuentos de bencina y ubicaciones de estaciones"""
+        """Scrapea descuentos de bencina y estaciones con precios"""
         print("\n" + "=" * 50)
         print("⛽ INICIANDO SCRAPING DE BENCINAS")
         print("=" * 50 + "\n")
 
-        # 1. Descuentos
+        # 1. Descuentos bancarios
         scraper_desc = ScraperBencina()
         self.descuentos_bencina = scraper_desc.scrapear()
 
-        # 2. Estaciones
-        scraper_est = ScraperEstacionesCNE()
-        self.estaciones_bencina = scraper_est.scrapear(region="Metropolitana")
+        # 2. Estaciones con precios desde bencinaenlinea.cl
+        scraper_est = ScraperBencinaEnLinea()
 
-        print(f"\n✅ BENCINAS: {len(self.descuentos_bencina)} descuentos, {len(self.estaciones_bencina)} estaciones\n")
+        # 2a. Todas las estaciones (para comparador de precios)
+        self.precios_todas = scraper_est.scrapear(solo_con_descuentos=False)
+
+        # 2b. Solo Copec/Shell/Aramco (para mapa de descuentos)
+        self.estaciones_bencina = [
+            e for e in self.precios_todas
+            if e.cadena.lower() in ('copec', 'shell', 'aramco')
+        ]
+
+        print(f"\n✅ BENCINAS: {len(self.descuentos_bencina)} descuentos, "
+              f"{len(self.estaciones_bencina)} estaciones con descuentos, "
+              f"{len(self.precios_todas)} estaciones totales\n")
         return self.descuentos_bencina, self.estaciones_bencina
 
     def guardar_bencinas_json(self, filename: str = "bencinas.json"):
-        """Guarda descuentos de bencina y estaciones en JSON"""
+        """Guarda descuentos de bencina, estaciones y precios en JSON"""
         data = {
             "descuentos": [d.to_dict() for d in self.descuentos_bencina],
             "estaciones": [e.to_dict() for e in self.estaciones_bencina],
+            "precios_todas": [e.to_dict() for e in self.precios_todas],
             "meta": {
                 "fecha_scrape": datetime.now().isoformat(),
+                "fecha_precios": datetime.now().isoformat(),
                 "vigencia_mes": datetime.now().strftime("%Y-%m"),
                 "total_descuentos": len(self.descuentos_bencina),
                 "total_estaciones": len(self.estaciones_bencina),
+                "total_con_precios": len(self.precios_todas),
+                "fuente_precios": "Bencinas en Línea - Comisión Nacional de Energía",
+                "disclaimer": "Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes",
             }
         }
         with open(filename, 'w', encoding='utf-8') as f:

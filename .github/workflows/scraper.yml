@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 5 1-4 * *'     # Días 1-4: diario a las 2AM Chile (obligatorio)
     - cron: '0 5 10,20,30 * *' # Días 10, 20, 30: actualización quincenal
+    - cron: '0 13 * * 1,4'    # Precios bencina: lunes y jueves 10AM Chile
   workflow_dispatch:  # Permite ejecución manual desde GitHub
 
 permissions:
@@ -44,6 +45,7 @@ jobs:
           echo "BENEFICIOS=$(python -c 'import json;d=json.load(open("beneficios.json"));print(len(d))')" >> $GITHUB_ENV
           echo "BENCINAS_DCTOS=$(python -c 'import json;d=json.load(open("bencinas.json"));print(len(d.get("descuentos",[])))')" >> $GITHUB_ENV
           echo "BENCINAS_EST=$(python -c 'import json;d=json.load(open("bencinas.json"));print(len(d.get("estaciones",[])))')" >> $GITHUB_ENV
+          echo "BENCINAS_PRECIOS=$(python -c 'import json;d=json.load(open("bencinas.json"));print(len(d.get("precios_todas",[])))')" >> $GITHUB_ENV
           echo "BANCOS=$(python -c 'import json;d=json.load(open("beneficios.json"));print(len(set(b["banco"] for b in d)))')" >> $GITHUB_ENV
 
       - name: Upload to Pinecone
@@ -94,9 +96,13 @@ jobs:
                     <td style="padding:8px 0">⛽ Descuentos bencina</td>
                     <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_DCTOS }}</td>
                   </tr>
-                  <tr>
-                    <td style="padding:8px 0">📍 Estaciones mapeadas</td>
+                  <tr style="border-bottom:1px solid #f3f4f6">
+                    <td style="padding:8px 0">📍 Estaciones con descuentos</td>
                     <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_EST }}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0">💰 Estaciones con precios</td>
+                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_PRECIOS }}</td>
                   </tr>
                 </table>
                 <div style="margin-top:16px;display:flex;gap:8px">
