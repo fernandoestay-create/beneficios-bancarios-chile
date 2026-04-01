@@ -2465,7 +2465,8 @@ ${{chainBadge}}
 <div class="disclaimer">⚠️ Condiciones sujetas al banco o app</div></div>`;
 grid.appendChild(el)}})}}
 
-function renderAll(){{render();if(currentView==='mapa'&&mapObj)renderMapMarkers()}}
+function getSidebarCadena(){{const c=chipVal('cadenaChips','cadena');return c==='all'?'':c}}
+function renderAll(){{render();if(currentView==='mapa'&&mapObj)renderMapMarkers();if(currentView==='precios'&&preciosInited)renderPrecios()}}
 function resetAll(){{
 search.value='';bankMS.reset();
 sortF.value='desc-desc';
@@ -2628,7 +2629,11 @@ function renderPrecios(){{
   const field=preciosField;
   const region=document.getElementById('precioRegion').value;
   const comuna=document.getElementById('precioComuna').value;
-  const cadena=document.getElementById('precioCadena').value;
+  const cadenaLocal=document.getElementById('precioCadena').value;
+  const cadenaSidebar=getSidebarCadena();
+  const cadena=cadenaSidebar||cadenaLocal;
+  // Sync PU dropdown with sidebar selection
+  if(cadenaSidebar){{document.getElementById('precioCadena').value=cadenaSidebar}}
   preciosFiltered=allPrices.filter(e=>{{
     const precio=e[field]||0;
     if(precio<=0)return false;
