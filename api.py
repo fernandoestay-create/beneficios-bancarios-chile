@@ -2118,6 +2118,10 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 <div class="precios-stats" id="preciosStats"></div>
 </div>
 <div class="precios-map-container">
+<div class="geo-bar">
+<button class="geo-btn" id="geoBtnPrecios" onclick="toggleGeolocationPrecios()">📍 Mi ubicacion</button>
+<span class="geo-status" id="geoStatusPrecios"></span>
+</div>
 <div id="precios-map" style="height:350px;border-radius:10px;border:1px solid var(--line)"></div>
 </div>
 <div class="precios-list" id="preciosList"></div>
@@ -2472,7 +2476,14 @@ search.value='';bankMS.reset();
 sortF.value='desc-desc';
 document.querySelectorAll('#cadenaChips .chip').forEach(c=>c.classList.remove('active'));
 document.querySelector('#cadenaChips .chip[data-cadena="all"]').classList.add('active');
-dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));renderAll()}}
+dayAll.classList.add('active');daySels.forEach(s=>s.classList.remove('active'));
+// Reset PU Bencina filters
+const precioReg=document.getElementById('precioRegion');if(precioReg)precioReg.value='';
+const precioCom=document.getElementById('precioComuna');if(precioCom){{precioCom.innerHTML='<option value="">Todas las comunas</option>';precioCom.value=''}}
+const precioCad=document.getElementById('precioCadena');if(precioCad)precioCad.value='';
+document.querySelectorAll('.fuel-chip').forEach(c=>c.classList.remove('active'));
+const fuel93=document.querySelector('.fuel-chip[data-fuel="93"]');if(fuel93)fuel93.classList.add('active');
+renderAll()}}
 document.getElementById('resetBtn').addEventListener('click',resetAll);
 document.getElementById('resetBtn2').addEventListener('click',resetAll);
 render();
@@ -2731,6 +2742,38 @@ function updatePreciosList(){{
     </div>`}}).join('')
 }}
 function precioZoom(lat,lng){{if(preciosMapObj)preciosMapObj.setView([lat,lng],15)}}
+
+let geoMarkerPrecios=null,geoActivePrecios=false;
+function toggleGeolocationPrecios(){{
+const btn=document.getElementById('geoBtnPrecios'),status=document.getElementById('geoStatusPrecios');
+if(geoActivePrecios){{
+  geoActivePrecios=false;btn.classList.remove('active');
+  if(geoMarkerPrecios){{preciosMapObj.removeLayer(geoMarkerPrecios);geoMarkerPrecios=null}}
+  status.textContent='';return;
+}}
+if(!navigator.geolocation){{status.textContent='Tu navegador no soporta geolocalizacion';return}}
+btn.classList.add('loading');status.textContent='Obteniendo ubicacion...';
+navigator.geolocation.getCurrentPosition(
+  pos=>{{
+    geoActivePrecios=true;btn.classList.remove('loading');btn.classList.add('active');
+    const lat=pos.coords.latitude,lng=pos.coords.longitude;
+    status.textContent=`📍 ${{lat.toFixed(4)}}, ${{lng.toFixed(4)}}`;
+    if(geoMarkerPrecios)preciosMapObj.removeLayer(geoMarkerPrecios);
+    const geoIcon=L.divIcon({{className:'',html:`<div style="position:relative"><div style="width:18px;height:18px;background:#4285F4;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(66,133,244,.5)"></div><div style="position:absolute;top:-6px;left:-6px;width:30px;height:30px;border-radius:50%;background:rgba(66,133,244,.15);animation:geoPulse 2s infinite"></div></div>`,
+    iconSize:[18,18],iconAnchor:[9,9]}});
+    geoMarkerPrecios=L.marker([lat,lng],{{icon:geoIcon,zIndex:9999}}).addTo(preciosMapObj)
+      .bindPopup('<div style="text-align:center"><strong>📍 Estas aqui</strong><br><span style="color:#6b7280;font-size:12px">Tu ubicacion actual</span></div>');
+    preciosMapObj.setView([lat,lng],14);
+    geoMarkerPrecios.openPopup();
+  }},
+  err=>{{
+    btn.classList.remove('loading');
+    const msgs={{1:'Permiso denegado',2:'Ubicacion no disponible',3:'Tiempo agotado'}};
+    status.textContent='⚠️ '+(msgs[err.code]||'Error desconocido');
+  }},
+  {{enableHighAccuracy:true,timeout:10000,maximumAge:60000}}
+);
+}}
 </script>
 </body></html>"""
 
