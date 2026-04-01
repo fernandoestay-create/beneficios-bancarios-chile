@@ -1767,7 +1767,11 @@ async def ver_bencinas():
     # Precios: todas las estaciones con precios (para comparador)
     precios_json = json.dumps([e.to_dict() for e in bencinas_precios_todas if e.precio_93 > 0 or e.precio_97 > 0 or e.precio_diesel > 0], ensure_ascii=False)
     # Regiones y comunas únicas para filtros de precios
-    regiones_set = sorted(set(e.region for e in bencinas_precios_todas if e.region))
+    _regiones_raw = set(e.region for e in bencinas_precios_todas if e.region)
+    # Metropolitana siempre primero, luego alfabetico
+    metro = [r for r in _regiones_raw if 'metropolitana' in r.lower()]
+    resto = sorted(r for r in _regiones_raw if 'metropolitana' not in r.lower())
+    regiones_set = metro + resto
     comunas_set = sorted(set(e.comuna for e in bencinas_precios_todas if e.comuna))
     regiones_json = json.dumps(regiones_set, ensure_ascii=False)
     comunas_map_json = json.dumps({r: sorted(set(e.comuna for e in bencinas_precios_todas if e.region == r and e.comuna)) for r in regiones_set}, ensure_ascii=False)
@@ -2038,6 +2042,7 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 <button class="chip" data-cadena="Copec">Copec</button>
 <button class="chip" data-cadena="Shell">Shell</button>
 <button class="chip" data-cadena="Aramco">Aramco</button>
+<button class="chip" data-cadena="otra">Otras</button>
 </div></div>
 <div class="group"><label>Ordenar</label>
 <select id="sortFilter">
@@ -2369,7 +2374,7 @@ let f=deals.filter(d=>{{
 const txt=norm([d.cadena,d.banco,d.tarjeta,d.condicion||'',d.descuento_texto||''].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
-const mCad=cadena==='all'||d.cadena===cadena;
+const mCad=cadena==='all'||(cadena==='otra'?!['Copec','Shell','Aramco'].includes(d.cadena):d.cadena===cadena);
 const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
 return mS&&mB&&mCad&&mDay}});
 f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_por_litro-b.descuento_por_litro;
@@ -2512,11 +2517,12 @@ const qRaw=search.value.trim();
 const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
 // Filter stations by cadena
 let filtSt=stations;
-if(cadena!=='all')filtSt=filtSt.filter(s=>s.cadena===cadena);
+if(cadena==='otra')filtSt=filtSt.filter(s=>!['Copec','Shell','Aramco'].includes(s.cadena));
+else if(cadena!=='all')filtSt=filtSt.filter(s=>s.cadena===cadena);
 // Filter deals
 let filtDeals=deals.filter(d=>{{
 const mB=!banks||banks.includes(d.banco);
-const mCad=cadena==='all'||d.cadena===cadena;
+const mCad=cadena==='all'||(cadena==='otra'?!['Copec','Shell','Aramco'].includes(d.cadena):d.cadena===cadena);
 const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
 const txt=norm([d.cadena,d.banco,d.tarjeta].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
