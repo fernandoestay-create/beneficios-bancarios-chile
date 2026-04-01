@@ -2619,14 +2619,17 @@ function initPreciosView(){{
   }},100)
 }}
 
+let preciosFiltered=[];let preciosField='precio_93';let preciosMapBound=false;
+
 function renderPrecios(){{
   const fuelBtn=document.querySelector('.fuel-chip.active');
   const fuel=fuelBtn?fuelBtn.dataset.fuel:'93';
-  const field=FUEL_FIELD[fuel]||'precio_93';
+  preciosField=FUEL_FIELD[fuel]||'precio_93';
+  const field=preciosField;
   const region=document.getElementById('precioRegion').value;
   const comuna=document.getElementById('precioComuna').value;
   const cadena=document.getElementById('precioCadena').value;
-  let filtered=allPrices.filter(e=>{{
+  preciosFiltered=allPrices.filter(e=>{{
     const precio=e[field]||0;
     if(precio<=0)return false;
     if(region&&!e.region.includes(region))return false;
@@ -2635,54 +2638,18 @@ function renderPrecios(){{
     else if(cadena&&e.cadena!==cadena)return false;
     return true
   }});
-  filtered.sort((a,b)=>(a[field]||9999)-(b[field]||9999));
-  const prices=filtered.map(e=>e[field]);
-  const minP=prices.length?Math.min(...prices):0;
-  const maxP=prices.length?Math.max(...prices):0;
-  const avgP=prices.length?Math.round(prices.reduce((a,b)=>a+b,0)/prices.length):0;
-  document.getElementById('preciosStats').innerHTML=`
-    <div class="ps-card"><div class="ps-label">Mas barato</div><div class="ps-value ps-min">$${{minP.toLocaleString()}}</div></div>
-    <div class="ps-card"><div class="ps-label">Mas caro</div><div class="ps-value ps-max">$${{maxP.toLocaleString()}}</div></div>
-    <div class="ps-card"><div class="ps-label">Promedio</div><div class="ps-value ps-avg">$${{avgP.toLocaleString()}}</div></div>
-    <div class="ps-card"><div class="ps-label">Estaciones</div><div class="ps-value ps-count">${{filtered.length}}</div></div>`;
-  document.getElementById('preciosCount').textContent=filtered.length+' estaciones';
-  // Ranking list with logos
-  const list=document.getElementById('preciosList');
-  const top=filtered.slice(0,50);
-  list.innerHTML=top.map((e,i)=>{{
-    const precio=e[field];const diff=precio-minP;
-    const color=CHAIN_COLORS[e.cadena]||'#6b7280';
-    const cls=i<3?'cheapest':(precio>=maxP-10?'expensive':'normal');
-    const rankCls=i<3?'top3':'';
-    const logo=CHAIN_LOGOS[e.cadena]||'';
-    const logoHtml=logo?`<img src="${{logo}}" style="height:22px;width:auto;object-fit:contain">`:`<div class="precio-chain-dot" style="background:${{color}}"></div>`;
-    const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{e.latitud}},${{e.longitud}}`;
-    return `<div class="precio-row">
-      <span class="precio-rank ${{rankCls}}">#${{i+1}}</span>
-      ${{logoHtml}}
-      <div class="precio-info" onclick="precioZoom(${{e.latitud}},${{e.longitud}})" style="cursor:pointer">
-        <div class="precio-name">${{e.cadena}} - ${{e.direccion||'Sin direccion'}}</div>
-        <div class="precio-addr">${{e.comuna}}, ${{e.region}}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div>
-          <div class="precio-value ${{cls}}">$${{precio.toLocaleString()}}</div>
-          ${{diff>0?`<div class="precio-diff">+$${{diff.toLocaleString()}}</div>`:`<div class="precio-diff" style="color:#16a34a;font-weight:600">Mejor precio</div>`}}
-        </div>
-        <a href="${{mapsUrl}}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:3px;padding:6px 10px;background:#4285F4;color:#fff;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap" title="Abrir en Google Maps">Ir</a>
-      </div>
-    </div>`}}).join('');
-  // Map markers with chain logos and colors
+  preciosFiltered.sort((a,b)=>(a[field]||9999)-(b[field]||9999));
+  // Map markers
   if(preciosCluster){{
     preciosCluster.clearLayers();
-    filtered.slice(0,300).forEach((e,i)=>{{
+    preciosFiltered.slice(0,300).forEach((e,i)=>{{
       if(!e.latitud||!e.longitud)return;
       const precio=e[field];
       const color=CHAIN_COLORS[e.cadena]||'#6b7280';
       const logo=CHAIN_LOGOS[e.cadena];
       const iconHtml=logo
         ?`<div style="display:flex;align-items:center;gap:4px;background:#fff;padding:4px 8px;border-radius:12px;border:2px solid ${{color}};box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap"><img src="${{logo}}" style="height:22px;width:auto"><span style="font-size:12px;font-weight:700;color:${{color}}">$${{precio.toLocaleString()}}</span></div>`
-        :`<div style="background:${{color}};color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap">$${{precio.toLocaleString()}}</div>`;
+        :`<div style="display:flex;align-items:center;gap:4px;background:${{color}};color:#fff;padding:4px 8px;border-radius:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap"><span style="font-size:10px;font-weight:600">${{e.cadena.substring(0,6)}}</span><span style="font-size:12px;font-weight:700">$${{precio.toLocaleString()}}</span></div>`;
       const icon=L.divIcon({{className:'',html:iconHtml,iconSize:[null,null],iconAnchor:[35,14]}});
       const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{e.latitud}},${{e.longitud}}`;
       const popup=`<div style="font-family:Inter,sans-serif;min-width:200px">
@@ -2703,6 +2670,60 @@ function renderPrecios(){{
       L.marker([e.latitud,e.longitud],{{icon}}).bindPopup(popup,{{maxWidth:300}}).addTo(preciosCluster)
     }})
   }}
+  // Bind moveend to sync ranking with map viewport
+  if(preciosMapObj&&!preciosMapBound){{
+    preciosMapBound=true;
+    preciosMapObj.on('moveend',updatePreciosList)
+  }}
+  updatePreciosList()
+}}
+
+function updatePreciosList(){{
+  const field=preciosField;
+  // Filter to map viewport if map exists
+  let visible=preciosFiltered;
+  if(preciosMapObj){{
+    const bounds=preciosMapObj.getBounds();
+    visible=preciosFiltered.filter(e=>e.latitud&&e.longitud&&bounds.contains([e.latitud,e.longitud]))
+  }}
+  visible.sort((a,b)=>(a[field]||9999)-(b[field]||9999));
+  const prices=visible.map(e=>e[field]);
+  const minP=prices.length?Math.min(...prices):0;
+  const maxP=prices.length?Math.max(...prices):0;
+  const avgP=prices.length?Math.round(prices.reduce((a,b)=>a+b,0)/prices.length):0;
+  document.getElementById('preciosStats').innerHTML=`
+    <div class="ps-card"><div class="ps-label">Mas barato</div><div class="ps-value ps-min">$${{minP.toLocaleString()}}</div></div>
+    <div class="ps-card"><div class="ps-label">Mas caro</div><div class="ps-value ps-max">$${{maxP.toLocaleString()}}</div></div>
+    <div class="ps-card"><div class="ps-label">Promedio</div><div class="ps-value ps-avg">$${{avgP.toLocaleString()}}</div></div>
+    <div class="ps-card"><div class="ps-label">En vista</div><div class="ps-value ps-count">${{visible.length}}</div></div>`;
+  document.getElementById('preciosCount').textContent=visible.length+' estaciones';
+  const list=document.getElementById('preciosList');
+  const top=visible.slice(0,50);
+  list.innerHTML=top.map((e,i)=>{{
+    const precio=e[field];const diff=precio-minP;
+    const color=CHAIN_COLORS[e.cadena]||'#6b7280';
+    const cls=i<3?'cheapest':(precio>=maxP-10?'expensive':'normal');
+    const rankCls=i<3?'top3':'';
+    const logo=CHAIN_LOGOS[e.cadena]||'';
+    const logoHtml=logo
+      ?`<img src="${{logo}}" style="height:24px;width:auto;object-fit:contain">`
+      :`<div style="background:${{color}};color:#fff;font-size:9px;font-weight:700;padding:3px 6px;border-radius:6px;white-space:nowrap">${{e.cadena.substring(0,8)}}</div>`;
+    const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{e.latitud}},${{e.longitud}}`;
+    return `<div class="precio-row">
+      <span class="precio-rank ${{rankCls}}">#${{i+1}}</span>
+      ${{logoHtml}}
+      <div class="precio-info" onclick="precioZoom(${{e.latitud}},${{e.longitud}})" style="cursor:pointer">
+        <div class="precio-name">${{e.cadena}} - ${{e.direccion||'Sin direccion'}}</div>
+        <div class="precio-addr">${{e.comuna}}, ${{e.region}}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div>
+          <div class="precio-value ${{cls}}">$${{precio.toLocaleString()}}</div>
+          ${{diff>0?`<div class="precio-diff">+$${{diff.toLocaleString()}}</div>`:`<div class="precio-diff" style="color:#16a34a;font-weight:600">Mejor precio</div>`}}
+        </div>
+        <a href="${{mapsUrl}}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:3px;padding:6px 10px;background:#4285F4;color:#fff;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap" title="Abrir en Google Maps">Ir</a>
+      </div>
+    </div>`}}).join('')
 }}
 function precioZoom(lat,lng){{if(preciosMapObj)preciosMapObj.setView([lat,lng],15)}}
 </script>
