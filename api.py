@@ -1764,6 +1764,15 @@ async def ver_bencinas():
     # Serializar datos para JS
     bencina_deals_json = json.dumps([d.to_dict() for d in bencinas_descuentos], ensure_ascii=False)
     estaciones_json = json.dumps([e.to_dict() for e in bencinas_estaciones], ensure_ascii=False)
+    # Precios: todas las estaciones con precios (para comparador)
+    precios_json = json.dumps([e.to_dict() for e in bencinas_precios_todas if e.precio_93 > 0 or e.precio_97 > 0 or e.precio_diesel > 0], ensure_ascii=False)
+    # Regiones y comunas únicas para filtros de precios
+    regiones_set = sorted(set(e.region for e in bencinas_precios_todas if e.region))
+    comunas_set = sorted(set(e.comuna for e in bencinas_precios_todas if e.comuna))
+    regiones_json = json.dumps(regiones_set, ensure_ascii=False)
+    comunas_map_json = json.dumps({r: sorted(set(e.comuna for e in bencinas_precios_todas if e.region == r and e.comuna)) for r in regiones_set}, ensure_ascii=False)
+    total_precios = len([e for e in bencinas_precios_todas if e.precio_93 > 0 or e.precio_97 > 0 or e.precio_diesel > 0])
+    fecha_precios = bencinas_meta.get("fecha_precios", "")
 
     # Stats
     total_desc = len(bencinas_descuentos)
@@ -1945,9 +1954,38 @@ font-weight:600;cursor:pointer;transition:all .2s}}
 .geo-btn.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border-color:transparent}}
 .geo-btn.loading{{opacity:.7;cursor:wait}}
 .geo-status{{font-size:12px;color:var(--muted)}}
+.precios-filters{{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}}
+.precios-filter-row{{display:flex;gap:12px;flex-wrap:wrap;align-items:end}}
+.pf-group{{flex:1;min-width:140px}}
+.pf-group label{{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}}
+.pf-select{{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#fff;color:var(--text);cursor:pointer}}
+.pf-select:focus{{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(234,88,12,.1)}}
+.fuel-chips{{display:flex;gap:6px;flex-wrap:wrap}}
+.fuel-chip{{padding:6px 14px;border:2px solid var(--line);border-radius:20px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text)}}
+.fuel-chip:hover{{border-color:var(--primary);color:var(--primary)}}
+.fuel-chip.active{{background:linear-gradient(135deg,#ea580c,#dc2626);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(234,88,12,.3)}}
+.precios-stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}}
+.ps-card{{background:linear-gradient(135deg,#f9fafb,#fff);border:1px solid var(--line);border-radius:10px;padding:10px 14px;text-align:center}}
+.ps-label{{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}}
+.ps-value{{font-size:20px;font-weight:800;margin-top:2px}}
+.ps-min{{color:#16a34a}}.ps-max{{color:#dc2626}}.ps-avg{{color:#ea580c}}.ps-count{{color:#6366f1}}
+.precios-map-container{{margin-bottom:16px}}
+.precios-list{{display:flex;flex-direction:column;gap:6px;max-height:500px;overflow-y:auto;padding-right:4px}}
+.precio-row{{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;transition:all .15s}}
+.precio-row:hover{{border-color:var(--primary);box-shadow:0 2px 8px rgba(234,88,12,.08)}}
+.precio-rank{{font-size:14px;font-weight:800;color:var(--muted);min-width:28px;text-align:center}}
+.precio-rank.top3{{color:#ea580c}}
+.precio-chain-dot{{width:10px;height:10px;border-radius:50%;flex-shrink:0}}
+.precio-info{{flex:1;min-width:0}}
+.precio-name{{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.precio-addr{{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.precio-value{{font-size:18px;font-weight:800;text-align:right;min-width:80px}}
+.precio-value.cheapest{{color:#16a34a}}.precio-value.expensive{{color:#dc2626}}.precio-value.normal{{color:var(--text)}}
+.precio-diff{{font-size:10px;color:var(--muted);text-align:right}}
 @media(max-width:980px){{.hero,.layout,.grid{{grid-template-columns:1fr}}.stats-grid{{grid-template-columns:1fr}}
 .filters{{position:static}}.deal-img{{height:140px}}#bencina-map{{height:60vh}}
-.day-circle{{width:24px;height:24px;font-size:10px}}.day-bar{{gap:4px;padding:6px 8px}}}}
+.day-circle{{width:24px;height:24px;font-size:10px}}.day-bar{{gap:4px;padding:6px 8px}}
+.precios-filter-row{{flex-direction:column}}.precios-stats{{grid-template-columns:repeat(2,1fr)}}}}
 .deal-visuals{{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-top:1px solid var(--line);background:#fafaf9;gap:6px;min-height:40px}}
 .deal-chain-logo{{height:28px;width:auto;object-fit:contain}}
 .deal-tarjeta{{height:38px;width:auto;max-width:120px;object-fit:contain;border-radius:4px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.15))}}
@@ -2014,6 +2052,7 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 <div class="view-toggle">
 <button class="view-btn active" data-view="tarjetas">⛽ Tarjetas</button>
 <button class="view-btn" data-view="mapa">📍 Mapa</button>
+<button class="view-btn" data-view="precios">💰 Precios</button>
 </div>
 <div id="summaryBar" class="summary-bar"></div>
 <div id="view-tarjetas" class="view-content active">
@@ -2036,6 +2075,56 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 <div id="bencina-map"></div>
 <p style="color:var(--muted);font-size:11px;margin-top:8px;text-align:center">📍 Estaciones reales en la RM · Activa tu GPS para verte en el mapa</p>
 </div>
+<div id="view-precios" class="view-content">
+<div class="toolbar">
+<h2>Comparador de Precios</h2>
+<span class="pill" id="preciosCount">0 estaciones</span>
+</div>
+<div class="precios-filters">
+<div class="precios-filter-row">
+<div class="pf-group">
+<label>Combustible</label>
+<div class="fuel-chips" id="fuelChips">
+<button class="fuel-chip active" data-fuel="93">93</button>
+<button class="fuel-chip" data-fuel="95">95</button>
+<button class="fuel-chip" data-fuel="97">97</button>
+<button class="fuel-chip" data-fuel="diesel">Diesel</button>
+<button class="fuel-chip" data-fuel="kerosene">Kerosene</button>
+</div>
+</div>
+<div class="pf-group">
+<label>Region</label>
+<select id="precioRegion" class="pf-select">
+<option value="">Todas las regiones</option>
+</select>
+</div>
+<div class="pf-group">
+<label>Comuna</label>
+<select id="precioComuna" class="pf-select">
+<option value="">Todas las comunas</option>
+</select>
+</div>
+<div class="pf-group">
+<label>Cadena</label>
+<select id="precioCadena" class="pf-select">
+<option value="">Todas</option>
+<option value="Copec">Copec</option>
+<option value="Shell">Shell</option>
+<option value="Aramco">Aramco</option>
+<option value="otra">Otras</option>
+</select>
+</div>
+</div>
+<div class="precios-stats" id="preciosStats"></div>
+</div>
+<div class="precios-map-container">
+<div id="precios-map" style="height:350px;border-radius:10px;border:1px solid var(--line)"></div>
+</div>
+<div class="precios-list" id="preciosList"></div>
+<p style="color:var(--muted);font-size:10px;margin-top:12px;text-align:center;font-style:italic">
+Fuente: Bencinas en Linea - Comision Nacional de Energia. Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes.
+</p>
+</div>
 </main>
 </section>
 <div class="footer">
@@ -2048,6 +2137,9 @@ Vigencia: {mes_texto} · Beneficios Bancarios Chile
 <script>
 const deals={bencina_deals_json};
 const stations={estaciones_json};
+const allPrices={precios_json};
+const REGIONES={regiones_json};
+const COMUNAS_MAP={comunas_map_json};
 
 const DIAS_SEMANA=['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
 const HOY=DIAS_SEMANA[new Date().getDay()];
@@ -2196,6 +2288,7 @@ btn.classList.add('active');
 currentView=btn.dataset.view;
 document.getElementById('view-'+currentView).classList.add('active');
 if(currentView==='mapa'){{initMap();setTimeout(()=>{{if(mapObj)mapObj.invalidateSize();renderMapMarkers()}},80)}}
+if(currentView==='precios'){{initPreciosView()}}
 }})}});
 
 // ── Card grid ──
@@ -2428,6 +2521,12 @@ iconSize:[14,14],iconAnchor:[7,7]}});
 let popup=`<div style="min-width:220px;font-family:Inter,sans-serif">
 <div class="popup-title">${{s.nombre}}</div>
 <div style="font-size:12px;color:#6b7280">📍 ${{s.direccion}} - ${{s.comuna}}</div>`;
+if(s.precio_93||s.precio_97||s.precio_diesel){{
+popup+=`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">`;
+if(s.precio_93)popup+=`<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">93: $${{s.precio_93.toLocaleString()}}</span>`;
+if(s.precio_97)popup+=`<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">97: $${{s.precio_97.toLocaleString()}}</span>`;
+if(s.precio_diesel)popup+=`<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">DI: $${{s.precio_diesel.toLocaleString()}}</span>`;
+popup+=`</div>`}}
 if(stDeals.length>0){{
 popup+=`<hr style="margin:8px 0;border:0;border-top:1px solid #e5e2da">`;
 popup+=`<div style="font-weight:600;font-size:12px;margin-bottom:4px">Descuentos:</div>`;
@@ -2476,6 +2575,110 @@ navigator.geolocation.getCurrentPosition(
 );
 }}
 (function(){{const s=document.createElement('style');s.textContent='@keyframes geoPulse{{0%{{transform:scale(1);opacity:.6}}100%{{transform:scale(2.5);opacity:0}}}}';document.head.appendChild(s)}})();
+
+// ── COMPARADOR DE PRECIOS ──
+let preciosMapObj=null,preciosCluster=null,preciosInited=false;
+const FUEL_FIELD={{'93':'precio_93','95':'precio_95','97':'precio_97','diesel':'precio_diesel','kerosene':'precio_kerosene'}};
+
+function initPreciosView(){{
+  if(!preciosInited){{
+    preciosInited=true;
+    const regSel=document.getElementById('precioRegion');
+    REGIONES.forEach(r=>{{const o=document.createElement('option');o.value=r;o.textContent=r;regSel.appendChild(o)}});
+    regSel.addEventListener('change',()=>{{
+      const comSel=document.getElementById('precioComuna');
+      comSel.innerHTML='<option value="">Todas las comunas</option>';
+      const reg=regSel.value;
+      if(reg&&COMUNAS_MAP[reg]){{COMUNAS_MAP[reg].forEach(c=>{{const o=document.createElement('option');o.value=c;o.textContent=c;comSel.appendChild(o)}})}}
+      renderPrecios()
+    }});
+    document.getElementById('precioComuna').addEventListener('change',renderPrecios);
+    document.getElementById('precioCadena').addEventListener('change',renderPrecios);
+    document.getElementById('fuelChips').addEventListener('click',e=>{{
+      if(!e.target.classList.contains('fuel-chip'))return;
+      document.querySelectorAll('.fuel-chip').forEach(c=>c.classList.remove('active'));
+      e.target.classList.add('active');renderPrecios()
+    }});
+  }}
+  setTimeout(()=>{{
+    if(!preciosMapObj){{
+      preciosMapObj=L.map('precios-map').setView([-33.45,-70.65],10);
+      L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}@2x.png',{{attribution:'&copy; CARTO',maxZoom:19}}).addTo(preciosMapObj);
+      preciosCluster=L.markerClusterGroup({{maxClusterRadius:35}});
+      preciosMapObj.addLayer(preciosCluster)
+    }}else{{preciosMapObj.invalidateSize()}}
+    renderPrecios()
+  }},100)
+}}
+
+function renderPrecios(){{
+  const fuelBtn=document.querySelector('.fuel-chip.active');
+  const fuel=fuelBtn?fuelBtn.dataset.fuel:'93';
+  const field=FUEL_FIELD[fuel]||'precio_93';
+  const region=document.getElementById('precioRegion').value;
+  const comuna=document.getElementById('precioComuna').value;
+  const cadena=document.getElementById('precioCadena').value;
+  let filtered=allPrices.filter(e=>{{
+    const precio=e[field]||0;
+    if(precio<=0)return false;
+    if(region&&!e.region.includes(region))return false;
+    if(comuna&&e.comuna!==comuna)return false;
+    if(cadena==='otra'){{if(['Copec','Shell','Aramco'].includes(e.cadena))return false}}
+    else if(cadena&&e.cadena!==cadena)return false;
+    return true
+  }});
+  filtered.sort((a,b)=>(a[field]||9999)-(b[field]||9999));
+  const prices=filtered.map(e=>e[field]);
+  const minP=prices.length?Math.min(...prices):0;
+  const maxP=prices.length?Math.max(...prices):0;
+  const avgP=prices.length?Math.round(prices.reduce((a,b)=>a+b,0)/prices.length):0;
+  document.getElementById('preciosStats').innerHTML=`
+    <div class="ps-card"><div class="ps-label">Mas barato</div><div class="ps-value ps-min">$${{minP.toLocaleString()}}</div></div>
+    <div class="ps-card"><div class="ps-label">Mas caro</div><div class="ps-value ps-max">$${{maxP.toLocaleString()}}</div></div>
+    <div class="ps-card"><div class="ps-label">Promedio</div><div class="ps-value ps-avg">$${{avgP.toLocaleString()}}</div></div>
+    <div class="ps-card"><div class="ps-label">Estaciones</div><div class="ps-value ps-count">${{filtered.length}}</div></div>`;
+  document.getElementById('preciosCount').textContent=filtered.length+' estaciones';
+  const list=document.getElementById('preciosList');
+  const top=filtered.slice(0,50);
+  list.innerHTML=top.map((e,i)=>{{
+    const precio=e[field];const diff=precio-minP;
+    const color=CHAIN_COLORS[e.cadena]||'#6b7280';
+    const cls=i<3?'cheapest':(precio>=maxP-10?'expensive':'normal');
+    const rankCls=i<3?'top3':'';
+    return `<div class="precio-row" onclick="precioZoom(${{e.latitud}},${{e.longitud}})">
+      <span class="precio-rank ${{rankCls}}">#${{i+1}}</span>
+      <div class="precio-chain-dot" style="background:${{color}}"></div>
+      <div class="precio-info">
+        <div class="precio-name">${{e.cadena}} - ${{e.direccion||'Sin direccion'}}</div>
+        <div class="precio-addr">${{e.comuna}}, ${{e.region}}</div>
+      </div>
+      <div>
+        <div class="precio-value ${{cls}}">$${{precio.toLocaleString()}}</div>
+        ${{diff>0?`<div class="precio-diff">+$${{diff.toLocaleString()}}</div>`:`<div class="precio-diff" style="color:#16a34a;font-weight:600">Mejor precio</div>`}}
+      </div></div>`}}).join('');
+  if(preciosCluster){{
+    preciosCluster.clearLayers();
+    filtered.slice(0,200).forEach((e,i)=>{{
+      if(!e.latitud||!e.longitud)return;
+      const precio=e[field];const pct=maxP>minP?(precio-minP)/(maxP-minP):0;
+      const r=Math.round(pct*220);const g=Math.round((1-pct)*180);
+      const bg=`rgb(${{r}},${{g}},40)`;
+      const icon=L.divIcon({{className:'',html:`<div style="background:${{bg}};color:#fff;font-size:10px;font-weight:700;padding:2px 5px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);white-space:nowrap">$${{precio.toLocaleString()}}</div>`,iconSize:[null,null],iconAnchor:[20,10]}});
+      const popup=`<div style="font-family:Inter,sans-serif;min-width:180px">
+        <div style="font-weight:700;font-size:14px">${{e.cadena}}</div>
+        <div style="font-size:12px;color:#6b7280">${{e.direccion}}</div>
+        <div style="font-size:11px;color:#9ca3af">${{e.comuna}}, ${{e.region}}</div>
+        <hr style="margin:6px 0;border:0;border-top:1px solid #e5e7eb">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${{e.precio_93?`<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">93: $${{e.precio_93.toLocaleString()}}</span>`:''}}
+        ${{e.precio_97?`<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">97: $${{e.precio_97.toLocaleString()}}</span>`:''}}
+        ${{e.precio_diesel?`<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">DI: $${{e.precio_diesel.toLocaleString()}}</span>`:''}}
+        </div></div>`;
+      L.marker([e.latitud,e.longitud],{{icon}}).bindPopup(popup,{{maxWidth:280}}).addTo(preciosCluster)
+    }})
+  }}
+}}
+function precioZoom(lat,lng){{if(preciosMapObj)preciosMapObj.setView([lat,lng],15)}}
 </script>
 </body></html>"""
 
