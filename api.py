@@ -2052,7 +2052,7 @@ Filtra por cadena, banco, dia y descuento minimo.</p>
 <div class="view-toggle">
 <button class="view-btn active" data-view="tarjetas">⛽ Tarjetas</button>
 <button class="view-btn" data-view="mapa">📍 Mapa</button>
-<button class="view-btn" data-view="precios">💰 Precios</button>
+<button class="view-btn" data-view="precios">⛽ PU Bencina</button>
 </div>
 <div id="summaryBar" class="summary-bar"></div>
 <div id="view-tarjetas" class="view-content active">
@@ -2516,10 +2516,17 @@ filtSt.forEach(s=>{{
 if(!s.latitud||!s.longitud)return;
 const stDeals=dealsByChain[s.cadena]||[];
 const color=CHAIN_COLORS[s.cadena]||'#6b7280';
-const icon=L.divIcon({{className:'',html:`<div style="background:${{color}};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
-iconSize:[14,14],iconAnchor:[7,7]}});
+const logo=CHAIN_LOGOS[s.cadena];
+const iconHtml=logo
+  ?`<div style="background:#fff;padding:3px;border-radius:50%;border:2px solid ${{color}};box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center"><img src="${{logo}}" style="height:16px;width:16px;object-fit:contain"></div>`
+  :`<div style="background:${{color}};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`;
+const icon=L.divIcon({{className:'',html:iconHtml,iconSize:[24,24],iconAnchor:[12,12]}});
+const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{s.latitud}},${{s.longitud}}`;
 let popup=`<div style="min-width:220px;font-family:Inter,sans-serif">
-<div class="popup-title">${{s.nombre}}</div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+${{logo?`<img src="${{logo}}" style="height:22px">`:''}}
+<span class="popup-title">${{s.nombre}}</span>
+</div>
 <div style="font-size:12px;color:#6b7280">📍 ${{s.direccion}} - ${{s.comuna}}</div>`;
 if(s.precio_93||s.precio_97||s.precio_diesel){{
 popup+=`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">`;
@@ -2535,6 +2542,7 @@ const isToday=d.dias_validos.includes(HOY);
 const blogo=BANK_LOGOS[d.banco]?`<img src="${{BANK_LOGOS[d.banco]}}" style="height:14px">`:'';
 popup+=`<div style="padding:3px 0;font-size:12px;${{isToday?'color:#ea580c;font-weight:600':''}}">
 <strong>${{d.descuento_texto}}</strong> ${{blogo}} ${{d.banco}} ${{isToday?'🎯 HOY':''}}</div>`}})}}
+popup+=`<div style="margin-top:8px"><a href="${{mapsUrl}}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:#4285F4;color:#fff;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none">📍 Ir</a></div>`;
 popup+=`</div>`;
 L.marker([s.latitud,s.longitud],{{icon}}).bindPopup(popup,{{maxWidth:300}}).addTo(clusterGroup);
 count++}});
@@ -2638,6 +2646,7 @@ function renderPrecios(){{
     <div class="ps-card"><div class="ps-label">Promedio</div><div class="ps-value ps-avg">$${{avgP.toLocaleString()}}</div></div>
     <div class="ps-card"><div class="ps-label">Estaciones</div><div class="ps-value ps-count">${{filtered.length}}</div></div>`;
   document.getElementById('preciosCount').textContent=filtered.length+' estaciones';
+  // Ranking list with logos
   const list=document.getElementById('preciosList');
   const top=filtered.slice(0,50);
   list.innerHTML=top.map((e,i)=>{{
@@ -2645,36 +2654,53 @@ function renderPrecios(){{
     const color=CHAIN_COLORS[e.cadena]||'#6b7280';
     const cls=i<3?'cheapest':(precio>=maxP-10?'expensive':'normal');
     const rankCls=i<3?'top3':'';
-    return `<div class="precio-row" onclick="precioZoom(${{e.latitud}},${{e.longitud}})">
+    const logo=CHAIN_LOGOS[e.cadena]||'';
+    const logoHtml=logo?`<img src="${{logo}}" style="height:22px;width:auto;object-fit:contain">`:`<div class="precio-chain-dot" style="background:${{color}}"></div>`;
+    const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{e.latitud}},${{e.longitud}}`;
+    return `<div class="precio-row">
       <span class="precio-rank ${{rankCls}}">#${{i+1}}</span>
-      <div class="precio-chain-dot" style="background:${{color}}"></div>
-      <div class="precio-info">
+      ${{logoHtml}}
+      <div class="precio-info" onclick="precioZoom(${{e.latitud}},${{e.longitud}})" style="cursor:pointer">
         <div class="precio-name">${{e.cadena}} - ${{e.direccion||'Sin direccion'}}</div>
         <div class="precio-addr">${{e.comuna}}, ${{e.region}}</div>
       </div>
-      <div>
-        <div class="precio-value ${{cls}}">$${{precio.toLocaleString()}}</div>
-        ${{diff>0?`<div class="precio-diff">+$${{diff.toLocaleString()}}</div>`:`<div class="precio-diff" style="color:#16a34a;font-weight:600">Mejor precio</div>`}}
-      </div></div>`}}).join('');
+      <div style="display:flex;align-items:center;gap:10px">
+        <div>
+          <div class="precio-value ${{cls}}">$${{precio.toLocaleString()}}</div>
+          ${{diff>0?`<div class="precio-diff">+$${{diff.toLocaleString()}}</div>`:`<div class="precio-diff" style="color:#16a34a;font-weight:600">Mejor precio</div>`}}
+        </div>
+        <a href="${{mapsUrl}}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:3px;padding:6px 10px;background:#4285F4;color:#fff;border-radius:8px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap" title="Abrir en Google Maps">Ir</a>
+      </div>
+    </div>`}}).join('');
+  // Map markers with chain logos and colors
   if(preciosCluster){{
     preciosCluster.clearLayers();
-    filtered.slice(0,200).forEach((e,i)=>{{
+    filtered.slice(0,300).forEach((e,i)=>{{
       if(!e.latitud||!e.longitud)return;
-      const precio=e[field];const pct=maxP>minP?(precio-minP)/(maxP-minP):0;
-      const r=Math.round(pct*220);const g=Math.round((1-pct)*180);
-      const bg=`rgb(${{r}},${{g}},40)`;
-      const icon=L.divIcon({{className:'',html:`<div style="background:${{bg}};color:#fff;font-size:10px;font-weight:700;padding:2px 5px;border-radius:10px;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);white-space:nowrap">$${{precio.toLocaleString()}}</div>`,iconSize:[null,null],iconAnchor:[20,10]}});
-      const popup=`<div style="font-family:Inter,sans-serif;min-width:180px">
-        <div style="font-weight:700;font-size:14px">${{e.cadena}}</div>
-        <div style="font-size:12px;color:#6b7280">${{e.direccion}}</div>
+      const precio=e[field];
+      const color=CHAIN_COLORS[e.cadena]||'#6b7280';
+      const logo=CHAIN_LOGOS[e.cadena];
+      const iconHtml=logo
+        ?`<div style="display:flex;align-items:center;gap:3px;background:#fff;padding:3px 6px;border-radius:10px;border:2px solid ${{color}};box-shadow:0 2px 6px rgba(0,0,0,.25);white-space:nowrap"><img src="${{logo}}" style="height:16px;width:auto"><span style="font-size:10px;font-weight:700;color:${{color}}">$${{precio.toLocaleString()}}</span></div>`
+        :`<div style="background:${{color}};color:#fff;font-size:10px;font-weight:700;padding:3px 6px;border-radius:10px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);white-space:nowrap">$${{precio.toLocaleString()}}</div>`;
+      const icon=L.divIcon({{className:'',html:iconHtml,iconSize:[null,null],iconAnchor:[30,12]}});
+      const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{e.latitud}},${{e.longitud}}`;
+      const popup=`<div style="font-family:Inter,sans-serif;min-width:200px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          ${{logo?`<img src="${{logo}}" style="height:24px">`:''}}
+          <span style="font-weight:700;font-size:14px">${{e.cadena}}</span>
+        </div>
+        <div style="font-size:12px;color:#374151">${{e.direccion}}</div>
         <div style="font-size:11px;color:#9ca3af">${{e.comuna}}, ${{e.region}}</div>
-        <hr style="margin:6px 0;border:0;border-top:1px solid #e5e7eb">
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <hr style="margin:8px 0;border:0;border-top:1px solid #e5e7eb">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
         ${{e.precio_93?`<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">93: $${{e.precio_93.toLocaleString()}}</span>`:''}}
         ${{e.precio_97?`<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">97: $${{e.precio_97.toLocaleString()}}</span>`:''}}
         ${{e.precio_diesel?`<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">DI: $${{e.precio_diesel.toLocaleString()}}</span>`:''}}
-        </div></div>`;
-      L.marker([e.latitud,e.longitud],{{icon}}).bindPopup(popup,{{maxWidth:280}}).addTo(preciosCluster)
+        </div>
+        <a href="${{mapsUrl}}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:#4285F4;color:#fff;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none">📍 Ir</a>
+      </div>`;
+      L.marker([e.latitud,e.longitud],{{icon}}).bindPopup(popup,{{maxWidth:300}}).addTo(preciosCluster)
     }})
   }}
 }}
