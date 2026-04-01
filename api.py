@@ -2642,7 +2642,7 @@ function renderPrecios(){{
   // Map markers
   if(preciosCluster){{
     preciosCluster.clearLayers();
-    preciosFiltered.slice(0,300).forEach((e,i)=>{{
+    preciosFiltered.forEach((e,i)=>{{
       if(!e.latitud||!e.longitud)return;
       const precio=e[field];
       const color=CHAIN_COLORS[e.cadena]||'#6b7280';
