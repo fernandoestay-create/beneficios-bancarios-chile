@@ -2518,9 +2518,9 @@ const stDeals=dealsByChain[s.cadena]||[];
 const color=CHAIN_COLORS[s.cadena]||'#6b7280';
 const logo=CHAIN_LOGOS[s.cadena];
 const iconHtml=logo
-  ?`<div style="background:#fff;padding:3px;border-radius:50%;border:2px solid ${{color}};box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center"><img src="${{logo}}" style="height:16px;width:16px;object-fit:contain"></div>`
-  :`<div style="background:${{color}};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`;
-const icon=L.divIcon({{className:'',html:iconHtml,iconSize:[24,24],iconAnchor:[12,12]}});
+  ?`<div style="background:#fff;padding:4px;border-radius:50%;border:3px solid ${{color}};box-shadow:0 2px 8px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><img src="${{logo}}" style="height:26px;width:26px;object-fit:contain"></div>`
+  :`<div style="background:${{color}};width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`;
+const icon=L.divIcon({{className:'',html:iconHtml,iconSize:[38,38],iconAnchor:[19,19]}});
 const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{s.latitud}},${{s.longitud}}`;
 let popup=`<div style="min-width:220px;font-family:Inter,sans-serif">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -2681,9 +2681,9 @@ function renderPrecios(){{
       const color=CHAIN_COLORS[e.cadena]||'#6b7280';
       const logo=CHAIN_LOGOS[e.cadena];
       const iconHtml=logo
-        ?`<div style="display:flex;align-items:center;gap:3px;background:#fff;padding:3px 6px;border-radius:10px;border:2px solid ${{color}};box-shadow:0 2px 6px rgba(0,0,0,.25);white-space:nowrap"><img src="${{logo}}" style="height:16px;width:auto"><span style="font-size:10px;font-weight:700;color:${{color}}">$${{precio.toLocaleString()}}</span></div>`
-        :`<div style="background:${{color}};color:#fff;font-size:10px;font-weight:700;padding:3px 6px;border-radius:10px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);white-space:nowrap">$${{precio.toLocaleString()}}</div>`;
-      const icon=L.divIcon({{className:'',html:iconHtml,iconSize:[null,null],iconAnchor:[30,12]}});
+        ?`<div style="display:flex;align-items:center;gap:4px;background:#fff;padding:4px 8px;border-radius:12px;border:2px solid ${{color}};box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap"><img src="${{logo}}" style="height:22px;width:auto"><span style="font-size:12px;font-weight:700;color:${{color}}">$${{precio.toLocaleString()}}</span></div>`
+        :`<div style="background:${{color}};color:#fff;font-size:11px;font-weight:700;padding:4px 8px;border-radius:12px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap">$${{precio.toLocaleString()}}</div>`;
+      const icon=L.divIcon({{className:'',html:iconHtml,iconSize:[null,null],iconAnchor:[35,14]}});
       const mapsUrl=`https://www.google.com/maps/dir/?api=1&destination=${{e.latitud}},${{e.longitud}}`;
       const popup=`<div style="font-family:Inter,sans-serif;min-width:200px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
