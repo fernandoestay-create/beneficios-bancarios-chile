@@ -352,6 +352,87 @@
       ]
     },
     {
+      "id": "bencina_shell_scotiabank_sabado",
+      "cadena": "Shell",
+      "banco": "Scotiabank",
+      "tarjeta": "Visa Crédito Singular/Premium",
+      "descuento_por_litro": 200,
+      "descuento_texto": "$200/L",
+      "dias_validos": [
+        "sabado"
+      ],
+      "condicion": "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes",
+      "tope_litros": 50,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-06",
+      "valido_hasta": "30-Jun-2026",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-06-01T16:54:36.048817",
+      "activo": true,
+      "tags": [
+        "shell",
+        "scotiabank",
+        "bencina",
+        "combustible"
+      ]
+    },
+    {
+      "id": "bencina_shell_scotiabank_sabado",
+      "cadena": "Shell",
+      "banco": "Scotiabank",
+      "tarjeta": "Visa Crédito Signature/Platinum",
+      "descuento_por_litro": 150,
+      "descuento_texto": "$150/L",
+      "dias_validos": [
+        "sabado"
+      ],
+      "condicion": "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes",
+      "tope_litros": 50,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-06",
+      "valido_hasta": "30-Jun-2026",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-06-01T16:54:36.048817",
+      "activo": true,
+      "tags": [
+        "shell",
+        "scotiabank",
+        "bencina",
+        "combustible"
+      ]
+    },
+    {
+      "id": "bencina_shell_scotiabank_sabado",
+      "cadena": "Shell",
+      "banco": "Scotiabank",
+      "tarjeta": "Visa Crédito Gold",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "sabado"
+      ],
+      "condicion": "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes",
+      "tope_litros": 50,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-06",
+      "valido_hasta": "30-Jun-2026",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-06-01T16:54:36.048817",
+      "activo": true,
+      "tags": [
+        "shell",
+        "scotiabank",
+        "bencina",
+        "combustible"
+      ]
+    },
+    {
       "id": "bencina_copec_cencosud_scotiabank_lunes",
       "cadena": "Copec",
       "banco": "Cencosud Scotiabank",

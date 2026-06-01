@@ -2942,6 +2942,10 @@ class ScraperBencina:
             ("Shell", "Micopiloto", "Cualquier tarjeta", 15, ["miercoles"], 'Código "MIDCTO", 1x/día, 70L', 70, 0),
             ("Shell", "Banco BICE", "Crédito BICE", 100, ["domingo"], "Máx 1 carga/mes", 0, 5000),
             ("Shell", "Banco Security", "Crédito Security", 100, ["domingo"], "", 0, 5000),
+            # Scotiabank Shell sábado vía App Shell (ex Mi Copiloto). Fuente: comparadores (T13, La Tercera); el sitio oficial Scotiabank solo confirma el de miércoles (Copec) — revalidar T&C mensual
+            ("Shell", "Scotiabank", "Visa Crédito Singular/Premium", 200, ["sabado"], "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes", 50, 0),
+            ("Shell", "Scotiabank", "Visa Crédito Signature/Platinum", 150, ["sabado"], "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes", 50, 0),
+            ("Shell", "Scotiabank", "Visa Crédito Gold", 100, ["sabado"], "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes", 50, 0),
 
             # COPEC
             ("Copec", "Cencosud Scotiabank", "Black", 100, ["lunes"], "App Copec", 0, 0),
