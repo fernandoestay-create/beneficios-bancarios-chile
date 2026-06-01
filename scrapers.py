@@ -329,10 +329,9 @@ class ScraperBancoChile:
 # ============================================
 
 class ScraperBancoFalabella:
-    """Scraper de Banco Falabella via Contentful CMS"""
+    """Scraper de Banco Falabella desde HTML SSR (Next.js RSC, sin navegador)"""
 
-    CONTENTFUL_SPACE = "p6eyia4djstu"
-    CONTENTFUL_ENV = "master"
+    URL = "https://www.bancofalabella.cl/descuentos/restaurantes"
     BANCO = "Banco Falabella"
 
     def __init__(self):
@@ -341,274 +340,168 @@ class ScraperBancoFalabella:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         })
         self.beneficios: List[Beneficio] = []
-        self._access_token: Optional[str] = None
-
-    def _obtener_token(self) -> Optional[str]:
-        """Obtiene el access token de Contentful desde el sitio"""
-        try:
-            from playwright.sync_api import sync_playwright
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-
-                token = None
-
-                def capture_token(response):
-                    nonlocal token
-                    url = response.url
-                    if 'cdn.contentful.com' in url and f'spaces/{self.CONTENTFUL_SPACE}' in url:
-                        import urllib.parse
-                        parsed = urllib.parse.urlparse(url)
-                        params = urllib.parse.parse_qs(parsed.query)
-                        t = params.get('access_token', [None])[0]
-                        if t:
-                            token = t
-
-                page.on('response', capture_token)
-                page.goto('https://www.bancofalabella.cl/descuentos/restaurantes',
-                          wait_until='domcontentloaded', timeout=20000)
-                page.wait_for_timeout(5000)
-                browser.close()
-                return token
-        except Exception as e:
-            print(f"   ⚠️  No se pudo obtener token de Contentful: {e}")
-            return None
 
     def scrapear(self) -> List[Beneficio]:
-        """Extrae beneficios usando Playwright para capturar datos de Contentful"""
+        """Extrae beneficios de restaurantes desde el HTML SSR (Next.js RSC).
+
+        El sitio migró a Next.js App Router: los beneficios vienen embebidos en
+        el HTML como payload RSC escapado. Se obtienen con requests puro (sin
+        navegador), por lo que corre en Render sin Chromium.
+        """
         try:
-            print(f"📡 Scrapeando {self.BANCO} (Contentful CMS)...")
+            print(f"📡 Scrapeando {self.BANCO} (SSR Next.js)...")
+            resp = self.session.get(self.URL, timeout=30)
+            resp.raise_for_status()
 
-            from playwright.sync_api import sync_playwright
+            cards = self._extraer_cards(resp.text)
+            print(f"   Cards de restaurantes encontradas: {len(cards)}")
 
-            raw_data = None
+            for card in cards:
+                beneficio = self._parsear_card(card)
+                if beneficio:
+                    self.beneficios.append(beneficio)
 
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-
-                def capture_data(response):
-                    nonlocal raw_data
-                    url = response.url
-                    if 'orderedBenefits' in url and 'Todos' in url:
-                        try:
-                            raw_data = response.json()
-                        except:
-                            pass
-
-                page.on('response', capture_data)
-                page.goto('https://www.bancofalabella.cl/descuentos/restaurantes',
-                          wait_until='domcontentloaded', timeout=25000)
-                page.wait_for_timeout(8000)
-                browser.close()
-
-            if not raw_data:
-                print(f"   ❌ No se capturaron datos de Contentful")
-                return []
-
-            # Construir mapa de assets (id → URL de imagen)
-            assets = raw_data.get('includes', {}).get('Asset', [])
-            asset_map = {}
-            for a in assets:
-                aid = a.get('sys', {}).get('id', '')
-                file_info = a.get('fields', {}).get('file', {})
-                url = file_info.get('url', '')
-                if url and not url.startswith('http'):
-                    url = 'https:' + url
-                if aid and url:
-                    asset_map[aid] = url
-            print(f"   Assets mapeados: {len(asset_map)}")
-
-            entries = raw_data.get('includes', {}).get('Entry', [])
-            print(f"   Total entries capturadas: {len(entries)}")
-
-            # Procesar newBenefits (formato nuevo)
-            count_new = 0
-            count_legacy = 0
-            for entry in entries:
-                ct = entry.get('sys', {}).get('contentType', {}).get('sys', {}).get('id', '')
-                fields = entry.get('fields', {})
-
-                if ct == 'newBenefits':
-                    # Filtrar solo restaurantes
-                    categories = fields.get('relatedCategory', [])
-                    if 'Restaurantes' in categories:
-                        beneficio = self._parsear_new_benefit(entry, asset_map)
-                        if beneficio:
-                            self.beneficios.append(beneficio)
-                            count_new += 1
-
-                elif ct == 'descuentos':
-                    # Filtrar solo restaurantes
-                    categories = fields.get('categoriaV2', [])
-                    if 'Restaurantes' in categories:
-                        beneficio = self._parsear_descuento_legacy(entry, asset_map)
-                        if beneficio:
-                            self.beneficios.append(beneficio)
-                            count_legacy += 1
-
-            print(f"   newBenefits (restaurantes): {count_new}")
-            print(f"   descuentos legacy (restaurantes): {count_legacy}")
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
             return self.beneficios
 
-        except ImportError:
-            print(f"   ⚠️  Playwright no instalado. Instalando...")
-            import subprocess
-            subprocess.run(['pip', 'install', 'playwright'], capture_output=True)
-            subprocess.run(['python3', '-m', 'playwright', 'install', 'chromium'], capture_output=True)
-            return self.scrapear()
         except Exception as e:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
             return self.beneficios
 
-    def _parsear_new_benefit(self, entry: dict, asset_map: dict = None) -> Optional[Beneficio]:
-        """Parsea un newBenefits entry"""
+    @staticmethod
+    def _extraer_cards(html: str) -> List[dict]:
+        """Localiza los objetos benefitCard embebidos en el payload RSC.
+
+        Cada card es un objeto JSON cuyo campo discountDays es una lista. Se
+        ancla en '"discountDays":[' y se recorta el objeto contenedor por
+        balance de llaves. Dedup por linkUrl.
+        """
+        text = (html.replace('\\"', '"')
+                    .replace('\\\\', '\\')
+                    .replace('\\u002F', '/'))
+        cards: List[dict] = []
+        vistos = set()
+        anchor = '"discountDays":['
+        idx = 0
+        while True:
+            p = text.find(anchor, idx)
+            if p == -1:
+                break
+            idx = p + len(anchor)
+            start = text.rfind('{', max(0, p - 10000), p)
+            if start == -1:
+                continue
+            depth = 0
+            in_str = False
+            esc = False
+            end = -1
+            for i in range(start, min(len(text), start + 8000)):
+                c = text[i]
+                if esc:
+                    esc = False
+                    continue
+                if c == '\\':
+                    esc = True
+                    continue
+                if c == '"':
+                    in_str = not in_str
+                    continue
+                if in_str:
+                    continue
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end = i
+                        break
+            if end == -1:
+                continue
+            try:
+                obj = json.loads(text[start:end + 1])
+            except Exception:
+                continue
+            if 'centerDiscountText' not in obj or 'linkUrl' not in obj:
+                continue
+            link = obj.get('linkUrl') or ''
+            if link in vistos:
+                continue
+            vistos.add(link)
+            cards.append(obj)
+        return cards
+
+    def _parsear_card(self, card: dict) -> Optional[Beneficio]:
+        """Convierte un benefitCard del SSR en un objeto Beneficio."""
         try:
-            fields = entry.get('fields', {})
-            sys_data = entry.get('sys', {})
-            asset_map = asset_map or {}
+            title = (card.get('title') or '').strip()
+            restaurante = re.sub(
+                r'^Descuentos?\s+en\s+(Restaurante\s+|Café\s+|Cervecer[ií]a\s+)?',
+                '', title, flags=re.IGNORECASE
+            ).strip() or title or 'Desconocido'
 
-            nombre = fields.get('commerceName', fields.get('benefitTitle', 'Desconocido'))
-            descuento_valor = fields.get('discount', 0) or 0
+            top = (card.get('topDiscountText') or '').strip()
+            center = (card.get('centerDiscountText') or '').strip()
+            bottom = (card.get('bottomDiscountText') or '').strip()
 
-            top_text = fields.get('topDiscountText', '')
-            center_text = fields.get('centerDiscountText', '')
-            bottom_text = fields.get('bottomDiscountText', '')
-            descuento_texto = f"{top_text} {center_text} {bottom_text}".strip()
+            descuento_valor = 0.0
+            descuento_tipo = 'otro'
+            m = re.search(r'(\d+)\s*%', center)
+            if m:
+                descuento_valor = float(m.group(1))
+                descuento_tipo = 'porcentaje'
+            elif center.startswith('$'):
+                num = re.sub(r'[^\d]', '', center)
+                if num:
+                    descuento_valor = float(num)
+                    descuento_tipo = 'precio_fijo'
+            elif center.isdigit():
+                descuento_valor = float(center)
+                descuento_tipo = 'porcentaje'
 
-            # Días
-            dias_raw = fields.get('discountDays', [])
-            dias_validos = self._normalizar_dias(dias_raw)
+            descuento_texto = ' '.join(t for t in (top, center, bottom) if t)
+            descuento_texto = descuento_texto.replace('$$', '$').strip()
 
-            # Tarjetas
-            tarjetas = fields.get('creditCards', [])
-            tarjeta_str = ', '.join(tarjetas[:3]) if tarjetas else 'CMR Falabella'
+            dias_validos = self._normalizar_dias(card.get('discountDays', []))
 
-            # Región
-            regiones = fields.get('region', [])
-            ubicacion = regiones[0] if regiones else ''
+            valido_desde = (card.get('initDate') or '')[:10]
+            valido_hasta = (card.get('endDate') or '')[:10]
 
-            # Modo
-            modos = fields.get('benefitsMode', [])
-            presencial = 'Presencial' in modos
-            online = 'Online' in modos or 'Delivery' in modos
+            def _img(u: Optional[str]) -> str:
+                u = (u or '').strip()
+                return 'https:' + u if u.startswith('//') else u
 
-            # Fechas
-            valido_desde = fields.get('initDate', '')[:10] if fields.get('initDate') else ''
-            valido_hasta = fields.get('endDate', '')[:10] if fields.get('endDate') else ''
+            imagen_url = _img(card.get('imageCard'))
+            logo_url = _img(card.get('logoCard'))
 
-            # URL
-            permalink = fields.get('permalink', '')
-            url = f"https://www.bancofalabella.cl/descuentos/detalle/{permalink}" if permalink else ''
+            link = card.get('linkUrl') or ''
+            url_fuente = f"https://www.bancofalabella.cl{link}" if link.startswith('/') else link
+            slug = link.rstrip('/').split('/')[-1] if link else restaurante.lower().replace(' ', '_')
 
-            # Descripción
-            descripcion = fields.get('commerceInfoDescription', '')
-            card_desc = fields.get('cardDescription', '')
-
-            # Legal
-            legal = fields.get('legalText', '')
-
-            # Imágenes (resolver asset IDs)
-            card_img_ref = fields.get('cardImage', {}).get('sys', {}).get('id', '')
-            card_logo_ref = fields.get('cardLogo', {}).get('sys', {}).get('id', '')
-            imagen_url = asset_map.get(card_img_ref, '')
-            logo_url = asset_map.get(card_logo_ref, '')
-
-            entry_id = sys_data.get('id', nombre.lower().replace(' ', '_'))
+            descripcion = (card.get('description') or '').strip()
 
             return Beneficio(
-                id=f"falabella_{entry_id}",
+                id=f"falabella_{slug}",
                 banco=self.BANCO,
-                tarjeta=tarjeta_str,
-                restaurante=nombre,
-                descuento_valor=float(descuento_valor),
-                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                tarjeta="CMR Falabella",
+                restaurante=restaurante,
+                descuento_valor=descuento_valor,
+                descuento_tipo=descuento_tipo,
                 descuento_texto=descuento_texto,
                 dias_validos=dias_validos,
                 valido_desde=valido_desde,
                 valido_hasta=valido_hasta,
-                ubicacion=ubicacion,
-                restricciones_texto=legal[:300] if legal else card_desc,
-                presencial=presencial,
-                online=online,
-                url_fuente=url,
-                imagen_url=imagen_url,
-                logo_url=logo_url,
-                activo=True,
-                descripcion=descripcion,
-            )
-        except Exception as e:
-            return None
-
-    def _parsear_descuento_legacy(self, entry: dict, asset_map: dict = None) -> Optional[Beneficio]:
-        """Parsea un descuentos (legacy) entry"""
-        try:
-            fields = entry.get('fields', {})
-            sys_data = entry.get('sys', {})
-            asset_map = asset_map or {}
-
-            nombre = fields.get('empresaBeneficioV2', fields.get('nombreBeneficio', 'Desconocido'))
-            subtitulo = fields.get('subtituloCajaV2', '')
-
-            # Extraer descuento del subtítulo
-            descuento_valor = 0
-            match = re.search(r'(\d+)%', subtitulo)
-            if match:
-                descuento_valor = int(match.group(1))
-
-            # Días
-            dias_raw = fields.get('diasDescuento', [])
-            dias_validos = self._normalizar_dias(dias_raw)
-
-            # Región
-            regiones = fields.get('region', [])
-            ubicacion = regiones[0] if regiones else ''
-
-            # Método de pago
-            payment = fields.get('paymentMethodBenefit', [])
-            tarjeta_str = ', '.join(payment) if payment else 'CMR Falabella'
-
-            # Fechas
-            valido_desde = fields.get('fechaIngresoV2', '')[:10] if fields.get('fechaIngresoV2') else ''
-            valido_hasta = fields.get('fechaTerminoV2', '')[:10] if fields.get('fechaTerminoV2') else ''
-
-            # URL
-            permalink = fields.get('permalink', '')
-            url = f"https://www.bancofalabella.cl/descuentos/detalle/{permalink}" if permalink else ''
-
-            # Tipo beneficio
-            tipo = fields.get('tipoBeneficio', [])
-
-            # Imágenes legacy
-            img_ref = fields.get('imagenCajaV2', {}).get('sys', {}).get('id', '')
-            logo_ref = fields.get('logoCajaV2', {}).get('sys', {}).get('id', '')
-            imagen_url = asset_map.get(img_ref, '')
-            logo_url = asset_map.get(logo_ref, '')
-
-            entry_id = sys_data.get('id', nombre.lower().replace(' ', '_'))
-
-            return Beneficio(
-                id=f"falabella_legacy_{entry_id}",
-                banco=self.BANCO,
-                tarjeta=tarjeta_str,
-                restaurante=nombre,
-                descuento_valor=float(descuento_valor),
-                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
-                descuento_texto=subtitulo,
-                dias_validos=dias_validos,
-                valido_desde=valido_desde,
-                valido_hasta=valido_hasta,
-                ubicacion=ubicacion,
-                restricciones_texto=', '.join(tipo) if tipo else '',
+                ubicacion="",
+                restricciones_texto=bottom if 'tope' in bottom.lower() else "",
                 presencial=True,
                 online=False,
-                url_fuente=url,
+                url_fuente=url_fuente,
                 imagen_url=imagen_url,
                 logo_url=logo_url,
                 activo=True,
+                tags=["Restaurantes"],
+                descripcion=descripcion,
             )
-        except Exception as e:
+        except Exception:
             return None
 
     def _normalizar_dias(self, dias_raw: list) -> List[str]:
