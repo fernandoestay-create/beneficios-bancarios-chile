@@ -1048,46 +1048,43 @@ class ScraperSantander:
         self.beneficios: List[Beneficio] = []
 
     def scrapear(self) -> List[Beneficio]:
-        """Extrae beneficios de restaurantes de Santander (Playwright para bypass 403)"""
+        """Extrae beneficios de restaurantes de Santander (requests + SSR).
+
+        Akamai devuelve 403 a User-Agents de browser/python-requests, pero
+        responde 200 a un UA estilo curl. Sirve el HTML SSR completo (li.item),
+        así que no se necesita browser y corre igual en local y en Render/cron.
+        """
         try:
-            print(f"📡 Scrapeando {self.BANCO} (Playwright)...")
-            from playwright.sync_api import sync_playwright
+            print(f"📡 Scrapeando {self.BANCO} (requests/SSR)...")
             from bs4 import BeautifulSoup
+
+            session = requests.Session()
+            session.headers.update({'User-Agent': 'curl/8.4.0'})
 
             total_items = 0
 
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                )
-                page = context.new_page()
+            for page_num in range(1, self.MAX_PAGES + 1):
+                url = f"{self.BASE_URL}?page={page_num}"
+                try:
+                    response = session.get(url, timeout=15)
+                    response.raise_for_status()
+                except Exception:
+                    break
 
-                for page_num in range(1, self.MAX_PAGES + 1):
-                    url = f"{self.BASE_URL}?page={page_num}"
-                    try:
-                        page.goto(url, wait_until='domcontentloaded', timeout=15000)
-                        page.wait_for_timeout(1500)
-                    except Exception:
-                        break
+                soup = BeautifulSoup(response.text, 'html.parser')
+                items = soup.select('li.item')
 
-                    html = page.content()
-                    soup = BeautifulSoup(html, 'html.parser')
-                    items = soup.select('li.item')
+                if not items:
+                    break
 
-                    if not items:
-                        break
+                for item in items:
+                    total_items += 1
+                    beneficio = self._parsear_item(item)
+                    if beneficio:
+                        self.beneficios.append(beneficio)
 
-                    for item in items:
-                        total_items += 1
-                        beneficio = self._parsear_item(item)
-                        if beneficio:
-                            self.beneficios.append(beneficio)
-
-                    if page_num % 5 == 0 or page_num == 1:
-                        print(f"   Página {page_num}: {len(self.beneficios)} restaurantes de {total_items} items")
-
-                browser.close()
+                if page_num % 5 == 0 or page_num == 1:
+                    print(f"   Página {page_num}: {len(self.beneficios)} restaurantes de {total_items} items")
 
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios de {total_items} total")
             return self.beneficios
