@@ -441,7 +441,9 @@ class ScraperBancoFalabella:
             restaurante = re.sub(
                 r'^Descuentos?\s+en\s+(Restaurante\s+|Café\s+|Cervecer[ií]a\s+)?',
                 '', title, flags=re.IGNORECASE
-            ).strip() or title or 'Desconocido'
+            ).strip() or title or ''
+            if not restaurante:
+                return None
 
             top = (card.get('topDiscountText') or '').strip()
             center = (card.get('centerDiscountText') or '').strip()
@@ -685,7 +687,7 @@ class ScraperBCI:
 # ============================================
 
 class ScraperItau:
-    """Scraper de Itaú via Playwright (Cloudflare-protected WordPress)"""
+    """Scraper de Itaú via requests (HTML SSR de WordPress, UA estilo curl)"""
 
     LISTING_URL = "https://itaubeneficios.cl/beneficios/beneficios-y-descuentos/ruta-gourmet/"
     BANCO = "Banco Itaú"
@@ -694,31 +696,19 @@ class ScraperItau:
         self.beneficios: List[Beneficio] = []
 
     def scrapear(self) -> List[Beneficio]:
-        """Extrae beneficios de la Ruta Gourmet Itaú usando Playwright"""
+        """Extrae beneficios de la Ruta Gourmet Itaú (HTML SSR via requests, sin browser)"""
         try:
-            print(f"📡 Scrapeando {self.BANCO} (Playwright + Cloudflare)...")
-
-            from playwright.sync_api import sync_playwright
+            print(f"📡 Scrapeando {self.BANCO} (HTML SSR via requests)...")
             from bs4 import BeautifulSoup
 
-            with sync_playwright() as p:
-                browser = p.chromium.launch(
-                    headless=True,
-                    args=['--disable-blink-features=AutomationControlled', '--no-sandbox'],
-                )
-                context = browser.new_context(
-                    user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                    viewport={'width': 1920, 'height': 1080},
-                    locale='es-CL',
-                )
-                page = context.new_page()
-                page.add_init_script('Object.defineProperty(navigator, "webdriver", {get: () => undefined})')
-                page.goto(self.LISTING_URL, wait_until='domcontentloaded', timeout=30000)
-                page.wait_for_timeout(12000)
-                html = page.content()
-                browser.close()
+            response = requests.get(
+                self.LISTING_URL,
+                headers={'User-Agent': 'curl/8.4.0'},
+                timeout=20,
+            )
+            response.raise_for_status()
 
-            soup = BeautifulSoup(html, 'html.parser')
+            soup = BeautifulSoup(response.text, 'html.parser')
             cards = soup.select('a.beneficio__item')
             print(f"   Tarjetas encontradas: {len(cards)}")
 
@@ -728,17 +718,9 @@ class ScraperItau:
                     self.beneficios.append(beneficio)
 
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
-            return self.beneficios
-
-        except ImportError:
-            print(f"   ⚠️  Playwright/bs4 no instalado. Instalando...")
-            import subprocess
-            subprocess.run(['pip', 'install', 'playwright', 'beautifulsoup4'], capture_output=True)
-            subprocess.run(['python3', '-m', 'playwright', 'install', 'chromium'], capture_output=True)
-            return self.scrapear()
         except Exception as e:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
-            return self.beneficios
+        return self.beneficios
 
     def _parsear_card(self, card) -> Optional[Beneficio]:
         """Parsea una tarjeta HTML a Beneficio"""
@@ -1334,7 +1316,9 @@ class ScraperBancoEstado:
         """Parsea una card con data-attributes a Beneficio"""
         try:
             card_id = card.get('data-card-id', '')
-            nombre = card.get('data-name', 'Desconocido')
+            nombre = (card.get('data-name') or '').strip()
+            if not nombre:
+                return None
             tarjeta_raw = card.get('data-tarjeta', '')
             oferta_raw = card.get('data-oferta', '')
 
@@ -1658,8 +1642,7 @@ class ScraperBancoRipley:
 
         except Exception as e:
             print(f"❌ Error API directa {self.BANCO}: {e}")
-            print(f"   🔄 Intentando fallback con Playwright...")
-            return self._scrape_playwright_fallback()
+            return self.beneficios
 
     def _extract_items(self, data) -> list:
         """Navega la estructura de respuesta: {success, haveData, data: [{config, items: [...]}]}"""
@@ -1683,51 +1666,6 @@ class ScraperBancoRipley:
         if isinstance(data, list):
             return data
         return []
-
-    def _scrape_playwright_fallback(self) -> List[Beneficio]:
-        """Fallback usando Playwright para interceptar API"""
-        try:
-            from playwright.sync_api import sync_playwright
-
-            captured_data = []
-
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-
-                def capture(response):
-                    if 'call-sp-api' in response.url and response.status == 200:
-                        try:
-                            captured_data.append(response.json())
-                        except Exception:
-                            pass
-
-                page.on('response', capture)
-                page.goto('https://www.bancoripley.cl/beneficios-y-promociones',
-                          wait_until='domcontentloaded', timeout=30000)
-                page.wait_for_timeout(8000)
-
-                # Try clicking restaurant tab
-                try:
-                    page.click('text=Restaurantes', timeout=3000)
-                    page.wait_for_timeout(3000)
-                except Exception:
-                    pass
-
-                browser.close()
-
-            for data in captured_data:
-                items = self._extract_items(data)
-                for item in items:
-                    beneficio = self._parsear_item(item)
-                    if beneficio:
-                        self.beneficios.append(beneficio)
-
-            print(f"   Playwright fallback: {len(self.beneficios)} beneficios")
-            return self.beneficios
-        except Exception as e:
-            print(f"   ❌ Fallback también falló: {e}")
-            return self.beneficios
 
     @staticmethod
     def _val(param):
@@ -1926,7 +1864,7 @@ class ScraperEntel:
             data = card_data_list[0] if isinstance(card_data_list[0], dict) else {}
 
             # Card structure: {header: {image: {sources: [{src}]}}, title, text, href, data: {market, segment}}
-            nombre = data.get('title', data.get('name', ''))
+            nombre = (data.get('title') or data.get('name') or '').strip()
             if not nombre:
                 return None
             descripcion = data.get('text', data.get('description', ''))
@@ -2230,7 +2168,7 @@ class ScraperTenpo:
 # ============================================
 
 class ScraperLiderBCI:
-    """Scraper de Lider BCI via Modyo CMS API (interceptada con Playwright)"""
+    """Scraper de Lider BCI via Modyo CMS API (requests directo, sin browser)"""
 
     API_URL = "https://www.bci.cl/api/content/spaces/tarjeta-lider/types/descuentos/entries?per_page=10000&sort_by=meta.published_at&order=desc"
     PAGE_URL = "https://www.liderbci.cl/descuentos"
@@ -2240,55 +2178,9 @@ class ScraperLiderBCI:
         self.beneficios: List[Beneficio] = []
 
     def scrapear(self) -> List[Beneficio]:
-        """Extrae beneficios de gastronomía de Lider BCI (Playwright intercept)"""
+        """Extrae beneficios de gastronomía de Lider BCI (API Modyo via requests, sin browser)"""
         try:
-            print(f"📡 Scrapeando {self.BANCO} (Playwright + API intercept)...")
-            from playwright.sync_api import sync_playwright
-
-            captured_data = []
-
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                )
-                page = context.new_page()
-
-                def capture(response):
-                    if 'tarjeta-lider' in response.url and 'entries' in response.url and response.status == 200:
-                        try:
-                            captured_data.append(response.json())
-                        except Exception:
-                            pass
-
-                page.on('response', capture)
-                page.goto(self.PAGE_URL, wait_until='domcontentloaded', timeout=30000)
-                page.wait_for_timeout(8000)
-                browser.close()
-
-            if not captured_data:
-                print(f"   ⚠️ No se capturó data de API, intentando request directo...")
-                return self._fallback_request()
-
-            # Process captured API data
-            for data in captured_data:
-                entries = data.get('entries', [])
-                print(f"   Entries capturadas: {len(entries)}")
-                for entry in entries:
-                    beneficio = self._parsear_entry(entry)
-                    if beneficio:
-                        self.beneficios.append(beneficio)
-
-            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
-            return self.beneficios
-
-        except Exception as e:
-            print(f"❌ Error scrapeando {self.BANCO}: {e}")
-            return self.beneficios
-
-    def _fallback_request(self) -> List[Beneficio]:
-        """Intenta request directo a la API (puede fallar por Cloudflare)"""
-        try:
+            print(f"📡 Scrapeando {self.BANCO} (API Modyo via requests)...")
             session = requests.Session()
             session.headers.update({
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -2297,15 +2189,15 @@ class ScraperLiderBCI:
             })
             response = session.get(self.API_URL, timeout=15)
             response.raise_for_status()
-            data = response.json()
-            entries = data.get('entries', [])
+            entries = response.json().get('entries', [])
+            print(f"   Entries: {len(entries)}")
             for entry in entries:
                 beneficio = self._parsear_entry(entry)
                 if beneficio:
                     self.beneficios.append(beneficio)
-            print(f"   Fallback request OK: {len(self.beneficios)} beneficios")
+            print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
         except Exception as e:
-            print(f"   ❌ Fallback también falló: {e}")
+            print(f"❌ Error scrapeando {self.BANCO}: {e}")
         return self.beneficios
 
     def _parsear_entry(self, entry: dict) -> Optional[Beneficio]:
@@ -2321,11 +2213,10 @@ class ScraperLiderBCI:
             if cat_norm != 'gastronomia':
                 return None
 
-            nombre_raw = fields.get('descripcion_card', '') or meta.get('name', 'Desconocido')
-            # Extract restaurant name from "En KFC todos los lunes" → try to get cleaner name
-            nombre = meta.get('name', '').replace('Descuento - ', '').strip()
+            nombre = (meta.get('name', '').replace('Descuento - ', '').strip()
+                      or fields.get('descripcion_card') or '').strip()
             if not nombre:
-                nombre = nombre_raw
+                return None
 
             slug = meta.get('slug', '')
             descuento_card = fields.get('valor_descuento', '')
@@ -2653,8 +2544,8 @@ class ScraperMach:
                 match = re.search(r'apiBnf\s*=\s*(\[.*?\]);\s', html, re.DOTALL)
 
             if not match:
-                print(f"   ⚠️ No se encontró apiBnf en HTML, intentando Playwright...")
-                return self._playwright_fallback()
+                print(f"   ⚠️ No se encontró apiBnf en HTML")
+                return self.beneficios
 
             entries = json.loads(match.group(1))
             print(f"   Total entries embebidas: {len(entries)}")
@@ -2674,51 +2565,15 @@ class ScraperMach:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
             return self.beneficios
 
-    def _playwright_fallback(self) -> List[Beneficio]:
-        """Fallback: interceptar API con Playwright"""
-        try:
-            from playwright.sync_api import sync_playwright
-
-            captured_data = []
-
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-
-                def capture(response):
-                    if 'mach' in response.url and 'entries' in response.url and response.status == 200:
-                        try:
-                            captured_data.append(response.json())
-                        except Exception:
-                            pass
-
-                page.on('response', capture)
-                page.goto(self.PAGE_URL, wait_until='domcontentloaded', timeout=30000)
-                page.wait_for_timeout(8000)
-                browser.close()
-
-            for data in captured_data:
-                entries = data.get('entries', [])
-                for entry in entries:
-                    cat = entry.get('meta', {}).get('category_name') or ''
-                    if cat and cat.lower() in ['restaurantes', 'restaurante']:
-                        beneficio = self._parsear_entry(entry)
-                        if beneficio:
-                            self.beneficios.append(beneficio)
-
-            print(f"   Playwright fallback: {len(self.beneficios)} beneficios")
-            return self.beneficios
-        except Exception as e:
-            print(f"   ❌ Fallback también falló: {e}")
-            return self.beneficios
-
     def _parsear_entry(self, entry: dict) -> Optional[Beneficio]:
         """Parsea una entry de Mach a Beneficio"""
         try:
             meta = entry.get('meta', {})
             fields = entry.get('fields', {})
 
-            nombre = fields.get('nombre_de_empresa', '') or fields.get('titulo', meta.get('name', 'Desconocido'))
+            nombre = (fields.get('nombre_de_empresa') or fields.get('titulo') or meta.get('name') or '').strip()
+            if not nombre:
+                return None
             titulo = fields.get('titulo', '')
 
             # Discount from etiqueta_banner
