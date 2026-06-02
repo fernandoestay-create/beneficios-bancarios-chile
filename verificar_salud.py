@@ -94,11 +94,14 @@ def check_beneficios():
 
     requeridos = {"id", "banco", "tarjeta", "restaurante", "dias_validos"}
     sin_campos = 0
+    sin_restaurante = 0
     dias_malos = set()
     bancos = {}
     for d in data:
         if not requeridos.issubset(d):
             sin_campos += 1
+        if not str(d.get("restaurante", "")).strip():
+            sin_restaurante += 1
         for dia in (d.get("dias_validos") or []):
             if dia not in DIAS_BENEFICIOS:
                 dias_malos.add(dia)
@@ -108,6 +111,10 @@ def check_beneficios():
         fail(f"{sin_campos} beneficios sin todos los campos requeridos {sorted(requeridos)}")
     else:
         print(f"   OK: todos tienen {sorted(requeridos)}")
+    if sin_restaurante:
+        fail(f"{sin_restaurante} beneficios con restaurante vacío (card basura, ej. BICE 'Dólares BICE Aplica')")
+    else:
+        print("   OK: 0 beneficios con restaurante vacío")
     if dias_malos:
         fail(f"beneficios con días NO normalizados: {sorted(dias_malos)}")
     else:

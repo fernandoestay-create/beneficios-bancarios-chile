@@ -2493,7 +2493,11 @@ class ScraperBICE:
             meta = entry.get('meta', {})
             fields = entry.get('fields', {})
 
-            nombre = fields.get('Marca', meta.get('name', 'Desconocido'))
+            # 'or' (no .get-default) para que un Marca='' caiga a meta.name;
+            # si igual queda vacío, se descarta (evita cards basura restaurante='').
+            nombre = (fields.get('Marca') or meta.get('name') or '').strip()
+            if not nombre:
+                return None
 
             # Discount
             promo_big = fields.get('Texto-promo-big', '')
