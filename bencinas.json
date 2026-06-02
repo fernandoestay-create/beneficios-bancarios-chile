@@ -82,7 +82,7 @@
       ]
     },
     {
-      "id": "bencina_aramco_banco_ripley_miercoles",
+      "id": "bencina_aramco_banco_ripley_miercoles_2",
       "cadena": "Aramco",
       "banco": "Banco Ripley",
       "tarjeta": "Crédito Ripley Silver",
@@ -109,7 +109,7 @@
       ]
     },
     {
-      "id": "bencina_aramco_banco_ripley_miercoles",
+      "id": "bencina_aramco_banco_ripley_miercoles_3",
       "cadena": "Aramco",
       "banco": "Banco Ripley",
       "tarjeta": "Crédito Ripley Plus",
@@ -379,7 +379,7 @@
       ]
     },
     {
-      "id": "bencina_shell_scotiabank_sabado",
+      "id": "bencina_shell_scotiabank_sabado_2",
       "cadena": "Shell",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Signature/Platinum",
@@ -406,7 +406,7 @@
       ]
     },
     {
-      "id": "bencina_shell_scotiabank_sabado",
+      "id": "bencina_shell_scotiabank_sabado_3",
       "cadena": "Shell",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Gold",
@@ -460,7 +460,7 @@
       ]
     },
     {
-      "id": "bencina_copec_cencosud_scotiabank_lunes",
+      "id": "bencina_copec_cencosud_scotiabank_lunes_2",
       "cadena": "Copec",
       "banco": "Cencosud Scotiabank",
       "tarjeta": "Clásica/Platinum",
@@ -599,7 +599,7 @@
       ]
     },
     {
-      "id": "bencina_copec_scotiabank_miercoles",
+      "id": "bencina_copec_scotiabank_miercoles_2",
       "cadena": "Copec",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Platinum",
@@ -626,7 +626,7 @@
       ]
     },
     {
-      "id": "bencina_copec_scotiabank_miercoles",
+      "id": "bencina_copec_scotiabank_miercoles_3",
       "cadena": "Copec",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Tradicional",

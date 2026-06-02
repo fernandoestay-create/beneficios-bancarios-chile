@@ -113,6 +113,46 @@ class EstacionBencina:
 
 
 # ============================================
+# UTILIDAD: UNICIDAD DE IDS
+# ============================================
+
+def _asegurar_ids_unicos(items: list) -> list:
+    """
+    Garantiza ids únicos en la salida de un scraper (beneficios o bencinas).
+
+    Dos patrones rompen la unicidad del id y, con ella, el endpoint /beneficios/{id}
+    (devuelve solo el primer match) y el upsert a Pinecone (sobrescribe el vector):
+      - Ripley/Entel: el id cae al slug del nombre cuando la fuente no trae id propio,
+        así que dos ofertas distintas del mismo local colisionan.
+      - Bencinas: el id omite la tarjeta, así que los tiers (Gold/Silver/Plus) colisionan.
+
+    Política (L-04/L-10): NO borrar contenido real.
+      - Duplicado EXACTO (idéntico salvo fecha_scrape) -> se descarta (ruido del scraper).
+      - Colisión con contenido DISTINTO -> se conserva con sufijo _2, _3, ... (oferta real).
+    Preserva el id de la primera aparición para no romper referencias existentes.
+    """
+    firmas_vistas = set()   # (id_base, firma_de_contenido) ya emitidos -> dedup exacto
+    cuenta_por_id = {}      # id_base -> nº de veces ya emitido (para el sufijo)
+    salida = []
+    for it in items:
+        d = asdict(it)
+        id_base = d.get("id", "")
+        firma = json.dumps(
+            {k: v for k, v in d.items() if k not in ("id", "fecha_scrape")},
+            ensure_ascii=False, sort_keys=True,
+        )
+        if (id_base, firma) in firmas_vistas:
+            continue  # duplicado exacto -> descartar
+        firmas_vistas.add((id_base, firma))
+        n = cuenta_por_id.get(id_base, 0)
+        if n:
+            it.id = f"{id_base}_{n + 1}"  # colisión distinta -> sufijo, no se borra
+        cuenta_por_id[id_base] = n + 1
+        salida.append(it)
+    return salida
+
+
+# ============================================
 # SCRAPER BANCO DE CHILE (API CMS)
 # ============================================
 
@@ -1637,6 +1677,7 @@ class ScraperBancoRipley:
                 if beneficio:
                     self.beneficios.append(beneficio)
 
+            self.beneficios = _asegurar_ids_unicos(self.beneficios)
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
             return self.beneficios
 
@@ -1842,6 +1883,7 @@ class ScraperEntel:
                 if beneficio:
                     self.beneficios.append(beneficio)
 
+            self.beneficios = _asegurar_ids_unicos(self.beneficios)
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
             return self.beneficios
 
@@ -2706,6 +2748,7 @@ class ScraperBencina:
             self.descuentos = []
             self._cargar_datos_estaticos()
 
+        self.descuentos = _asegurar_ids_unicos(self.descuentos)
         print(f"  ⛽ Total descuentos bencina: {len(self.descuentos)}")
         return self.descuentos
 

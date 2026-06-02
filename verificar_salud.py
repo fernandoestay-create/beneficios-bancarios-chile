@@ -19,6 +19,7 @@ Pensado para correr en pre-deploy / CI (Render) y localmente antes de pushear.
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -173,6 +174,16 @@ def check_beneficios():
         else:
             print(f"   OK: los {len(data)} construyen Beneficio(**d) (crash-parity)")
 
+    # IDs únicos: un id duplicado rompe /beneficios/{id} (api.py:345 devuelve solo el
+    # 1er match) y el upsert a Pinecone (sobrescribe el vector). Tras disambiguación
+    # (L-10) no debe quedar ninguno; si reaparece es regresión del scraper.
+    dup_ids = {i: c for i, c in Counter(d.get("id", "") for d in data).items() if c > 1}
+    if dup_ids:
+        fail(f"{len(dup_ids)} id(s) duplicados en beneficios.json "
+             f"(rompe /beneficios/{{id}} + Pinecone): {list(dup_ids.items())[:5]}")
+    else:
+        print("   OK: 0 ids duplicados")
+
     # Mojibake en texto de cara al usuario (restaurante / descuento_texto).
     if mojibake_hits:
         fail(f"{len(mojibake_hits)} beneficios con mojibake en restaurante/descuento_texto: {mojibake_hits[:5]}")
@@ -246,6 +257,17 @@ def check_bencinas():
             fail(f"{malos} descuentos no construyen DescuentoBencina(**d) [crash-parity api.py:166] — 1er error: {primer_err}")
         else:
             print(f"   OK: los {len(descuentos)} construyen DescuentoBencina(**d) (crash-parity)")
+
+    # IDs únicos en descuentos: mismo riesgo que beneficios (un id repetido sobrescribe
+    # el vector en Pinecone y rompe cualquier lookup por id). Los tiers (Gold/Silver/Plus)
+    # caían al mismo id por omitir la tarjeta; tras disambiguación (L-10) no debe quedar
+    # ninguno — si reaparece es regresión del scraper de bencinas.
+    dup_ids = {i: c for i, c in Counter(d.get("id", "") for d in descuentos).items() if c > 1}
+    if dup_ids:
+        fail(f"{len(dup_ids)} id(s) duplicados en bencinas.json descuentos "
+             f"(rompe Pinecone + lookup): {list(dup_ids.items())[:5]}")
+    else:
+        print("   OK: 0 ids duplicados en descuentos")
 
     # Guard de regresión: Scotiabank Shell sábado debe existir (fix 2026-06-01)
     scotia_sab = [d for d in descuentos

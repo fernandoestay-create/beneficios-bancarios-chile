@@ -27097,7 +27097,7 @@
     "descripcion": "Mexicana, Chilena y Peruana"
   },
   {
-    "id": "ripley_hitomi_tomi",
+    "id": "ripley_hitomi_tomi_2",
     "banco": "Banco Ripley",
     "tarjeta": "Tarjeta Ripley",
     "restaurante": "Hitomi Tomi",
@@ -27130,7 +27130,7 @@
     "descripcion": "Restobar"
   },
   {
-    "id": "ripley_rossie_la_loca",
+    "id": "ripley_rossie_la_loca_2",
     "banco": "Banco Ripley",
     "tarjeta": "Tarjeta Ripley",
     "restaurante": "Rossie la Loca",
@@ -27660,42 +27660,6 @@
     "activo": true,
     "tags": [],
     "descripcion": "30% Descuento en todo el menú solo los jueves"
-  },
-  {
-    "id": "entel_just_burger",
-    "banco": "Entel",
-    "tarjeta": "Entel",
-    "restaurante": "Just Burger",
-    "descuento_valor": 25.0,
-    "descuento_tipo": "porcentaje",
-    "descuento_texto": "25% dcto.",
-    "dias_validos": [
-      "lunes",
-      "martes",
-      "jueves",
-      "domingo"
-    ],
-    "horario_inicio": "",
-    "horario_fin": "",
-    "valido_desde": "",
-    "valido_hasta": "",
-    "ubicacion": "",
-    "ciudad": "",
-    "comuna": "",
-    "locales": [],
-    "compra_minima": 0,
-    "tope_descuento": 0,
-    "restricciones_texto": "",
-    "online": true,
-    "presencial": true,
-    "fecha_scrape": "2026-06-02T09:16:02.639115",
-    "url_fuente": "https://www.entel.cl/beneficios/descuentos/justburger",
-    "imagen_url": "https://entel.cdn.modyo.com/uploads/037bd5ef-a61b-44c8-8f65-cf540aae1357/original/Card_General_17_.png",
-    "logo_url": "",
-    "direccion": "",
-    "activo": true,
-    "tags": [],
-    "descripcion": "**25% dcto.** lunes, martes, jueves y domingo"
   },
   {
     "id": "entel_franchute",
