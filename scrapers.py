@@ -180,7 +180,11 @@ class ScraperBancoChile:
             meta = entry.get('meta', {})
             fields = entry.get('fields', {})
 
-            nombre = fields.get('Titulo', meta.get('name', 'Desconocido'))
+            # dict.get(k, default) NO aplica el default si la key existe vacía ('').
+            # Cadena `or` para caer al siguiente, y descartar si todo queda vacío (L-10).
+            nombre = (fields.get('Titulo') or meta.get('name') or '').strip()
+            if not nombre:
+                return None
             tags = meta.get('tags', [])
 
             # Extraer descuento
@@ -584,9 +588,12 @@ class ScraperBCI:
         """Parsea una oferta de la API a Beneficio"""
         try:
             comercio = oferta.get('comercio', {})
-            nombre_comercio = comercio.get('nombre', oferta.get('titulo', 'Desconocido'))
+            # Cadena `or`: si 'nombre' viene vacío ('') cae a 'titulo' (L-10).
+            nombre_comercio = comercio.get('nombre') or oferta.get('titulo') or ''
             # Limpiar nombre: quitar " - Descuento", " - Cashback", etc
             nombre = re.sub(r'\s*-\s*(Descuento|Cashback|Cuotas).*$', '', nombre_comercio).strip()
+            if not nombre:
+                return None
 
             # Descuento
             descuento_valor = oferta.get('deal', {}).get('discount', {}).get('percentage', 0) or 0
@@ -736,9 +743,12 @@ class ScraperItau:
     def _parsear_card(self, card) -> Optional[Beneficio]:
         """Parsea una tarjeta HTML a Beneficio"""
         try:
-            # Nombre
+            # Nombre: title_el puede existir pero con texto vacío → cadena `or`
+            # + descartar si todo queda vacío (L-10).
             title_el = card.select_one('h2.beneficio__item__info-location__title')
-            nombre = title_el.get_text(strip=True) if title_el else card.get('title', 'Desconocido')
+            nombre = ((title_el.get_text(strip=True) if title_el else '') or card.get('title') or '').strip()
+            if not nombre:
+                return None
 
             # URL detalle
             url = card.get('href', '')
@@ -915,14 +925,17 @@ class ScraperScotiabank:
                 cleaned = re.sub(r',\s*([\]}])', r'\1', raw)
                 data = json.loads(cleaned)
                 return data
-            except:
+            except Exception:
                 print(f"   ⚠️  Error parseando {var_name}")
                 return []
 
     def _parsear_sitio(self, sitio: dict, es_santiago: bool) -> Optional[Beneficio]:
         """Parsea un sitio de ScotiaRewards a Beneficio"""
         try:
-            nombre = sitio.get('nombre', 'Desconocido')
+            # Descartar si el nombre viene vacío en vez de emitir 'Desconocido' (L-10).
+            nombre = (sitio.get('nombre') or '').strip()
+            if not nombre:
+                return None
             direccion = sitio.get('direccion', '')
 
             # telefono es realmente el descuento
@@ -1205,7 +1218,10 @@ class ScraperConsorcio:
             fields = entry.get('fields', {})
             meta = entry.get('meta', {})
 
-            nombre = fields.get('title_card', 'Desconocido')
+            # Cadena `or` + descartar si queda vacío en vez de 'Desconocido' (L-10).
+            nombre = (fields.get('title_card') or meta.get('name') or '').strip()
+            if not nombre:
+                return None
             subtitulo = fields.get('subtitle_card', '')
             complemento = fields.get('complement_card', '')
             activa = fields.get('active_card', True)
@@ -1500,7 +1516,10 @@ class ScraperBancoSecurity:
             attrs = item.get('attributes', {})
             rels = item.get('relationships', {})
 
-            nombre = attrs.get('field_nombre_marca', attrs.get('title', 'Desconocido'))
+            # Cadena `or` + descartar si queda vacío en vez de 'Desconocido' (L-10).
+            nombre = (attrs.get('field_nombre_marca') or attrs.get('title') or '').strip()
+            if not nombre:
+                return None
 
             # Discount
             descuento_valor = attrs.get('field_porcentaje_descuento', 0) or 0
