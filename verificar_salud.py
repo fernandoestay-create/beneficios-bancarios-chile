@@ -27,12 +27,43 @@ LOGOS_DIR = ROOT / "static" / "logos"
 BENEFICIOS = ROOT / "beneficios.json"
 BENCINAS = ROOT / "bencinas.json"
 
+# Modelos REALES para crash-parity con api.py (líneas 149/166): api.py hace
+# [Beneficio(**item) for item in data]. Un dataclass lanza TypeError tanto si
+# FALTA un campo requerido (sin default) como si SOBRA una key (drift de esquema).
+# Importarlos aquí hace que el health check falle pre-deploy con exactamente el
+# mismo criterio que tumbaría el arranque del servidor en Render.
+sys.path.insert(0, str(ROOT))
+try:
+    from scrapers import Beneficio, DescuentoBencina
+except Exception as _e:  # pragma: no cover - si scrapers no importa, lo reportamos
+    Beneficio = DescuentoBencina = None
+    _IMPORT_ERR = _e
+else:
+    _IMPORT_ERR = None
+
 # Días normalizados (minúscula, sin tilde). 'todos' solo aplica a restaurantes.
 DIAS_BENCINAS = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"}
 DIAS_BENEFICIOS = DIAS_BENCINAS | {"todos"}
 
 # Patrones de URLs externas que rompen en producción (hotlink bloqueado / falsas).
 URLS_PROHIBIDAS = re.compile(r"https?://[^\"'\s)]*?(wikimedia|wikipedia|googleusercontent|play-lh)")
+
+# Piso de conteo por banco: detecta la regresión donde un banco cae a ~0 (como
+# pasó con Falabella y Santander). Valores ~40-50% del conteo actual: dan holgura
+# a la fluctuación normal del scraper sin tolerar un colapso silencioso.
+PISOS_POR_BANCO = {
+    "Banco de Chile": 100, "BCI": 50, "Banco Falabella": 40,
+    "Banco Security": 30, "Santander": 30, "Banco Itaú": 25,
+    "Scotiabank": 25, "Banco BICE": 25, "Banco Ripley": 20,
+    "Entel": 8, "Tenpo": 3, "Lider BCI": 3, "Banco Consorcio": 2, "Mach": 2,
+}
+PISO_TOTAL_BENEFICIOS = 800  # actual: 930
+
+# Mojibake clásico de UTF-8 leído como Latin-1 (ej: 'PÃ¡gina' en vez de 'Página',
+# el mismo patrón que dio un falso negativo en el probe de BancoEstado). Se chequea
+# SOLO en texto de cara al usuario (nombre de restaurante + texto de descuento), no
+# en el directorio de estaciones de bencina (metadata de un feed externo).
+MOJIBAKE = re.compile(r"Ã©|Ã¡|Ã­|Ã³|Ãº|Ã±|Ã“|Ã‘|Â¿|Â¡|Â°|â€")
 
 errores = []
 avisos = []
@@ -96,6 +127,7 @@ def check_beneficios():
     sin_campos = 0
     sin_restaurante = 0
     dias_malos = set()
+    mojibake_hits = []
     bancos = {}
     for d in data:
         if not requeridos.issubset(d):
@@ -105,6 +137,9 @@ def check_beneficios():
         for dia in (d.get("dias_validos") or []):
             if dia not in DIAS_BENEFICIOS:
                 dias_malos.add(dia)
+        for campo in ("restaurante", "descuento_texto"):
+            if MOJIBAKE.search(str(d.get(campo, ""))):
+                mojibake_hits.append(f"{d.get('id', '?')}:{campo}={d.get(campo)!r}")
         bancos[d.get("banco", "?")] = bancos.get(d.get("banco", "?"), 0) + 1
 
     if sin_campos:
@@ -119,6 +154,45 @@ def check_beneficios():
         fail(f"beneficios con días NO normalizados: {sorted(dias_malos)}")
     else:
         print("   OK: días normalizados")
+
+    # Crash-parity con api.py:149 (Beneficio(**item)). Falla si falta un campo
+    # requerido o si sobra una key (drift de esquema) — mismo TypeError que tumba
+    # el arranque en Render.
+    if Beneficio is None:
+        fail(f"no se pudo importar el modelo Beneficio de scrapers.py: {_IMPORT_ERR}")
+    else:
+        malos, primer_err = 0, ""
+        for d in data:
+            try:
+                Beneficio(**d)
+            except TypeError as e:
+                malos += 1
+                primer_err = primer_err or f"id={d.get('id', '?')}: {e}"
+        if malos:
+            fail(f"{malos} beneficios no construyen Beneficio(**d) [crash-parity api.py:149] — 1er error: {primer_err}")
+        else:
+            print(f"   OK: los {len(data)} construyen Beneficio(**d) (crash-parity)")
+
+    # Mojibake en texto de cara al usuario (restaurante / descuento_texto).
+    if mojibake_hits:
+        fail(f"{len(mojibake_hits)} beneficios con mojibake en restaurante/descuento_texto: {mojibake_hits[:5]}")
+    else:
+        print("   OK: 0 mojibake en texto de cara al usuario")
+
+    # Piso de conteo total (regresión masiva).
+    if len(data) < PISO_TOTAL_BENEFICIOS:
+        fail(f"solo {len(data)} beneficios (< piso {PISO_TOTAL_BENEFICIOS}) — posible regresión masiva")
+    else:
+        print(f"   OK: {len(data)} >= piso total {PISO_TOTAL_BENEFICIOS}")
+
+    # Piso por banco: presencia + colapso. Cada banco esperado debe existir y no
+    # haber caído bajo su piso (como Falabella/Santander que cayeron a 0).
+    bajo_piso = [f"{b}={bancos.get(b, 0)}(<{p})"
+                 for b, p in PISOS_POR_BANCO.items() if bancos.get(b, 0) < p]
+    if bajo_piso:
+        fail(f"bancos bajo su piso de conteo (regresión): {bajo_piso}")
+    else:
+        print(f"   OK: los {len(PISOS_POR_BANCO)} bancos esperados >= su piso")
     print(f"   {len(bancos)} bancos: " + ", ".join(f"{k}({v})" for k, v in sorted(bancos.items())))
 
 
@@ -156,6 +230,22 @@ def check_bencinas():
         fail(f"bencinas con días NO normalizados: {sorted(dias_malos)}")
     else:
         print("   OK: días normalizados")
+
+    # Crash-parity con api.py:166 (DescuentoBencina(**d)).
+    if DescuentoBencina is None:
+        fail(f"no se pudo importar el modelo DescuentoBencina de scrapers.py: {_IMPORT_ERR}")
+    else:
+        malos, primer_err = 0, ""
+        for d in descuentos:
+            try:
+                DescuentoBencina(**d)
+            except TypeError as e:
+                malos += 1
+                primer_err = primer_err or f"id={d.get('id', '?')}: {e}"
+        if malos:
+            fail(f"{malos} descuentos no construyen DescuentoBencina(**d) [crash-parity api.py:166] — 1er error: {primer_err}")
+        else:
+            print(f"   OK: los {len(descuentos)} construyen DescuentoBencina(**d) (crash-parity)")
 
     # Guard de regresión: Scotiabank Shell sábado debe existir (fix 2026-06-01)
     scotia_sab = [d for d in descuentos
