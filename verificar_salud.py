@@ -127,6 +127,7 @@ def check_beneficios():
     requeridos = {"id", "banco", "tarjeta", "restaurante", "dias_validos"}
     sin_campos = 0
     sin_restaurante = 0
+    sin_descuento_texto = 0
     dias_malos = set()
     mojibake_hits = []
     bancos = {}
@@ -135,6 +136,8 @@ def check_beneficios():
             sin_campos += 1
         if not str(d.get("restaurante", "")).strip():
             sin_restaurante += 1
+        if not str(d.get("descuento_texto", "")).strip():
+            sin_descuento_texto += 1
         for dia in (d.get("dias_validos") or []):
             if dia not in DIAS_BENEFICIOS:
                 dias_malos.add(dia)
@@ -151,6 +154,11 @@ def check_beneficios():
         fail(f"{sin_restaurante} beneficios con restaurante vacío (card basura, ej. BICE 'Dólares BICE Aplica')")
     else:
         print("   OK: 0 beneficios con restaurante vacío")
+    if sin_descuento_texto:
+        fail(f"{sin_descuento_texto} beneficios con descuento_texto vacío "
+             "(debe haber % o etiqueta, ej. 'Menú Priceless'/'Beneficio exclusivo')")
+    else:
+        print("   OK: 0 beneficios con descuento_texto vacío")
     if dias_malos:
         fail(f"beneficios con días NO normalizados: {sorted(dias_malos)}")
     else:

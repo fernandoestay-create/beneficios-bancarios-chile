@@ -13691,7 +13691,7 @@
     "restaurante": "Caoba Bar",
     "descuento_valor": 0.0,
     "descuento_tipo": "otro",
-    "descuento_texto": "",
+    "descuento_texto": "Beneficio exclusivo",
     "dias_validos": [
       "viernes"
     ],
@@ -20030,7 +20030,7 @@
     "restaurante": "Menú Priceless by Mastercard",
     "descuento_valor": 0.0,
     "descuento_tipo": "otro",
-    "descuento_texto": "",
+    "descuento_texto": "Beneficio exclusivo",
     "dias_validos": [
       "todos"
     ],
@@ -24628,7 +24628,7 @@
     "restaurante": "Tanaka - Mastercard",
     "descuento_valor": 0.0,
     "descuento_tipo": "otro",
-    "descuento_texto": "",
+    "descuento_texto": "Menú Priceless",
     "dias_validos": [
       "todos"
     ],
@@ -24661,7 +24661,7 @@
     "restaurante": "Capogrossi - Mastercard",
     "descuento_valor": 0.0,
     "descuento_tipo": "otro",
-    "descuento_texto": "",
+    "descuento_texto": "Menú Priceless",
     "dias_validos": [
       "todos"
     ],
@@ -24694,7 +24694,7 @@
     "restaurante": "Demencia - Mastercard",
     "descuento_valor": 0.0,
     "descuento_tipo": "otro",
-    "descuento_texto": "",
+    "descuento_texto": "Menú Priceless",
     "dias_validos": [
       "todos"
     ],
@@ -25585,7 +25585,7 @@
     "restaurante": "La Campiña - Mastercard",
     "descuento_valor": 0.0,
     "descuento_tipo": "otro",
-    "descuento_texto": "",
+    "descuento_texto": "Menú Priceless",
     "dias_validos": [
       "todos"
     ],

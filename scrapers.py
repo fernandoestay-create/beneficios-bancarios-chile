@@ -52,6 +52,9 @@ class Beneficio:
 
     def __post_init__(self):
         self.fecha_scrape = self.fecha_scrape or datetime.now().isoformat()
+        # Ningún beneficio sin texto visible: si no hay % ni texto, etiqueta genérica.
+        if not (self.descuento_texto or '').strip() and not self.descuento_valor:
+            self.descuento_texto = "Beneficio exclusivo"
 
     def to_dict(self):
         return asdict(self)
@@ -1547,7 +1550,11 @@ class ScraperBancoSecurity:
 
             # Discount
             descuento_valor = attrs.get('field_porcentaje_descuento', 0) or 0
-            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else ''
+            # Sin % (ej. menús Priceless): usar el título de la caluga como texto visible (L-10).
+            descuento_texto = (
+                f"{descuento_valor}% dcto." if descuento_valor > 0
+                else (attrs.get('field_titulo_caluga') or '').strip()
+            )
 
             # Card type
             tarjeta = attrs.get('field_tipo_de_tarjeta', '') or 'Tarjetas Security'
