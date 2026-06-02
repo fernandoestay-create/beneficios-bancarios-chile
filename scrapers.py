@@ -2206,7 +2206,7 @@ class ScraperTenpo:
 
 
 # ============================================
-# SCRAPER LIDER BCI (Modyo CMS via Playwright)
+# SCRAPER LIDER BCI (Modyo CMS via requests)
 # ============================================
 
 class ScraperLiderBCI:
