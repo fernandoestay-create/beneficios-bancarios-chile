@@ -1197,6 +1197,9 @@ class ScraperConsorcio:
     """Scraper de Banco Consorcio via API Modyo CMS"""
 
     API_URL = "https://sitio.consorcio.cl/api/content/spaces/grupo-consorcio-cim/types/tab-card-credit-card/entries"
+    # La promo gastronómica con el % real (Casacostanera: 50% devolución + tope + vigencia)
+    # vive en OTRO type, no en las cards de restaurante (cuyo % está dentro de la imagen).
+    PROMO_URL = "https://sitio.consorcio.cl/api/content/spaces/grupo-consorcio-cim/types/tab-beneficios-items/entries"
     BANCO = "Banco Consorcio"
 
     RESTAURANT_KEYWORDS = [
@@ -1214,11 +1217,49 @@ class ScraperConsorcio:
             'Accept': 'application/json',
         })
         self.beneficios: List[Beneficio] = []
+        self.promo: dict = {}
+
+    def _fetch_promo(self) -> dict:
+        """Lee la promo gastronómica (Casacostanera) que SÍ trae el % real, el tope y la
+        vigencia — vive en tab-beneficios-items, no en las cards. Devuelve
+        {pct, nombre, tope, vigencia, condicion, restaurantes}. (corrección 2026-06-22)"""
+        try:
+            r = self.session.get(self.PROMO_URL, params={'per_page': 50}, timeout=15)
+            r.raise_for_status()
+            for e in r.json().get('entries', []):
+                f = e.get('fields', {})
+                desc = (f.get('hightlight_text_complement_tab') or '').strip()
+                m = re.search(r'(\d{1,2})\s*%', desc)
+                if not m:
+                    continue
+                cond = (f.get('complement_text_tab') or '').strip()
+                vig = re.search(r'(\d{2}/\d{2}/\d{4})', cond)
+                tope = re.search(r'tope[^$]*\$\s*([\d.]+)', cond, re.I)
+                rest = re.search(r'restaurantes?:\s*(.+)', desc, re.I)
+                restaurantes = []
+                if rest:
+                    restaurantes = [x.strip(' .').lower() for x in re.split(r',|\sy\s|\se\s', rest.group(1)) if x.strip(' .')]
+                return {
+                    'pct': int(m.group(1)),
+                    'nombre': (f.get('hightlight_text_tab') or 'Casacostanera').strip(),
+                    'tope': int(tope.group(1).replace('.', '')) if tope else 0,
+                    'vigencia': vig.group(1) if vig else '',
+                    'condicion': re.sub(r'\s+', ' ', cond)[:200],
+                    'restaurantes': restaurantes,
+                }
+        except Exception as e:
+            print(f"   ⚠️ no se pudo leer la promo Consorcio: {e}")
+        return {}
 
     def scrapear(self) -> List[Beneficio]:
         """Extrae beneficios de restaurantes de Consorcio"""
         try:
             print(f"📡 Scrapeando {self.BANCO} (API Modyo CMS)...")
+
+            self.promo = self._fetch_promo()
+            if self.promo:
+                print(f"   Promo {self.promo['nombre']}: {self.promo['pct']}% devolución, "
+                      f"tope ${self.promo['tope']}, hasta {self.promo['vigencia']}")
 
             params = {'per_page': 100}
             response = self.session.get(self.API_URL, params=params, timeout=15)
@@ -1264,12 +1305,31 @@ class ScraperConsorcio:
                 return None
 
             descuento_valor = 0
+            descuento_tipo = "otro"
             match = re.search(r'(\d+)\s*%', f"{nombre} {subtitulo}")
             if match:
                 descuento_valor = int(match.group(1))
-            # El % de Consorcio vive dentro de la imagen del beneficio, no en texto.
-            # Etiqueta honesta + el tipo de cocina (subtitle) como descripción. (auditoría 2026-06-22)
-            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else "Beneficio exclusivo"
+                descuento_tipo = "porcentaje"
+            # Si la card no trae % propio, aplicar la promo gastronómica (Casacostanera:
+            # 50% devolución) cuando el restaurante está en su lista. El % real vive en
+            # tab-beneficios-items, no en la card. (corrección 2026-06-22, dato de Fernando)
+            promo = getattr(self, 'promo', None) or {}
+            tope_dcto = 0
+            valido_hasta = ''
+            restricciones = ''
+            if descuento_valor == 0 and promo.get('pct'):
+                nl = nombre.lower()
+                en_promo = (not promo['restaurantes']) or any(r in nl or nl in r for r in promo['restaurantes'])
+                if en_promo:
+                    descuento_valor = promo['pct']
+                    descuento_tipo = "cashback"
+                    tope_dcto = promo.get('tope', 0)
+                    valido_hasta = promo.get('vigencia', '')
+                    restricciones = promo.get('condicion', '')
+            if descuento_valor > 0:
+                descuento_texto = f"{descuento_valor}% devolución" if descuento_tipo == "cashback" else f"{descuento_valor}% dcto."
+            else:
+                descuento_texto = "Beneficio exclusivo"
 
             descripcion = (subtitulo or re.sub(r'<[^>]+>', ' ', body_html).strip())[:200]
 
@@ -1288,10 +1348,13 @@ class ScraperConsorcio:
                 tarjeta="Tarjetas Consorcio",
                 restaurante=nombre,
                 descuento_valor=float(descuento_valor),
-                descuento_tipo="porcentaje" if descuento_valor > 0 else "cashback",
+                descuento_tipo=descuento_tipo,
                 descuento_texto=descuento_texto,
                 dias_validos=['todos'],
                 ubicacion=complemento or '',
+                tope_descuento=tope_dcto,
+                valido_hasta=valido_hasta,
+                restricciones_texto=restricciones,
                 presencial=True,
                 online=False,
                 url_fuente="https://sitio.consorcio.cl/beneficios",
