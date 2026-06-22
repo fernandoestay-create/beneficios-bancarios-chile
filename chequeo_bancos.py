@@ -37,8 +37,8 @@ BANCOS_DIFERIDOS = {"BancoEstado"}  # esperan 0 a propósito, no generan alerta
 # considera degradado aunque supere su piso absoluto (atrapa la caída relativa).
 FRACCION_DEGRADADO = 0.6
 
-_COLOR = {"OK": "#10b981", "DEGRADADO": "#f59e0b", "CAIDO": "#dc2626"}
-_ICONO = {"OK": "✅", "DEGRADADO": "⚠️", "CAIDO": "🔴"}
+_COLOR = {"OK": "#10b981", "DEGRADADO": "#f59e0b", "CAIDO": "#dc2626", "PRESERVADO": "#6366f1"}
+_ICONO = {"OK": "✅", "DEGRADADO": "⚠️", "CAIDO": "🔴", "PRESERVADO": "🔵"}
 
 
 def piso_efectivo(banco, previo):
@@ -95,11 +95,13 @@ def problemas(reporte):
 def resumen(reporte):
     c = Counter(r["estado"] for r in reporte)
     return {"ok": c.get("OK", 0), "degradado": c.get("DEGRADADO", 0),
-            "caido": c.get("CAIDO", 0), "total": len(reporte)}
+            "caido": c.get("CAIDO", 0), "preservado": c.get("PRESERVADO", 0),
+            "total": len(reporte)}
 
 
 def generar_asunto(reporte, fecha, total_beneficios):
-    """Asunto del email: verde si todo OK, ALERTA con nombres si hay problemas."""
+    """Asunto del email: verde si todo OK (los bancos PRESERVADOS no son alarma — la
+    web conserva sus datos), ALERTA solo si hay caídos reales o degradados a revisar."""
     probs = problemas(reporte)
     if probs:
         caidos = [r["banco"] for r in probs if r["estado"] == "CAIDO"]
@@ -111,7 +113,8 @@ def generar_asunto(reporte, fecha, total_beneficios):
             partes.append("bajó " + ", ".join(degr))
         return f"⚠️ REVISAR · MiCartera — " + " | ".join(partes) + f" · {fecha}"
     r = resumen(reporte)
-    return f"✅ TODO OK · MiCartera {r['ok']}/{r['total']} bancos · {total_beneficios} beneficios · {fecha}"
+    extra = f" ({r['preservado']} preservado)" if r['preservado'] else ""
+    return f"✅ TODO OK · MiCartera {r['ok'] + r['preservado']}/{r['total']} bancos{extra} · {total_beneficios} beneficios · {fecha}"
 
 
 def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=None, aprendizaje_info=None):
@@ -122,8 +125,8 @@ def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=No
     r = resumen(reporte)
     nprob = r["degradado"] + r["caido"]
 
-    orden = {"CAIDO": 0, "DEGRADADO": 1, "OK": 2}
-    bg = {"OK": "#ffffff", "DEGRADADO": "#fffbeb", "CAIDO": "#fef2f2"}
+    orden = {"CAIDO": 0, "DEGRADADO": 1, "PRESERVADO": 2, "OK": 3}
+    bg = {"OK": "#ffffff", "DEGRADADO": "#fffbeb", "CAIDO": "#fef2f2", "PRESERVADO": "#eef2ff"}
     filas = []
     for it in sorted(reporte, key=lambda x: (orden[x["estado"]], -x["nuevo"])):
         color, ico = _COLOR[it["estado"]], _ICONO[it["estado"]]
@@ -147,6 +150,15 @@ def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=No
             f"<ul style='margin:6px 0 0;padding-left:18px'>{det}</ul>"
             "<div style='margin-top:6px;color:#7f1d1d'>Los <b>caídos</b> conservan sus datos previos (la web no pierde el banco). "
             "Si fue un cambio de la página del banco, avísame para arreglar el scraper.</div></div>"
+        )
+    preserv = [r for r in reporte if r["estado"] == "PRESERVADO"]
+    if preserv:
+        nombres = ", ".join(r["banco"] for r in preserv)
+        banner += (
+            "<div style='background:#eef2ff;border:1px solid #c7d2fe;padding:11px 16px;"
+            "border-radius:10px;margin-bottom:16px;color:#3730a3;font-size:13px'>"
+            f"🔵 <b>{nombres}</b> usa datos previos: el scrape de hoy lo trajo en 0 (probable geo-fence desde la nube), "
+            "pero la web conserva sus ofertas y el refresco desde Chile lo actualiza. No es una falla.</div>"
         )
 
     color_top = "#b91c1c" if probs else "#0f6e56"

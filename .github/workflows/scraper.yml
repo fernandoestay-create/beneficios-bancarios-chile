@@ -1,10 +1,8 @@
-name: Scraping Mensual - Beneficios y Bencinas
+name: Scraping Diario - Beneficios y Bencinas
 
 on:
   schedule:
-    - cron: '0 5 1-4 * *'     # Días 1-4: diario a las 2AM Chile (obligatorio)
-    - cron: '0 5 10,20,30 * *' # Días 10, 20, 30: actualización quincenal
-    - cron: '0 13 * * 1,4'    # Precios bencina: lunes y jueves 10AM Chile
+    - cron: '0 11 * * *'    # Diario ~07:00 Chile: scrape + chequeo por banco + mail diario "por sí o por no"
   workflow_dispatch:  # Permite ejecución manual desde GitHub
 
 permissions:

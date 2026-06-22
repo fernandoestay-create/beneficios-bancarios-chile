@@ -3571,7 +3571,13 @@ class OrquestadorScrapers:
                 if reinyectados:
                     self.all_beneficios.extend(reinyectados)
                     self.bancos_preservados.append((banco, it["previo"]))
-                    print(f"⚠️  PRESERVADO {banco}: trajo 0, se reinyectan "
+                    # Marcar PRESERVADO (no CAIDO): para la web el banco está OK (conserva
+                    # sus datos). No es alarma roja; el mail lo informa en azul. Esto evita
+                    # falsos rojos diarios cuando el cron (USA) geo-fencea un banco. (2026-06-22)
+                    it["estado"] = "PRESERVADO"
+                    it["nuevo"] = it["previo"]
+                    it["motivo"] = f"trajo 0; se conservan {it['previo']} ofertas previas (geo-fence/caída del sitio)"
+                    print(f"🔵 PRESERVADO {banco}: trajo 0, se conservan "
                           f"{it['previo']} beneficios previos (geo-fence/caída del sitio)")
 
         probs = chequeo_bancos.problemas(self.reporte_bancos)
