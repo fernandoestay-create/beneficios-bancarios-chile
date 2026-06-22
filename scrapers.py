@@ -3190,6 +3190,7 @@ class OrquestadorScrapers:
         self.descuentos_bencina: List[DescuentoBencina] = []
         self.estaciones_bencina: List[EstacionBencina] = []
         self.precios_todas: List[EstacionBencina] = []
+        self.bancos_preservados: list = []  # bancos que cayeron a 0 y se preservaron (L-W20)
 
     def scrapear_bencinas(self) -> tuple:
         """Scrapea descuentos de bencina y estaciones con precios"""
@@ -3431,6 +3432,68 @@ class OrquestadorScrapers:
         texto = re.sub(r'(\d+)%\s*dscto\.?', r'\1% dcto.', texto, flags=re.IGNORECASE)
         return texto
 
+    def preservar_bancos_caidos(self, json_previo: str = "beneficios.json") -> list:
+        """Red de seguridad anti "proceso esteril" (regla cardinal del workspace, L-W20).
+
+        Si un banco trae 0 en esta corrida pero en la data previa (en disco) tenia
+        beneficios, casi siempre es una falla transitoria del lado del sitio
+        (geo-fence a la IP del runner, WAF, caida) y NO que el banco dejara de
+        tener ofertas. En vez de dejar que el commit del cron borre el banco en
+        silencio, se REINYECTAN sus beneficios previos (quedan "stale" pero
+        presentes) y se registra el banco para alertar por email.
+
+        Caso real (2026-06-20): Banco Falabella sirvio su pagina vacia a la IP
+        USA de GitHub Actions; el scraper trajo 0 y el cron borro 97 descuentos
+        sin avisar, reportando "success". (L-01 / L-08 / L-09)
+
+        Debe llamarse DESPUES de scrapear_todo() y ANTES de guardar_json().
+        Devuelve [(banco, n_previo), ...] de los bancos preservados (vacia si todo ok).
+        """
+        import os
+        from collections import Counter
+        self.bancos_preservados = []
+        if not os.path.exists(json_previo):
+            return self.bancos_preservados  # primera corrida: nada previo que preservar
+
+        with open(json_previo, encoding='utf-8') as f:
+            previos = json.load(f)
+
+        nuevos_por_banco = Counter(b.banco for b in self.all_beneficios)
+        previos_por_banco = Counter(d.get('banco', '') for d in previos)
+
+        for banco, n_previo in previos_por_banco.items():
+            if banco and n_previo > 0 and nuevos_por_banco.get(banco, 0) == 0:
+                reinyectados = [Beneficio(**d) for d in previos if d.get('banco') == banco]
+                self.all_beneficios.extend(reinyectados)
+                self.bancos_preservados.append((banco, n_previo))
+                print(f"⚠️  PRESERVADO {banco}: trajo 0, se reinyectan {n_previo} "
+                      f"beneficios previos (posible geo-fence/caida del sitio)")
+
+        if self.bancos_preservados:
+            print(f"⚠️  ALERTA: {len(self.bancos_preservados)} banco(s) preservados de data previa")
+        return self.bancos_preservados
+
+    def escribir_status(self, filename: str = "scrape_status.json", preservados: list = None):
+        """Escribe un resumen de la corrida para que el workflow alerte por email.
+
+        Incluye conteo por banco y la lista de bancos preservados. El flag
+        "alerta" es True si algun banco cayo a 0 y hubo que preservarlo.
+        """
+        from collections import Counter
+        preservados = preservados or []
+        por_banco = dict(Counter(b.banco for b in self.all_beneficios))
+        status = {
+            "fecha": datetime.now().isoformat(),
+            "total": len(self.all_beneficios),
+            "bancos": len(por_banco),
+            "por_banco": por_banco,
+            "preservados": [{"banco": b, "previos": n} for b, n in preservados],
+            "alerta": bool(preservados),
+        }
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(status, f, ensure_ascii=False, indent=2)
+        print(f"📋 Status de la corrida escrito en {filename} (alerta={status['alerta']})")
+
     def guardar_json(self, filename: str = "beneficios.json"):
         """Guarda los beneficios en JSON"""
         data = [b.to_dict() for b in self.all_beneficios]
@@ -3468,8 +3531,13 @@ if __name__ == "__main__":
 
     # Scraping de beneficios bancarios (restaurantes)
     beneficios = orquestador.scrapear_todo()
+    # Red de seguridad anti "proceso esteril" (L-W20): si un banco cayo a 0
+    # teniendo datos previos (geo-fence/WAF/caida), preservar los previos ANTES
+    # de sobreescribir y registrar la alerta para el reporte por email.
+    preservados = orquestador.preservar_bancos_caidos("beneficios.json")
     orquestador.guardar_json("beneficios.json")
     orquestador.guardar_csv("beneficios.csv")
+    orquestador.escribir_status("scrape_status.json", preservados)
 
     # Scraping de bencinas
     descuentos_bencina, estaciones = orquestador.scrapear_bencinas()

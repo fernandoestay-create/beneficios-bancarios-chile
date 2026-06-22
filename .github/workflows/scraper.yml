@@ -47,6 +47,8 @@ jobs:
           echo "BENCINAS_EST=$(python -c 'import json;d=json.load(open("bencinas.json"));print(len(d.get("estaciones",[])))')" >> $GITHUB_ENV
           echo "BENCINAS_PRECIOS=$(python -c 'import json;d=json.load(open("bencinas.json"));print(len(d.get("precios_todas",[])))')" >> $GITHUB_ENV
           echo "BANCOS=$(python -c 'import json;d=json.load(open("beneficios.json"));print(len(set(b["banco"] for b in d)))')" >> $GITHUB_ENV
+          echo "PRESERVADOS=$(python -c 'import json,os;s=json.load(open("scrape_status.json")) if os.path.exists("scrape_status.json") else {};print(", ".join(p["banco"] for p in s.get("preservados",[])))')" >> $GITHUB_ENV
+          echo "ALERTA=$(python -c 'import json,os;s=json.load(open("scrape_status.json")) if os.path.exists("scrape_status.json") else {};print("1" if s.get("alerta") else "0")')" >> $GITHUB_ENV
 
       - name: Upload to Pinecone
         env:
@@ -72,11 +74,12 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USER }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "🔄 Scraping ${{ env.SCRAPE_DATE }} - ${{ env.BENEFICIOS }} beneficios | ${{ env.BENCINAS_DCTOS }} bencinas"
+          subject: "${{ env.ALERTA == '1' && format('⚠️ ALERTA Scraping {0} — banco caído a 0: {1}', env.SCRAPE_DATE, env.PRESERVADOS) || format('🔄 Scraping {0} - {1} beneficios', env.SCRAPE_DATE, env.BENEFICIOS) }} | ${{ env.BENCINAS_DCTOS }} bencinas"
           to: fernando.estay@gmail.com
           from: Beneficios Bot <${{ secrets.GMAIL_USER }}>
           html_body: |
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+              ${{ env.ALERTA == '1' && format('<div style="background:#fef2f2;border:1px solid #fecaca;padding:12px 16px;border-radius:8px;margin-bottom:12px;color:#dc2626;font-size:14px"><b>⚠️ ALERTA:</b> {0} trajo 0 en este scrape (posible geo-fence/caída del sitio). Se preservaron los datos previos — pueden estar desactualizados. Revisa el scraper.</div>', env.PRESERVADOS) || '' }}
               <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:20px;border-radius:12px 12px 0 0">
                 <h1 style="color:#fff;margin:0;font-size:20px">🔄 Reporte Scraping</h1>
                 <p style="color:rgba(255,255,255,.8);margin:5px 0 0;font-size:14px">${{ env.SCRAPE_DATE }}</p>

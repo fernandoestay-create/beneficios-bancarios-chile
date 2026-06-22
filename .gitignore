@@ -6,3 +6,5 @@ __pycache__/
 falabella_raw.json
 .env.*
 *.env
+scrape_status.json
+falabella_debug.html
