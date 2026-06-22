@@ -71,7 +71,7 @@ try {
     & $PY diagnosticar.py --desde-status
 
     # 6. Commit + push si hay cambios -> Render redeploya
-    git -C $CLONE add beneficios.json beneficios.csv bencinas.json
+    git -C $CLONE add beneficios.json beneficios.csv bencinas.json historial.json
     git -C $CLONE diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git -C $CLONE commit -m "Refresco local (Chile) $(Get-Date -Format yyyy-MM-dd)" --quiet

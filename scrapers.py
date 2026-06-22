@@ -3592,15 +3592,30 @@ class OrquestadorScrapers:
         """
         import chequeo_bancos
         from datetime import date
+        from collections import Counter
 
         reporte = getattr(self, "reporte_bancos", []) or []
         preservados = getattr(self, "bancos_preservados", []) or []
         total = len(self.all_beneficios)
         fecha = date.today().isoformat()
+        probs = chequeo_bancos.problemas(reporte)
+
+        # Aprendizaje: registrar esta corrida en la memoria (calibra las próximas) y
+        # traer el resumen (cuántas corridas lleva aprendidas) para el mail.
+        aprend_info = None
+        try:
+            import aprendizaje
+            por_banco = dict(Counter(b.banco for b in self.all_beneficios))
+            aprendizaje.registrar_corrida(fecha, por_banco,
+                                          problemas=[p["banco"] for p in probs],
+                                          preservados=preservados, total=total)
+            aprend_info = aprendizaje.resumen_aprendizaje()
+            print(f"🧠 Memoria: {aprend_info['corridas']} corridas aprendidas")
+        except Exception as e:
+            print(f"   ⚠️ no se pudo registrar en la memoria: {e}")
 
         asunto = chequeo_bancos.generar_asunto(reporte, fecha, total)
-        html = chequeo_bancos.generar_html(reporte, fecha, total, preservados, bencinas_n)
-        probs = chequeo_bancos.problemas(reporte)
+        html = chequeo_bancos.generar_html(reporte, fecha, total, preservados, bencinas_n, aprend_info)
 
         status = {
             "fecha": datetime.now().isoformat(),
@@ -3610,6 +3625,7 @@ class OrquestadorScrapers:
             "preservados": [{"banco": b, "previos": n} for b, n in preservados],
             "problemas": [p["banco"] for p in probs],
             "alerta": bool(probs),
+            "aprendizaje": aprend_info,
         }
         with open("scrape_status.json", "w", encoding="utf-8") as f:
             json.dump(status, f, ensure_ascii=False, indent=2)

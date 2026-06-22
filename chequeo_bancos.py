@@ -52,16 +52,34 @@ def evaluar_corrida(nuevos_por_banco, previos_por_banco):
     Devuelve lista de dicts ordenada por banco:
         {banco, nuevo, previo, piso, estado, motivo}
     """
+    # Aprendizaje: si hay historial, el piso se calibra al nivel normal de cada banco
+    # y se detectan caidas relativas a su propio historico (alerta temprana). Sin
+    # historial (primeras corridas), cae limpio a los pisos fijos.
+    try:
+        import aprendizaje
+        _hist = aprendizaje.cargar_historial()
+    except Exception:
+        aprendizaje = None
+        _hist = []
+
     reporte = []
     bancos = (set(nuevos_por_banco) | set(previos_por_banco) | set(PISOS_BANCOS)) - BANCOS_DIFERIDOS
     for banco in sorted(bancos):
         nuevo = int(nuevos_por_banco.get(banco, 0))
         previo = int(previos_por_banco.get(banco, 0))
-        piso = piso_efectivo(banco, previo)
+        piso_base = piso_efectivo(banco, previo)
+        tend = None
+        if aprendizaje:
+            piso = aprendizaje.piso_aprendido(banco, piso_base, _hist)
+            tend = aprendizaje.tendencia(banco, nuevo, _hist)
+        else:
+            piso = piso_base
         if nuevo == 0:
             estado, motivo = "CAIDO", f"trajo 0 (previo {previo})"
         elif nuevo < piso:
             estado, motivo = "DEGRADADO", f"trajo {nuevo}, esperado >= {piso} (previo {previo})"
+        elif tend:
+            estado, motivo = "DEGRADADO", f"tendencia a la baja: {tend}"
         else:
             estado, motivo = "OK", f"trajo {nuevo}"
         reporte.append({"banco": banco, "nuevo": nuevo, "previo": previo,
@@ -88,15 +106,15 @@ def generar_asunto(reporte, fecha, total_beneficios):
         degr = [r["banco"] for r in probs if r["estado"] == "DEGRADADO"]
         partes = []
         if caidos:
-            partes.append("CAÍDO: " + ", ".join(caidos))
+            partes.append("caído " + ", ".join(caidos))
         if degr:
-            partes.append("degradado: " + ", ".join(degr))
-        return f"⚠️ ALERTA Scraping {fecha} — " + " | ".join(partes)
+            partes.append("bajó " + ", ".join(degr))
+        return f"⚠️ REVISAR · MiCartera — " + " | ".join(partes) + f" · {fecha}"
     r = resumen(reporte)
-    return f"✅ Scraping {fecha} — {r['ok']}/{r['total']} bancos OK · {total_beneficios} beneficios"
+    return f"✅ TODO OK · MiCartera {r['ok']}/{r['total']} bancos · {total_beneficios} beneficios · {fecha}"
 
 
-def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=None):
+def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=None, aprendizaje_info=None):
     """Cuerpo HTML del email: banner de alerta (si hay) + tabla con estado por banco."""
     preservados_list = list(preservados or [])
     preservados_set = {(p[0] if isinstance(p, (list, tuple)) else p) for p in preservados_list}
@@ -163,7 +181,9 @@ def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=No
         "<li><b>Reintentos automáticos</b> ante fallas temporales (timeout, sitio lento).</li>"
         "<li><b>Red de seguridad:</b> si un banco cae a 0, se conservan sus datos previos y este mail te avisa — la web nunca queda sin el banco.</li>"
         "<li>La data solo se publica si pasa el <b>chequeo de salud</b> (sin duplicados ni datos corruptos, todos los bancos sobre su piso).</li>"
-        "</ul>"
+        + (f"<li><b>🧠 Aprende:</b> lleva <b>{aprendizaje_info['corridas']} corridas</b> en memoria; ajusta el piso de cada banco a su nivel normal histórico y avisa si uno cae respecto a lo habitual — antes de llegar a 0.</li>"
+           if aprendizaje_info and aprendizaje_info.get('corridas') else "")
+        + "</ul>"
         f"{pres_html}"
         "</div>"
     )

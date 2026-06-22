@@ -63,7 +63,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add beneficios.json beneficios.csv bencinas.json
+          git add beneficios.json beneficios.csv bencinas.json historial.json
           git diff --staged --quiet || git commit -m "🔄 Actualizar beneficios y bencinas $(date +%Y-%m-%d)"
           git push
 
