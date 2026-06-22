@@ -1115,6 +1115,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 <span class="geo-status" id="geoStatus"></span>
 </div>
 <div id="map"></div>
+<div id="mapNote" style="display:none"></div>
 <p style="color:var(--muted);font-size:11px;margin-top:8px;text-align:center">📍 Ubicaciones aproximadas por región · Activa tu GPS para verte en el mapa</p>
 </div>
 </main>
@@ -1410,6 +1411,21 @@ ${{d.url_fuente?`<a class="popup-link" href="${{d.url_fuente}}" target="_blank">
 L.marker(coords,{{icon}}).bindPopup(popup,{{maxWidth:280}}).addTo(markers);
 }});
 document.getElementById('mapCount').textContent=count+' en mapa';
+// Ofertas sin local fijo (Falabella, Entel, Lider BCI, Mach, Tenpo, Santander): aplican
+// en toda la cadena, no son geolocalizables. Avisamos para que no "desaparezcan" del mapa.
+const sinU=deals.filter(d=>!d.direccion&&!d.ubicacion).filter(d=>{{
+const txt=norm([d.restaurante,d.banco,d.descripcion||''].join(' '));
+const mS=!qWords.length||qWords.every(w=>txt.includes(w));
+const mB=!banks||banks.includes(d.banco);
+const mD=d.descuento_valor>=min;
+const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
+const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
+return mS&&mB&&mD&&mDay&&mMode}});
+const note=document.getElementById('mapNote');
+if(sinU.length){{const bks=[...new Set(sinU.map(d=>d.banco))].sort();
+note.style.display='block';
+note.innerHTML='<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px;color:#9a3412"><b>'+sinU.length+' ofertas sin local fijo</b> ('+bks.join(', ')+') aplican en toda la cadena y no se ubican en el mapa. <a href="#" onclick="document.querySelector(\'.view-btn[data-view=tarjetas]\').click();return false" style="color:#c2410c;font-weight:700">Verlas en la Lista &rarr;</a></div>';
+}}else{{note.style.display='none';note.innerHTML=''}}
 }}
 
 // ── Geolocation ──

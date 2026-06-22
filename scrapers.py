@@ -1161,7 +1161,10 @@ class ScraperSantander:
             match = re.search(r'(\d+)\s*%', f"{nombre} {descripcion}")
             if match:
                 descuento_valor = int(match.group(1))
-            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else descripcion[:100]
+            # Santander gastronómico no expone % (ni en listado, detalle ni API): son
+            # beneficios de acceso/experiencia. Etiqueta honesta en vez del texto crudo
+            # de la descripción pegada sin espacios. (auditoría 2026-06-22)
+            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else "Beneficio exclusivo"
 
             beneficio_id = f"santander_{slug or re.sub(r'[^a-z0-9]', '_', nombre.lower()[:40])}"
 
@@ -1264,9 +1267,11 @@ class ScraperConsorcio:
             match = re.search(r'(\d+)\s*%', f"{nombre} {subtitulo}")
             if match:
                 descuento_valor = int(match.group(1))
-            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else subtitulo[:100]
+            # El % de Consorcio vive dentro de la imagen del beneficio, no en texto.
+            # Etiqueta honesta + el tipo de cocina (subtitle) como descripción. (auditoría 2026-06-22)
+            descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else "Beneficio exclusivo"
 
-            descripcion = re.sub(r'<[^>]+>', ' ', body_html).strip()[:200] if body_html else ''
+            descripcion = (subtitulo or re.sub(r'<[^>]+>', ' ', body_html).strip())[:200]
 
             img_data = fields.get('image_desktop', {})
             imagen_url = ''
