@@ -184,6 +184,14 @@ beneficios-bancarios-chile/
 | **OpenAI** | Embeddings + GPT-4o-mini del bot | Pago por uso (centavos) |
 | **Twilio** | WhatsApp del bot | Pago por uso |
 | **Gmail** | El mail diario (vía SMTP, secret en GitHub) | Gratis |
+| **Keep-alive** | Ping cada 10 min para que la web no duerma (`keepalive.yml`) | Gratis |
+
+> **Por qué la web a veces tarda en cargar:** Render (plan gratuito) suspende el
+> servicio tras ~15 min sin visitas; la primera carga después tarda ~40s y se ve en
+> blanco ("el link del mail no muestra info"). `keepalive.yml` la mantiene despierta
+> en horario de uso (~06–19 Chile). De madrugada puede dormir — si entrás y se ve
+> vacío, esperá ~40s y recargá. Para que **nunca** duerma: UptimeRobot (gratis, tu
+> cuenta) o Render pago (~USD 7/mes).
 
 ---
 
