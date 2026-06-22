@@ -47,8 +47,9 @@ jobs:
           echo "BENCINAS_EST=$(python -c 'import json;d=json.load(open("bencinas.json"));print(len(d.get("estaciones",[])))')" >> $GITHUB_ENV
           echo "BENCINAS_PRECIOS=$(python -c 'import json;d=json.load(open("bencinas.json"));print(len(d.get("precios_todas",[])))')" >> $GITHUB_ENV
           echo "BANCOS=$(python -c 'import json;d=json.load(open("beneficios.json"));print(len(set(b["banco"] for b in d)))')" >> $GITHUB_ENV
-          echo "PRESERVADOS=$(python -c 'import json,os;s=json.load(open("scrape_status.json")) if os.path.exists("scrape_status.json") else {};print(", ".join(p["banco"] for p in s.get("preservados",[])))')" >> $GITHUB_ENV
-          echo "ALERTA=$(python -c 'import json,os;s=json.load(open("scrape_status.json")) if os.path.exists("scrape_status.json") else {};print("1" if s.get("alerta") else "0")')" >> $GITHUB_ENV
+          # Asunto y cuerpo HTML del email los genera chequeo_bancos.py (tabla por banco)
+          echo "SCRAPE_SUBJECT=$(cat asunto_email.txt)" >> $GITHUB_ENV
+          { echo "EMAIL_BODY<<__HTML_EOF__"; cat reporte_email.html; echo ""; echo "__HTML_EOF__"; } >> $GITHUB_ENV
 
       - name: Upload to Pinecone
         env:
@@ -74,49 +75,10 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USER }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "${{ env.ALERTA == '1' && format('⚠️ ALERTA Scraping {0} — banco caído a 0: {1}', env.SCRAPE_DATE, env.PRESERVADOS) || format('🔄 Scraping {0} - {1} beneficios', env.SCRAPE_DATE, env.BENEFICIOS) }} | ${{ env.BENCINAS_DCTOS }} bencinas"
+          subject: "${{ env.SCRAPE_SUBJECT }}"
           to: fernando.estay@gmail.com
           from: Beneficios Bot <${{ secrets.GMAIL_USER }}>
-          html_body: |
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-              ${{ env.ALERTA == '1' && format('<div style="background:#fef2f2;border:1px solid #fecaca;padding:12px 16px;border-radius:8px;margin-bottom:12px;color:#dc2626;font-size:14px"><b>⚠️ ALERTA:</b> {0} trajo 0 en este scrape (posible geo-fence/caída del sitio). Se preservaron los datos previos — pueden estar desactualizados. Revisa el scraper.</div>', env.PRESERVADOS) || '' }}
-              <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:20px;border-radius:12px 12px 0 0">
-                <h1 style="color:#fff;margin:0;font-size:20px">🔄 Reporte Scraping</h1>
-                <p style="color:rgba(255,255,255,.8);margin:5px 0 0;font-size:14px">${{ env.SCRAPE_DATE }}</p>
-              </div>
-              <div style="background:#fff;padding:20px;border:1px solid #e5e7eb">
-                <h2 style="color:#1f2937;font-size:16px;margin-top:0">📊 Resultados</h2>
-                <table style="width:100%;border-collapse:collapse;font-size:14px">
-                  <tr style="border-bottom:1px solid #f3f4f6">
-                    <td style="padding:8px 0">🍽️ Beneficios restaurantes</td>
-                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#6366f1">${{ env.BENEFICIOS }}</td>
-                  </tr>
-                  <tr style="border-bottom:1px solid #f3f4f6">
-                    <td style="padding:8px 0">🏦 Bancos</td>
-                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#6366f1">${{ env.BANCOS }}</td>
-                  </tr>
-                  <tr style="border-bottom:1px solid #f3f4f6">
-                    <td style="padding:8px 0">⛽ Descuentos bencina</td>
-                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_DCTOS }}</td>
-                  </tr>
-                  <tr style="border-bottom:1px solid #f3f4f6">
-                    <td style="padding:8px 0">📍 Estaciones con descuentos</td>
-                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_EST }}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 0">💰 Estaciones con precios</td>
-                    <td style="padding:8px 0;text-align:right;font-weight:700;color:#10b981">${{ env.BENCINAS_PRECIOS }}</td>
-                  </tr>
-                </table>
-                <div style="margin-top:16px;display:flex;gap:8px">
-                  <a href="https://api-beneficios-chile.onrender.com/ver" style="background:#6366f1;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">🍽️ Ver Restaurantes</a>
-                  <a href="https://api-beneficios-chile.onrender.com/ver/bencinas" style="background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⛽ Ver Bencinas</a>
-                </div>
-              </div>
-              <div style="background:#f9fafb;padding:12px 20px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
-                <p style="color:#9ca3af;font-size:11px;margin:0">Ejecución automática GitHub Actions · <a href="https://github.com/fernandoestay-create/beneficios-bancarios-chile/actions" style="color:#6366f1">Ver logs</a></p>
-              </div>
-            </div>
+          html_body: ${{ env.EMAIL_BODY }}
 
       - name: Send failure email
         if: failure()

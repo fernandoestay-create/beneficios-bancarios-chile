@@ -3191,6 +3191,7 @@ class OrquestadorScrapers:
         self.estaciones_bencina: List[EstacionBencina] = []
         self.precios_todas: List[EstacionBencina] = []
         self.bancos_preservados: list = []  # bancos que cayeron a 0 y se preservaron (L-W20)
+        self.reporte_bancos: list = []      # chequeo experto por banco (chequeo_bancos)
 
     def scrapear_bencinas(self) -> tuple:
         """Scrapea descuentos de bencina y estaciones con precios"""
@@ -3266,15 +3267,13 @@ class OrquestadorScrapers:
             ('Mach', ScraperMach),
         ]
 
+        from chequeo_bancos import BANCOS_DIFERIDOS
         for nombre, ScraperClass in scrapers:
-            try:
-                scraper = ScraperClass()
-                beneficios = scraper.scrapear()
-                self.all_beneficios.extend(beneficios)
-                resultados[nombre] = len(beneficios)
-            except Exception as e:
-                print(f"❌ Error con {nombre}: {e}")
-                resultados[nombre] = 0
+            # Bancos diferidos (BancoEstado, campaña caída) traen 0 a propósito: 1 intento.
+            intentos = 1 if nombre in BANCOS_DIFERIDOS else 3
+            beneficios = self._scrapear_con_reintentos(nombre, ScraperClass, intentos=intentos)
+            self.all_beneficios.extend(beneficios)
+            resultados[nombre] = len(beneficios)
             print()
 
         # Normalizar todos los beneficios
@@ -3432,67 +3431,117 @@ class OrquestadorScrapers:
         texto = re.sub(r'(\d+)%\s*dscto\.?', r'\1% dcto.', texto, flags=re.IGNORECASE)
         return texto
 
-    def preservar_bancos_caidos(self, json_previo: str = "beneficios.json") -> list:
-        """Red de seguridad anti "proceso esteril" (regla cardinal del workspace, L-W20).
+    def _scrapear_con_reintentos(self, nombre, ScraperClass, intentos=3, espera=5):
+        """Auto-corrección de fallas transitorias: reintenta un banco que trae 0 o
+        lanza excepción (timeout, rate-limit, 5xx puntual) antes de darlo por caído.
+        Un geo-fence o cambio de página CONSISTENTE seguirá en 0 tras los reintentos,
+        y ahí entra la red de seguridad (aplicar_red_de_seguridad). (L-15 / L-16)
+        """
+        import time
+        for i in range(intentos):
+            try:
+                items = ScraperClass().scrapear()
+                if items:
+                    if i > 0:
+                        print(f"   ✓ {nombre} recuperado en intento {i + 1}: {len(items)}")
+                    return items
+                print(f"   ⚠️  {nombre} trajo 0 (intento {i + 1}/{intentos})")
+            except Exception as e:
+                print(f"   ❌ {nombre} error intento {i + 1}/{intentos}: {e}")
+            if i < intentos - 1:
+                time.sleep(espera * (i + 1))  # backoff lineal: 5s, 10s
+        if intentos > 1:
+            print(f"   ✗ {nombre}: sigue en 0 tras {intentos} intentos")
+        return []
 
-        Si un banco trae 0 en esta corrida pero en la data previa (en disco) tenia
-        beneficios, casi siempre es una falla transitoria del lado del sitio
-        (geo-fence a la IP del runner, WAF, caida) y NO que el banco dejara de
-        tener ofertas. En vez de dejar que el commit del cron borre el banco en
-        silencio, se REINYECTAN sus beneficios previos (quedan "stale" pero
-        presentes) y se registra el banco para alertar por email.
+    def aplicar_red_de_seguridad(self, json_previo: str = "beneficios.json") -> list:
+        """Red de seguridad anti "proceso esteril" POR BANCO (regla cardinal L-W20).
 
-        Caso real (2026-06-20): Banco Falabella sirvio su pagina vacia a la IP
-        USA de GitHub Actions; el scraper trajo 0 y el cron borro 97 descuentos
-        sin avisar, reportando "success". (L-01 / L-08 / L-09)
+        Compara la corrida nueva contra la previa (en disco) con chequeo_bancos y
+        clasifica cada banco (OK / DEGRADADO / CAIDO). Para cada banco CAIDO (trajo 0
+        teniendo historial) REINYECTA sus beneficios previos: quedan "stale" pero
+        presentes, en vez de que el commit del cron los borre en silencio. Los
+        DEGRADADOS no se preservan (podrían ser una baja real) pero quedan marcados
+        para la alerta del email.
+
+        Caso real (2026-06-20): Falabella sirvió su página vacía a la IP USA del
+        runner; el scraper trajo 0 y el cron borró 97 descuentos reportando "success".
 
         Debe llamarse DESPUES de scrapear_todo() y ANTES de guardar_json().
-        Devuelve [(banco, n_previo), ...] de los bancos preservados (vacia si todo ok).
+        Guarda el reporte en self.reporte_bancos; devuelve [(banco, n_previo), ...].
         """
         import os
         from collections import Counter
-        self.bancos_preservados = []
-        if not os.path.exists(json_previo):
-            return self.bancos_preservados  # primera corrida: nada previo que preservar
+        import chequeo_bancos
 
-        with open(json_previo, encoding='utf-8') as f:
-            previos = json.load(f)
+        self.bancos_preservados = []
+        previos = []
+        if os.path.exists(json_previo):
+            with open(json_previo, encoding='utf-8') as f:
+                previos = json.load(f)
 
         nuevos_por_banco = Counter(b.banco for b in self.all_beneficios)
         previos_por_banco = Counter(d.get('banco', '') for d in previos)
 
-        for banco, n_previo in previos_por_banco.items():
-            if banco and n_previo > 0 and nuevos_por_banco.get(banco, 0) == 0:
-                reinyectados = [Beneficio(**d) for d in previos if d.get('banco') == banco]
-                self.all_beneficios.extend(reinyectados)
-                self.bancos_preservados.append((banco, n_previo))
-                print(f"⚠️  PRESERVADO {banco}: trajo 0, se reinyectan {n_previo} "
-                      f"beneficios previos (posible geo-fence/caida del sitio)")
+        # Chequeo experto: clasifica los 14 bancos (OK / DEGRADADO / CAIDO)
+        self.reporte_bancos = chequeo_bancos.evaluar_corrida(nuevos_por_banco, previos_por_banco)
 
-        if self.bancos_preservados:
-            print(f"⚠️  ALERTA: {len(self.bancos_preservados)} banco(s) preservados de data previa")
+        # Preservar SOLO los CAIDOS (0 con historial) reinyectando sus previos
+        for it in self.reporte_bancos:
+            if it["estado"] == "CAIDO" and it["previo"] > 0:
+                banco = it["banco"]
+                reinyectados = [Beneficio(**d) for d in previos if d.get('banco') == banco]
+                if reinyectados:
+                    self.all_beneficios.extend(reinyectados)
+                    self.bancos_preservados.append((banco, it["previo"]))
+                    print(f"⚠️  PRESERVADO {banco}: trajo 0, se reinyectan "
+                          f"{it['previo']} beneficios previos (geo-fence/caída del sitio)")
+
+        probs = chequeo_bancos.problemas(self.reporte_bancos)
+        if probs:
+            caidos = sum(1 for p in probs if p["estado"] == "CAIDO")
+            degr = sum(1 for p in probs if p["estado"] == "DEGRADADO")
+            print(f"⚠️  ALERTA: {len(probs)} banco(s) con problema ({caidos} caídos, {degr} degradados)")
+        else:
+            print("✅ Chequeo por banco: los 14 bancos OK")
         return self.bancos_preservados
 
-    def escribir_status(self, filename: str = "scrape_status.json", preservados: list = None):
-        """Escribe un resumen de la corrida para que el workflow alerte por email.
-
-        Incluye conteo por banco y la lista de bancos preservados. El flag
-        "alerta" es True si algun banco cayo a 0 y hubo que preservarlo.
+    def generar_reporte(self, bencinas_n=None):
+        """Genera los artefactos del email del cron (chequeo experto por banco):
+          - scrape_status.json : reporte estructurado por banco + flags
+          - reporte_email.html : cuerpo HTML del mail (tabla por banco)
+          - asunto_email.txt   : asunto (verde si OK, ALERTA con nombres si falla)
+        Usa self.reporte_bancos (poblado por aplicar_red_de_seguridad).
         """
-        from collections import Counter
-        preservados = preservados or []
-        por_banco = dict(Counter(b.banco for b in self.all_beneficios))
+        import chequeo_bancos
+        from datetime import date
+
+        reporte = getattr(self, "reporte_bancos", []) or []
+        preservados = getattr(self, "bancos_preservados", []) or []
+        total = len(self.all_beneficios)
+        fecha = date.today().isoformat()
+
+        asunto = chequeo_bancos.generar_asunto(reporte, fecha, total)
+        html = chequeo_bancos.generar_html(reporte, fecha, total, preservados, bencinas_n)
+        probs = chequeo_bancos.problemas(reporte)
+
         status = {
             "fecha": datetime.now().isoformat(),
-            "total": len(self.all_beneficios),
-            "bancos": len(por_banco),
-            "por_banco": por_banco,
+            "total": total,
+            "bancos": len({b.banco for b in self.all_beneficios}),
+            "reporte_por_banco": reporte,
             "preservados": [{"banco": b, "previos": n} for b, n in preservados],
-            "alerta": bool(preservados),
+            "problemas": [p["banco"] for p in probs],
+            "alerta": bool(probs),
         }
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open("scrape_status.json", "w", encoding="utf-8") as f:
             json.dump(status, f, ensure_ascii=False, indent=2)
-        print(f"📋 Status de la corrida escrito en {filename} (alerta={status['alerta']})")
+        with open("reporte_email.html", "w", encoding="utf-8") as f:
+            f.write(html)
+        with open("asunto_email.txt", "w", encoding="utf-8") as f:
+            f.write(asunto)
+        print(f"📋 Reporte generado (alerta={status['alerta']}): {asunto}")
+        return status
 
     def guardar_json(self, filename: str = "beneficios.json"):
         """Guarda los beneficios en JSON"""
@@ -3531,17 +3580,19 @@ if __name__ == "__main__":
 
     # Scraping de beneficios bancarios (restaurantes)
     beneficios = orquestador.scrapear_todo()
-    # Red de seguridad anti "proceso esteril" (L-W20): si un banco cayo a 0
-    # teniendo datos previos (geo-fence/WAF/caida), preservar los previos ANTES
-    # de sobreescribir y registrar la alerta para el reporte por email.
-    preservados = orquestador.preservar_bancos_caidos("beneficios.json")
+    # Red de seguridad anti "proceso esteril" POR BANCO (L-16): preservar los bancos
+    # que cayeron a 0 ANTES de sobreescribir, y clasificar los 14 para el reporte.
+    orquestador.aplicar_red_de_seguridad("beneficios.json")
     orquestador.guardar_json("beneficios.json")
     orquestador.guardar_csv("beneficios.csv")
-    orquestador.escribir_status("scrape_status.json", preservados)
 
     # Scraping de bencinas
     descuentos_bencina, estaciones = orquestador.scrapear_bencinas()
     orquestador.guardar_bencinas_json("bencinas.json")
+
+    # Reporte experto por banco para el email del cron (L-15/L-16): estado de cada
+    # banco, alerta si alguno cayó/degradó. Genera scrape_status.json + reporte_email.html.
+    orquestador.generar_reporte(bencinas_n=len(descuentos_bencina))
 
     # Mostrar muestra de beneficios
     print("\n📋 MUESTRA DE BENEFICIOS:\n")

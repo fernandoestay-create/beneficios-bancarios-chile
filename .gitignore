@@ -7,4 +7,7 @@ falabella_raw.json
 .env.*
 *.env
 scrape_status.json
+reporte_email.html
+asunto_email.txt
+scrape_output.txt
 falabella_debug.html

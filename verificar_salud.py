@@ -50,14 +50,18 @@ DIAS_BENEFICIOS = DIAS_BENCINAS | {"todos"}
 URLS_PROHIBIDAS = re.compile(r"https?://[^\"'\s)]*?(wikimedia|wikipedia|googleusercontent|play-lh)")
 
 # Piso de conteo por banco: detecta la regresión donde un banco cae a ~0 (como
-# pasó con Falabella y Santander). Valores ~40-50% del conteo actual: dan holgura
-# a la fluctuación normal del scraper sin tolerar un colapso silencioso.
-PISOS_POR_BANCO = {
-    "Banco de Chile": 100, "BCI": 50, "Banco Falabella": 40,
-    "Banco Security": 30, "Santander": 30, "Banco Itaú": 25,
-    "Scotiabank": 25, "Banco BICE": 25, "Banco Ripley": 20,
-    "Entel": 8, "Tenpo": 3, "Lider BCI": 3, "Banco Consorcio": 2, "Mach": 2,
-}
+# pasó con Falabella y Santander). Fuente ÚNICA centralizada en chequeo_bancos.py
+# (la comparten el health check y la red de seguridad del cron — L-16). Valores
+# ~40-50% del conteo actual: holgura a la fluctuación normal sin tolerar un colapso.
+try:
+    from chequeo_bancos import PISOS_BANCOS as PISOS_POR_BANCO
+except Exception:
+    PISOS_POR_BANCO = {
+        "Banco de Chile": 100, "BCI": 50, "Banco Falabella": 40,
+        "Banco Security": 30, "Santander": 30, "Banco Itaú": 25,
+        "Scotiabank": 25, "Banco BICE": 25, "Banco Ripley": 20,
+        "Entel": 8, "Tenpo": 3, "Lider BCI": 3, "Banco Consorcio": 2, "Mach": 2,
+    }
 PISO_TOTAL_BENEFICIOS = 800  # actual: 930
 
 # Mojibake clásico de UTF-8 leído como Latin-1 (ej: 'PÃ¡gina' en vez de 'Página',
