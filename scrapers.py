@@ -2413,6 +2413,7 @@ class ScraperBICE:
         try:
             response = self.session.get(self.WIDGET_URL, timeout=20)
             response.raise_for_status()
+            response.encoding = 'utf-8'  # el bundle es UTF-8; sin esto requests adivina mal en Windows -> mojibake (L-10)
             js_content = response.text
 
             # Extract JSON array from 'const entries = [...]'
@@ -3279,6 +3280,14 @@ class OrquestadorScrapers:
         # Normalizar todos los beneficios
         print("🔧 Normalizando datos...")
         self._normalizar_todos()
+
+        # Garantizar ids únicos GLOBALMENTE — protege a TODOS los bancos (no solo los
+        # wireados como Ripley/Entel/BICE): Santander derivaba el id de un slug del
+        # nombre y dos ofertas del mismo restaurante colisionaban (santander_ac-kitchen). (L-11)
+        _antes_ids = len(self.all_beneficios)
+        self.all_beneficios = _asegurar_ids_unicos(self.all_beneficios)
+        if len(self.all_beneficios) != _antes_ids:
+            print(f"🔑 ids únicos: {_antes_ids} -> {len(self.all_beneficios)} (dup exacto dropeado / colisión suffixada)")
 
         print("=" * 50)
         print(f"✅ TOTAL BENEFICIOS EXTRAÍDOS: {len(self.all_beneficios)}")
