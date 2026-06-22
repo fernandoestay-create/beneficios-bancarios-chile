@@ -1,0 +1,22 @@
+name: Keep-alive (mantener la web despierta)
+
+# Render plan gratuito suspende el servicio tras ~15 min sin visitas, y la primera
+# carga despues tarda ~40s (se ve en blanco). Este workflow pinguea la web cada 10
+# min en horario de uso (Chile) para que este siempre despierta y los links del mail
+# carguen al instante. Ligero: solo un curl, no scrapea nada.
+
+on:
+  schedule:
+    - cron: '*/10 10-23 * * *'   # cada 10 min, ~06:00-19:00 Chile (UTC-4)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Despertar la web
+        run: |
+          for path in /estadisticas /ver; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "https://api-beneficios-chile.onrender.com$path" || echo "000")
+            echo "$path -> HTTP $code"
+          done
