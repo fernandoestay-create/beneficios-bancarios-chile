@@ -6,7 +6,9 @@
 
 Sistema completo que **scrapea descuentos bancarios en restaurantes de Chile** y los expone a través de una **página web interactiva**, un **bot de WhatsApp con IA**, y una **API REST**.
 
-> **v_01** — 985 beneficios · 15 bancos · Página web con filtros + mapa · Bot WhatsApp conversacional
+> **Estado (2026-06-22):** ~954 beneficios · 14 bancos activos · web con filtros + mapa · bot WhatsApp · **monitoreo + auto-resiliencia + aprendizaje** (cron diario, refresco desde Chile, red de seguridad, mail diario).
+>
+> 👉 **Cómo funciona TODO el sistema, en lenguaje claro → [`COMO_FUNCIONA.md`](COMO_FUNCIONA.md)**
 
 ---
 
@@ -42,39 +44,55 @@ Sistema completo que **scrapea descuentos bancarios en restaurantes de Chile** y
 
 ---
 
+## ⚙️ Automatización, monitoreo y aprendizaje (2026-06)
+
+El sistema se actualiza y se vigila solo. **Detalle completo en [`COMO_FUNCIONA.md`](COMO_FUNCIONA.md).**
+
+- **Cron diario** (`.github/workflows/scraper.yml`, GitHub Actions): scrapea, chequea, publica y **manda el mail diario** con el estado de cada banco.
+- **Refresco local** (`refrescar_local.ps1`, PC en Chile): mantiene frescos los bancos geo-fenceados (ej. Falabella, que el cron en USA no puede ver).
+- **Chequeo experto** (`chequeo_bancos.py`): clasifica cada banco OK / DEGRADADO / CAÍDO / PRESERVADO contra su piso.
+- **Red de seguridad**: si un banco cae a 0, conserva sus datos previos — ningún banco desaparece en silencio.
+- **Aprendizaje** (`aprendizaje.py` + `historial.json`): aprende el nivel normal de cada banco, ajusta los pisos solo y detecta caídas temprano.
+- **Health check** (`verificar_salud.py`): gate de calidad — si algo está mal, NO se publica.
+
+---
+
 ## 📊 Estado actual
 
 | Métrica | Valor |
 |---------|-------|
-| Beneficios activos | **985** |
-| Bancos scrapeados | **15** |
-| Restaurantes únicos | **~700+** |
-| Mejor descuento | **50%** |
-| Regiones cubiertas | **16** |
+| Beneficios activos | **~954** |
+| Bancos activos | **14** (BancoEstado diferido) |
+| Restaurantes únicos | **~680** |
+| Mejor descuento | **80% (Entel) · 50% devolución (Consorcio Casacostanera)** |
+| Mail diario | ✅ funcionando (cron) |
 
 ---
 
-## 🏦 Bancos scrapeados (15)
+## 🏦 Bancos scrapeados (15; conteos reales 2026-06-22)
 
-| # | Banco | Método | Beneficios |
-|---|-------|--------|------------|
-| 1 | Banco de Chile | API CMS interna | ~200 |
-| 2 | Banco Falabella | API CMS v2 | ~150 |
-| 3 | BCI | HTML scraping | ~100 |
-| 4 | Banco Itaú | API JSON | ~50 |
-| 5 | Scotiabank | JS embebido (arrays) | ~61 |
-| 6 | Santander | HTML scraping | ~80 |
-| 7 | Banco Consorcio | HTML scraping | ~40 |
-| 8 | BancoEstado | API/HTML | ~60 |
-| 9 | Banco Security | HTML scraping | ~50 |
-| 10 | Banco Ripley | HTML scraping | ~40 |
-| 11 | Entel | HTML scraping | ~30 |
-| 12 | Tenpo | API/HTML | ~20 |
-| 13 | Lider BCI | HTML scraping | ~25 |
-| 14 | Banco BICE | HTML scraping | ~30 |
-| 15 | Mach | HTML scraping | ~20 |
+| # | Banco | Método actual | ~Ofertas | Notas |
+|---|-------|---------------|----------|-------|
+| 1 | Banco de Chile | API CMS interna | 239 | — |
+| 2 | BCI | API REST | 129 | — |
+| 3 | Banco Falabella | requests/SSR (Next.js RSC) | 95 | **geo-fenceado**: sólo IP chilena → lo trae el refresco local |
+| 4 | Banco Security | Drupal JSON:API | 86 | — |
+| 5 | Santander | requests/SSR (UA `curl`, bypassa Akamai) | 77 | beneficios sin % → "Beneficio exclusivo" |
+| 6 | Banco Itaú | HTML SSR via requests | 72 | — |
+| 7 | Banco BICE | Widget JS bundle | 70 | encoding UTF-8 forzado (mojibake en Windows) |
+| 8 | Scotiabank | JS embebido | 66 | — |
+| 9 | Banco Ripley | API interna | 62 | — |
+| 10 | Entel | HTML + Lit Components | 23 | — |
+| 11 | Lider BCI | API Modyo via requests | 11 | — |
+| 12 | Tenpo | Webflow CMS | 10 | — |
+| 13 | Banco Consorcio | API Modyo (2 types) | 8 | **50% devolución** (promo Casacostanera, tope $40.000) |
+| 14 | Mach | HTML con JSON embebido | 6 | — |
+| 15 | BancoEstado | Playwright (diferido) | 0 | campaña estacional caída; se retoma cuando relance |
 
-Cada scraper extrae: restaurante, descuento (% y texto), días válidos, ubicación, dirección, comuna, imagen, link, vigencia, restricciones, modalidad (presencial/online).
+> Conteos exactos del día: ver el **mail diario** o `GET /bancos`. Cada scraper extrae:
+> restaurante, descuento (% y texto), días válidos, ubicación/dirección/comuna,
+> imagen, link, vigencia, restricciones, modalidad. Falabella/Entel/Lider/Mach/Tenpo
+> son ofertas **sin local fijo** (a nivel cadena) → no van al mapa, sí a la lista.
 
 ---
 
