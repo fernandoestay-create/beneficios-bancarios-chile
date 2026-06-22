@@ -98,59 +98,101 @@ def generar_asunto(reporte, fecha, total_beneficios):
 
 def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=None):
     """Cuerpo HTML del email: banner de alerta (si hay) + tabla con estado por banco."""
-    preservados = {(p[0] if isinstance(p, (list, tuple)) else p) for p in (preservados or [])}
+    preservados_list = list(preservados or [])
+    preservados_set = {(p[0] if isinstance(p, (list, tuple)) else p) for p in preservados_list}
     probs = problemas(reporte)
     r = resumen(reporte)
+    nprob = r["degradado"] + r["caido"]
 
     orden = {"CAIDO": 0, "DEGRADADO": 1, "OK": 2}
+    bg = {"OK": "#ffffff", "DEGRADADO": "#fffbeb", "CAIDO": "#fef2f2"}
     filas = []
     for it in sorted(reporte, key=lambda x: (orden[x["estado"]], -x["nuevo"])):
         color, ico = _COLOR[it["estado"]], _ICONO[it["estado"]]
-        pres = " <i style='color:#6b7280'>(preservado)</i>" if it["banco"] in preservados else ""
+        pres = " <span style='color:#6b7280;font-size:11px'>(preservado)</span>" if it["banco"] in preservados_set else ""
         filas.append(
-            "<tr style='border-bottom:1px solid #f3f4f6'>"
-            f"<td style='padding:7px 0'>{it['banco']}{pres}</td>"
-            f"<td style='padding:7px 0;text-align:right;font-weight:700'>{it['nuevo']}</td>"
-            f"<td style='padding:7px 0;text-align:right;color:#9ca3af'>{it['piso']}</td>"
-            f"<td style='padding:7px 0;text-align:right;color:{color};font-weight:700'>{ico} {it['estado']}</td>"
+            f"<tr style='background:{bg[it['estado']]};border-bottom:1px solid #f3f4f6'>"
+            f"<td style='padding:8px 6px'>{it['banco']}{pres}</td>"
+            f"<td style='padding:8px 6px;text-align:right;font-weight:700'>{it['nuevo']}</td>"
+            f"<td style='padding:8px 6px;text-align:right;color:#9ca3af'>{it['piso']}</td>"
+            f"<td style='padding:8px 6px;text-align:right;color:{color};font-weight:700'>{ico} {it['estado']}</td>"
             "</tr>"
         )
 
     banner = ""
     if probs:
-        det = "; ".join(f"{p['banco']} ({p['motivo']})" for p in probs)
+        det = "".join(f"<li><b>{p['banco']}</b>: {p['motivo']}</li>" for p in probs)
         banner = (
             "<div style='background:#fef2f2;border:1px solid #fecaca;padding:12px 16px;"
-            "border-radius:8px;margin-bottom:14px;color:#dc2626;font-size:14px'>"
-            f"<b>⚠️ {len(probs)} banco(s) con problema.</b> {det}. "
-            "Los CAÍDOS conservan sus datos previos (no desaparecen de la web). Revisá el scraper.</div>"
+            "border-radius:10px;margin-bottom:16px;color:#9a1c1c;font-size:13px'>"
+            f"<b>⚠️ {len(probs)} banco(s) necesitan tu atención:</b>"
+            f"<ul style='margin:6px 0 0;padding-left:18px'>{det}</ul>"
+            "<div style='margin-top:6px;color:#7f1d1d'>Los <b>caídos</b> conservan sus datos previos (la web no pierde el banco). "
+            "Si fue un cambio de la página del banco, avísame para arreglar el scraper.</div></div>"
         )
 
-    color_top = "#dc2626" if probs else "#6366f1"
-    titulo = "⚠️ Alerta Scraping" if probs else "✅ Reporte Scraping"
-    bencinas_txt = f" · ⛽ {bencinas} bencinas" if bencinas is not None else ""
+    color_top = "#b91c1c" if probs else "#0f6e56"
+    titulo = "⚠️ Revisar — hay bancos con problema" if probs else "✅ Todo OK — el sistema corrió bien"
 
-    return f"""<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto">
-  <div style="background:{color_top};padding:18px;border-radius:12px 12px 0 0">
-    <h1 style="color:#fff;margin:0;font-size:20px">{titulo}</h1>
-    <p style="color:rgba(255,255,255,.85);margin:5px 0 0;font-size:13px">{fecha} · {total_beneficios} beneficios · {r['ok']} OK / {r['degradado']} degradados / {r['caido']} caídos{bencinas_txt}</p>
+    def _card(lbl, val, col):
+        return (f"<td style='background:#f9fafb;border-radius:10px;padding:14px 6px;text-align:center'>"
+                f"<div style='font-size:23px;font-weight:700;color:{col}'>{val}</div>"
+                f"<div style='font-size:11px;color:#6b7280;margin-top:3px'>{lbl}</div></td>")
+    cards = ("<table style='width:100%;border-collapse:separate;border-spacing:8px 0;margin-bottom:18px'><tr>"
+             + _card("beneficios", total_beneficios, "#003058")
+             + _card("bancos OK", f"{r['ok']}/{r['total']}", "#0f6e56")
+             + _card("a revisar", nprob, "#b45309" if nprob else "#9ca3af")
+             + (_card("bencinas", bencinas, "#0f6e56") if bencinas is not None else "")
+             + "</tr></table>")
+
+    pres_html = ""
+    if preservados_list:
+        li = "".join(f"<li><b>{(p[0] if isinstance(p,(list,tuple)) else p)}</b>: se mantienen "
+                     f"{(p[1] if isinstance(p,(list,tuple)) else '?')} ofertas de la corrida anterior</li>"
+                     for p in preservados_list)
+        pres_html = (f"<div style='margin-top:10px;color:#92400e'><b>Esta corrida preservó datos de:</b>"
+                     f"<ul style='margin:4px 0 0;padding-left:18px'>{li}</ul></div>")
+
+    como = (
+        "<div style='background:#f9fafb;border-radius:10px;padding:14px 16px;margin-top:18px;font-size:13px;line-height:1.65;color:#374151'>"
+        "<b style='font-size:14px;color:#1f2937'>🔧 Cómo funciona este reporte</b>"
+        "<ul style='margin:8px 0 0;padding-left:18px'>"
+        "<li>Se scrapean los <b>15 bancos</b> a diario, desde tu PC en Chile (sin geo-fence) + un cron en la nube de respaldo.</li>"
+        "<li>Cada banco se compara con su <b>piso</b> (mínimo esperado) — columnas TRAJO vs PISO. "
+        "<b style='color:#0f6e56'>✅ OK</b> = sobre el piso · <b style='color:#b45309'>⚠️ degradado</b> = bajó del piso · <b style='color:#b91c1c'>🔴 caído</b> = trajo 0.</li>"
+        "<li><b>Reintentos automáticos</b> ante fallas temporales (timeout, sitio lento).</li>"
+        "<li><b>Red de seguridad:</b> si un banco cae a 0, se conservan sus datos previos y este mail te avisa — la web nunca queda sin el banco.</li>"
+        "<li>La data solo se publica si pasa el <b>chequeo de salud</b> (sin duplicados ni datos corruptos, todos los bancos sobre su piso).</li>"
+        "</ul>"
+        f"{pres_html}"
+        "</div>"
+    )
+
+    return f"""<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f2937">
+  <div style="background:{color_top};padding:20px;border-radius:12px 12px 0 0">
+    <h1 style="color:#fff;margin:0;font-size:21px">{titulo}</h1>
+    <p style="color:rgba(255,255,255,.85);margin:6px 0 0;font-size:13px">{fecha} · MiCartera — beneficios bancarios Chile</p>
   </div>
-  <div style="background:#fff;padding:18px;border:1px solid #e5e7eb">
+  <div style="background:#fff;padding:20px;border:1px solid #e5e7eb">
     {banner}
+    {cards}
+    <h2 style="font-size:15px;margin:0 0 8px;color:#1f2937">Estado de cada banco</h2>
     <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr style="border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:11px">
-        <td style="padding:6px 0">BANCO</td>
-        <td style="padding:6px 0;text-align:right">TRAJO</td>
-        <td style="padding:6px 0;text-align:right">PISO</td>
-        <td style="padding:6px 0;text-align:right">ESTADO</td>
+      <tr style="border-bottom:2px solid #e5e7eb;color:#6b7280;font-size:11px;text-align:left">
+        <th style="padding:6px;font-weight:600">BANCO</th>
+        <th style="padding:6px;text-align:right;font-weight:600">TRAJO</th>
+        <th style="padding:6px;text-align:right;font-weight:600">PISO</th>
+        <th style="padding:6px;text-align:right;font-weight:600">ESTADO</th>
       </tr>
       {''.join(filas)}
     </table>
-    <div style="margin-top:16px">
-      <a href="https://api-beneficios-chile.onrender.com/ver" style="background:#6366f1;color:#fff;padding:9px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">🍽️ Ver Restaurantes</a>
+    {como}
+    <div style="margin-top:18px">
+      <a href="https://api-beneficios-chile.onrender.com/ver" style="background:#003058;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">🍽️ Ver Restaurantes</a>
+      <a href="https://api-beneficios-chile.onrender.com/ver/bencinas" style="background:#0f6e56;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⛽ Ver Bencinas</a>
     </div>
   </div>
-  <div style="background:#f9fafb;padding:11px 18px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
-    <p style="color:#9ca3af;font-size:11px;margin:0">Chequeo experto por banco · GitHub Actions · <a href="https://github.com/fernandoestay-create/beneficios-bancarios-chile/actions" style="color:#6366f1">Ver logs</a></p>
+  <div style="background:#f9fafb;padding:12px 18px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
+    <p style="color:#9ca3af;font-size:11px;margin:0">MiCartera · reporte automático diario · este correo te llega siempre (haya o no problemas) para confirmarte que el sistema corrió.</p>
   </div>
 </div>"""
