@@ -37,7 +37,7 @@ trae **precios y descuentos de bencina**.
 
 El sistema tiene **dos procesos** que actualizan los datos, y se complementan:
 
-### A. El cron en la nube (GitHub Actions) — corre diario ~07:00 Chile
+### A. El cron en la nube (GitHub Actions) — corre diario 09:00 Chile
 1. Scrapea los 15 bancos **desde un servidor en USA**.
 2. Corre el chequeo experto por banco.
 3. Sube los datos al buscador con IA (Pinecone) para el bot.
@@ -48,7 +48,7 @@ El sistema tiene **dos procesos** que actualizan los datos, y se complementan:
 a IPs chilenas (*geo-fencing*). Desde USA, el cron los ve en 0. Por eso existe la
 segunda fuente ↓
 
-### B. El refresco local (tu PC) — corre diario 09:00
+### B. El refresco local (tu PC) — corre diario 08:30 (antes del cron, para no chocar)
 1. Scrapea los 15 bancos **desde tu IP chilena** (donde NO hay geo-fence).
 2. Mismo chequeo + publica.
 3. Así **Falabella y cualquier banco geo-fenceado quedan frescos**.
