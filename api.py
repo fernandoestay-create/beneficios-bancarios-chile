@@ -1424,7 +1424,9 @@ return mS&&mB&&mD&&mDay&&mMode}});
 const note=document.getElementById('mapNote');
 if(sinU.length){{const bks=[...new Set(sinU.map(d=>d.banco))].sort();
 note.style.display='block';
-note.innerHTML='<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px;color:#9a3412"><b>'+sinU.length+' ofertas sin local fijo</b> ('+bks.join(', ')+') aplican en toda la cadena y no se ubican en el mapa. <a href="#" onclick="document.querySelector(\'.view-btn[data-view=tarjetas]\').click();return false" style="color:#c2410c;font-weight:700">Verlas en la Lista &rarr;</a></div>';
+note.innerHTML='<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px;color:#9a3412"><b>'+sinU.length+' ofertas sin local fijo</b> ('+bks.join(', ')+') aplican en toda la cadena y no se ubican en el mapa. <a href="#" id="verListaLink" style="color:#c2410c;font-weight:700">Verlas en la Lista &rarr;</a></div>';
+var _vl=document.getElementById('verListaLink');
+if(_vl)_vl.onclick=function(){{document.querySelector('.view-btn[data-view=tarjetas]').click();return false}};
 }}else{{note.style.display='none';note.innerHTML=''}}
 }}
 
