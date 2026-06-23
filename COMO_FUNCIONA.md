@@ -3,7 +3,7 @@
 > **Para qué es este documento:** explicar, en lenguaje claro, cómo funciona todo el
 > sistema tal como quedó al 2026-06-22. Si abrís esto dentro de 6 meses y no te
 > acordás de nada, acá está todo.
-> **Última actualización:** 2026-06-22
+> **Última actualización:** 2026-06-23
 
 ---
 
@@ -108,10 +108,10 @@ banco). Con ese histórico, el sistema:
 
 ## 7. El mail diario "por sí o por no"
 
-Te llega **todos los días**, haya o no problemas, para confirmarte que el sistema corrió.
+Te llega **todos los días a las 9:00 AM (Chile)**, haya o no problemas, para confirmarte que el sistema corrió. (El refresco local corre antes, a las 8:30, así el correo de las 9 ya sale con todo fresco.)
 
 - **Asunto:** arranca con `✅ TODO OK · MiCartera 14/14 bancos · …` (verde) o
-  `⚠️ REVISAR · MiCartera — …` (rojo). Lo marcás de un vistazo.
+  `⚠️ REVISAR · MiCartera — …` (rojo). Lo marcas de un vistazo.
 - **Cuerpo:** tarjetas de resumen + el estado de cada banco (trajo vs piso) + una
   sección "cómo funciona".
 - **Quién lo manda:** el cron, con las credenciales de Gmail que están guardadas
