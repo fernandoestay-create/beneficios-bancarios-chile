@@ -2,7 +2,7 @@ name: Scraping Diario - Beneficios y Bencinas
 
 on:
   schedule:
-    - cron: '0 11 * * *'    # Diario ~07:00 Chile: scrape + chequeo por banco + mail diario "por sí o por no"
+    - cron: '0 13 * * *'    # Diario 09:00 Chile (13:00 UTC): scrape + chequeo por banco + mail diario "por sí o por no"
   workflow_dispatch:  # Permite ejecución manual desde GitHub
 
 permissions:
