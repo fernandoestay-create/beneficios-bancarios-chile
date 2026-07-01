@@ -117,6 +117,44 @@ def generar_asunto(reporte, fecha, total_beneficios):
     return f"✅ TODO OK · MiCartera {r['ok'] + r['preservado']}/{r['total']} bancos{extra} · {total_beneficios} beneficios · {fecha}"
 
 
+def _seccion_cuotas():
+    """Sección de cuotas sin interés del mes para el email (lee cuotas_sin_interes.json).
+
+    Muestra un resumen + las campañas de 0% en 'Todos los comercios' (las más útiles).
+    Devuelve '' si no hay archivo o no hay campañas (no rompe el email)."""
+    import os, json
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cuotas_sin_interes.json")
+    if not os.path.exists(path):
+        return ""
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+    except Exception:
+        return ""
+    bancos = d.get("bancos", {})
+    mes = d.get("mes_referencia", "")
+    con = {k: v for k, v in bancos.items() if v.get("campanas")}
+    if not con:
+        return ""
+    total_camp = sum(len(v["campanas"]) for v in con.values())
+    trans = []
+    for banco, v in con.items():
+        for c in v["campanas"]:
+            tasa = c.get("tasa", "")
+            if c.get("categoria") == "Todos los comercios" and "0%" in tasa and "NO 0%" not in tasa:
+                trans.append((banco, c.get("cuotas", "")))
+                break
+    trans_li = "".join(f"<li><b>{b}</b>: {q}</li>" for b, q in trans[:12])
+    return (
+        "<div style='background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;margin-top:18px;font-size:13px;line-height:1.6;color:#065f46'>"
+        f"<b style='font-size:14px;color:#065f46'>💳 Cuotas sin interés — {mes}</b>"
+        f"<div style='margin:4px 0 8px;color:#047857'>{len(con)} bancos con campaña · {total_camp} campañas. Sin interés (0%) en todos los comercios:</div>"
+        f"<ul style='margin:0;padding-left:18px'>{trans_li}</ul>"
+        "<div style='margin-top:8px;font-size:12px;color:#059669'>Automotriz, educación y salud suelen ser a tasa preferencial (no 0%). Detalle, condiciones y link oficial de cada banco en el botón de abajo.</div>"
+        "</div>"
+    )
+
+
 def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=None, aprendizaje_info=None):
     """Cuerpo HTML del email: banner de alerta (si hay) + tabla con estado por banco."""
     preservados_list = list(preservados or [])
@@ -219,9 +257,11 @@ def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=No
       {''.join(filas)}
     </table>
     {como}
+    {_seccion_cuotas()}
     <div style="margin-top:18px">
       <a href="https://api-beneficios-chile.onrender.com/ver" style="background:#003058;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">🍽️ Ver Restaurantes</a>
-      <a href="https://api-beneficios-chile.onrender.com/ver/bencinas" style="background:#0f6e56;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⛽ Ver Bencinas</a>
+      <a href="https://api-beneficios-chile.onrender.com/ver/bencinas" style="background:#0f6e56;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">⛽ Ver Bencinas</a>
+      <a href="https://api-beneficios-chile.onrender.com/ver/cuotas" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">💳 Ver Cuotas</a>
     </div>
   </div>
   <div style="background:#f9fafb;padding:12px 18px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
