@@ -3,7 +3,7 @@
 > **Para qué es este documento:** explicar, en lenguaje claro, cómo funciona todo el
 > sistema tal como quedó al 2026-06-22. Si abrís esto dentro de 6 meses y no te
 > acordás de nada, acá está todo.
-> **Última actualización:** 2026-06-23
+> **Última actualización:** 2026-07-01
 
 ---
 
@@ -195,7 +195,21 @@ beneficios-bancarios-chile/
 
 ---
 
-## 12. Una línea para recordar
+## 12. El apartado de Cuotas sin interés (`/ver/cuotas`)
+
+Además de restaurantes y bencina, hay un tercer apartado (botón **💳 Cuotas** en la barra): las **campañas de cuotas sin interés del mes**, por banco y categoría.
+
+- **Qué muestra:** por cada banco, sus campañas agrupadas en categorías (todos los comercios, automotriz, educación, supermercados, salud, contribuciones), con el número de cuotas, las **condiciones de uso** (topes, tarjetas, exclusiones, CAE), la vigencia y un **link a la fuente oficial** del banco.
+- **0% vs tasa preferencial:** distingue las que son realmente **sin interés (0%)** de las de **tasa preferencial** (automotriz/educación/salud suelen ser 0,79%–1,19% mensual, NO 0%). No se vende como "sin interés" lo que no lo es.
+- **De dónde sale el dato:** de las **páginas oficiales de cada banco** (no de Chócale). Se leen desde tu PC (Chile) con `curl`, porque varias bloquean el acceso desde servidores fuera de Chile. Chócale se usa solo como **control de calidad**: se cruza contra lo oficial y se marca si hay inconsistencias.
+- **Cómo se mantiene:** es **curado mensual** (no scraper automático — las campañas cambian de formato cada mes y un scraper daría datos errados). El dato vive en `cuotas_sin_interes.json`; a inicio de mes se re-cura verificando las fuentes oficiales.
+- **Confianza por banco:** cada banco indica si su dato es "verificado en la fuente", "fuente oficial" o "secundaria". Ripley y Mach no ofrecen cuotas sin interés tipo campaña (se indica).
+
+> **Honestidad:** el día 1 del mes las páginas de los bancos suelen mostrar aún el mes anterior; el dato del mes en curso se completa en los primeros días. Cada campaña enlaza a su fuente oficial para verificar. (Detalle: lección L-24.)
+
+---
+
+## 13. Una línea para recordar
 
 > **El cron te manda el mail diario y publica; tu PC mantiene Falabella fresco; la red
 > de seguridad evita que algo desaparezca; el aprendizaje calibra los pisos solo. Tu
