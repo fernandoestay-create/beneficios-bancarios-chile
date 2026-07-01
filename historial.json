@@ -199,21 +199,21 @@
  },
  {
   "fecha": "2026-07-01",
-  "total": 869,
+  "total": 871,
   "por_banco": {
-   "Banco de Chile": 240,
+   "Banco de Chile": 241,
    "Banco Falabella": 74,
    "BCI": 105,
-   "Banco Itaú": 30,
+   "Banco Itaú": 23,
    "Scotiabank": 62,
-   "Santander": 64,
+   "Santander": 66,
    "Banco Consorcio": 8,
-   "Banco Security": 104,
-   "Banco Ripley": 62,
+   "Banco Security": 109,
+   "Banco Ripley": 68,
    "Entel": 24,
    "Tenpo": 8,
    "Lider BCI": 11,
-   "Banco BICE": 71,
+   "Banco BICE": 66,
    "Mach": 6
   },
   "problemas": [
