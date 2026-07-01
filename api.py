@@ -2870,9 +2870,16 @@ async def ver_cuotas():
     for cat in categorias:
         chips += f'<button class="cat-filtro" data-cat="{html_lib.escape(cat)}">{CAT_ICON.get(cat,"")} {html_lib.escape(cat)}</button>'
 
-    ops = '<option value="todos">Todos los bancos</option>'
+    meses_disponibles = [mes_ref] if mes_ref else []
+    meses_html = ""
+    for i, m in enumerate(meses_disponibles):
+        cls = "mes-btn active" if i == 0 else "mes-btn"
+        meses_html += f'<button class="{cls}" data-mes="{html_lib.escape(m)}">{html_lib.escape(m.title())}</button>'
+
+    bancos_sel = '<button class="banco-btn active" data-banco="todos"><span>Todos</span></button>'
     for b in con_camp:
-        ops += f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>'
+        logo = BANK_LOGOS.get(b, "")
+        bancos_sel += f'<button class="banco-btn" data-banco="{html_lib.escape(b)}" title="{html_lib.escape(b)}"><img src="{logo}" alt="{html_lib.escape(b)}"></button>'
 
     tarjetas = ""
     for banco in con_camp:
@@ -2947,8 +2954,18 @@ body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--te
 .stat .v{{font-size:24px;font-weight:800;color:var(--primary)}}
 .stat .l{{font-size:11px;color:var(--muted)}}
 .nota{{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:12px 16px;font-size:13px;margin-bottom:16px;line-height:1.5}}
-.filtros{{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}}
-.filtros select{{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:14px;font-weight:600;color:var(--text)}}
+.filtros{{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}}
+.fgrupo{{margin-bottom:12px}}
+.fgrupo:last-child{{margin-bottom:0}}
+.flbl{{display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}}
+.mes-sel,.banco-sel{{display:flex;gap:8px;flex-wrap:wrap;align-items:center}}
+.mes-btn{{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;text-transform:capitalize}}
+.mes-btn.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.banco-btn{{border:1.5px solid var(--line);background:var(--panel);border-radius:12px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;justify-content:center;height:42px;min-width:54px;transition:all .15s}}
+.banco-btn img{{height:20px;width:auto;max-width:68px;object-fit:contain}}
+.banco-btn span{{font-size:13px;font-weight:700;color:var(--text)}}
+.banco-btn:hover{{border-color:var(--primary)}}
+.banco-btn.active{{border-color:var(--primary);background:#ecfdf5;box-shadow:0 0 0 2px rgba(5,150,105,.15)}}
 .cat-filtros{{display:flex;gap:6px;flex-wrap:wrap}}
 .cat-filtro{{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:7px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-weight:600}}
 .cat-filtro.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
@@ -2996,19 +3013,21 @@ body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--te
 </div>
 <div class="nota">ℹ️ {nota_general}</div>
 <div class="filtros">
-<select id="f-banco">{ops}</select>
-<div class="cat-filtros">{chips}</div>
+<div class="fgrupo"><span class="flbl">Mes</span><div class="mes-sel">{meses_html}</div></div>
+<div class="fgrupo"><span class="flbl">Banco</span><div class="banco-sel">{bancos_sel}</div></div>
+<div class="fgrupo"><span class="flbl">Categoría</span><div class="cat-filtros">{chips}</div></div>
 </div>
 <div id="lista">{tarjetas}</div>
 {sin_html}
 <div class="foot">Cada campaña enlaza a la fuente oficial del banco. Las cuotas de automotriz, educación y salud suelen ser a tasa preferencial (no 0%) — se indica la tasa real.<br>MiCartera · cuotas sin interés · {actualizado}</div>
 </div>
 <script>
-var selBanco=document.getElementById('f-banco');
+var bancoBtns=document.querySelectorAll('.banco-btn');
 var chips=document.querySelectorAll('.cat-filtro');
+var mesBtns=document.querySelectorAll('.mes-btn');
 var catActiva='todas';
+var bancoActivo='todos';
 function aplicarCuotas(){{
-var banco=selBanco.value;
 document.querySelectorAll('.banco').forEach(function(b){{
 var vis=0;
 b.querySelectorAll('.cuota').forEach(function(c){{
@@ -3016,16 +3035,25 @@ var okCat=(catActiva==='todas'||c.getAttribute('data-cat')===catActiva);
 c.style.display=okCat?'':'none';
 if(okCat)vis++;
 }});
-var okBanco=(banco==='todos'||b.getAttribute('data-banco')===banco);
+var okBanco=(bancoActivo==='todos'||b.getAttribute('data-banco')===bancoActivo);
 b.style.display=(okBanco&&vis>0)?'':'none';
 }});
 }}
-selBanco.addEventListener('change',aplicarCuotas);
+bancoBtns.forEach(function(btn){{btn.addEventListener('click',function(){{
+bancoBtns.forEach(function(x){{x.classList.remove('active')}});
+btn.classList.add('active');
+bancoActivo=btn.getAttribute('data-banco');
+aplicarCuotas();
+}});}});
 chips.forEach(function(ch){{ch.addEventListener('click',function(){{
 chips.forEach(function(x){{x.classList.remove('active')}});
 ch.classList.add('active');
 catActiva=ch.getAttribute('data-cat');
 aplicarCuotas();
+}});}});
+mesBtns.forEach(function(m){{m.addEventListener('click',function(){{
+mesBtns.forEach(function(x){{x.classList.remove('active')}});
+m.classList.add('active');
 }});}});
 </script>
 </body></html>"""
