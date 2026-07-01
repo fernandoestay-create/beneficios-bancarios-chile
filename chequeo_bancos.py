@@ -145,9 +145,19 @@ def _seccion_cuotas():
                 trans.append((banco, c.get("cuotas", "")))
                 break
     trans_li = "".join(f"<li><b>{b}</b>: {q}</li>" for b, q in trans[:12])
+    from datetime import datetime as _dt
+    _MESES = {1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio',
+              7: 'julio', 8: 'agosto', 9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'}
+    _n = _dt.now()
+    _mes_actual = f"{_MESES[_n.month]} {_n.year}"
+    _aviso = ""
+    if mes and mes.strip().lower() != _mes_actual:
+        _aviso = ("<div style='background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:8px 12px;border-radius:8px;margin:6px 0;font-size:12px'>"
+                  f"⚠️ Ya es <b>{_mes_actual}</b> y estas cuotas son de <b>{mes}</b>. Los bancos publican los primeros días del mes — hay que actualizarlas (avísame para re-curarlas).</div>")
     return (
         "<div style='background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 16px;margin-top:18px;font-size:13px;line-height:1.6;color:#065f46'>"
         f"<b style='font-size:14px;color:#065f46'>💳 Cuotas sin interés — {mes}</b>"
+        f"{_aviso}"
         f"<div style='margin:4px 0 8px;color:#047857'>{len(con)} bancos con campaña · {total_camp} campañas. Sin interés (0%) en todos los comercios:</div>"
         f"<ul style='margin:0;padding-left:18px'>{trans_li}</ul>"
         "<div style='margin-top:8px;font-size:12px;color:#059669'>Automotriz, educación y salud suelen ser a tasa preferencial (no 0%). Detalle, condiciones y link oficial de cada banco en el botón de abajo.</div>"
