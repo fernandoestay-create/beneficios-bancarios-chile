@@ -112,7 +112,7 @@ Te llega **todos los días a las 9:00 AM (Chile)**, haya o no problemas, para co
 
 - **Asunto:** arranca con `✅ TODO OK · MiCartera 14/14 bancos · …` (verde) o
   `⚠️ REVISAR · MiCartera — …` (rojo). Lo marcas de un vistazo.
-- **Cuerpo:** tarjetas de resumen + el estado de cada banco (trajo vs piso) + una **sección de cuotas sin interés del mes** (resumen: bancos con campaña + las de 0% en todos los comercios + botón "Ver Cuotas") + una sección "cómo funciona".
+- **Cuerpo:** tarjetas de resumen + el estado de cada banco (trajo vs piso) + una **sección de cuotas sin interés del mes** (resumen: bancos con campaña + las de 0% en todos los comercios + botón "Ver Cuotas", **con aviso automático si el mes quedó desfasado** — ej. "ya es julio y las cuotas son de junio, actualizar") + una sección "cómo funciona".
 - **Quién lo manda:** el cron, con las credenciales de Gmail que están guardadas
   cifradas en GitHub (Secrets). No necesitás configurar nada.
 
