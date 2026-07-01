@@ -1036,6 +1036,7 @@ font-weight:600;cursor:pointer;transition:all .2s}}
 <nav style="display:flex;gap:4px;margin-bottom:20px;background:var(--panel);padding:4px;border-radius:14px;box-shadow:var(--shadow);width:fit-content">
 <a href="/ver" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3)">🍽️ Restaurantes</a>
 <a href="/ver/bencinas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">⛽ Bencina</a>
+<a href="/ver/cuotas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">💳 Cuotas</a>
 </nav>
 <section class="hero">
 <div class="card hero-main">
@@ -2020,6 +2021,7 @@ font-weight:600;cursor:pointer;transition:all .2s}}
 <nav style="display:flex;gap:4px;margin-bottom:20px;background:var(--panel);padding:4px;border-radius:14px;box-shadow:var(--shadow);width:fit-content">
 <a href="/ver" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">🍽️ Restaurantes</a>
 <a href="/ver/bencinas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#ea580c,#dc2626);color:#fff;box-shadow:0 2px 8px rgba(234,88,12,.3)">⛽ Bencina</a>
+<a href="/ver/cuotas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">💳 Cuotas</a>
 </nav>
 <section class="hero">
 <div class="card hero-main">
@@ -2824,6 +2826,209 @@ navigator.geolocation.getCurrentPosition(
 </script>
 </body></html>"""
 
+    return HTMLResponse(page)
+
+
+@app.get("/ver/cuotas", response_class=HTMLResponse)
+async def ver_cuotas():
+    """Cuotas sin interes del mes por banco y categoria (curado + trazable a la fuente oficial)."""
+    import html as html_lib
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    cuotas_path = os.path.join(script_dir, "cuotas_sin_interes.json")
+    if not os.path.exists(cuotas_path):
+        return HTMLResponse("<h1>Cuotas sin interes</h1><p>Datos aun no disponibles.</p>")
+    with open(cuotas_path, "r", encoding="utf-8") as f:
+        cdata = json.load(f)
+
+    bancos = cdata.get("bancos", {})
+    mes_ref = cdata.get("mes_referencia", "")
+    actualizado = cdata.get("actualizado", "")
+    nota_general = cdata.get("nota_general", "")
+    categorias = cdata.get("categorias", [])
+
+    BANK_LOGOS = {
+        'Banco de Chile':'/static/logos/bancochile.svg','Banco Falabella':'/static/logos/falabella.svg',
+        'BCI':'/static/logos/bci.svg','Banco Itau':'/static/logos/itau.svg','Banco Itaú':'/static/logos/itau.svg',
+        'Scotiabank':'/static/logos/scotiabank.svg','Santander':'/static/logos/santander.svg',
+        'Banco Consorcio':'/static/logos/consorcio.svg','Banco Security':'/static/logos/security.png',
+        'Banco Ripley':'/static/logos/ripley.png','Entel':'/static/logos/entel.svg','Tenpo':'/static/logos/tenpo.svg',
+        'Lider BCI':'/static/logos/lider.svg','Banco BICE':'/static/logos/bice.svg','Mach':'/static/logos/mach.svg'
+    }
+    BANK_COLORS = {
+        'Banco de Chile':'#003DA5','Banco Falabella':'#00B140','BCI':'#E31837','Banco Itaú':'#003399',
+        'Scotiabank':'#EC111A','Santander':'#EC0000','Banco Consorcio':'#003366','Banco Security':'#1B3A5C',
+        'Banco Ripley':'#7B2D8E','Entel':'#FF6B00','Tenpo':'#00C389','Lider BCI':'#E31837','Banco BICE':'#002F6C','Mach':'#6B21A8'
+    }
+    CAT_ICON = {"Todos los comercios":"\U0001F6CD️","Automotriz":"\U0001F697","Educación":"\U0001F393",
+                "Supermercados":"\U0001F6D2","Salud":"\U0001F3E5","Contribuciones":"\U0001F3DB️","Otros":"\U0001F3F7️"}
+
+    con_camp = [k for k in bancos if bancos[k].get("campanas")]
+    sin_camp = [k for k in bancos if bancos[k].get("sin_campana")]
+    total_camp = sum(len(bancos[k]["campanas"]) for k in con_camp)
+
+    chips = '<button class="cat-filtro active" data-cat="todas">Todas</button>'
+    for cat in categorias:
+        chips += f'<button class="cat-filtro" data-cat="{html_lib.escape(cat)}">{CAT_ICON.get(cat,"")} {html_lib.escape(cat)}</button>'
+
+    ops = '<option value="todos">Todos los bancos</option>'
+    for b in con_camp:
+        ops += f'<option value="{html_lib.escape(b)}">{html_lib.escape(b)}</option>'
+
+    tarjetas = ""
+    for banco in con_camp:
+        v = bancos[banco]
+        logo = BANK_LOGOS.get(banco, "")
+        color = BANK_COLORS.get(banco, "#059669")
+        conf = v.get("confianza", "")
+        if conf == "oficial-verificada":
+            conf_badge = '<span class="conf ok">✓ verificado en la fuente</span>'
+        elif conf == "oficial":
+            conf_badge = '<span class="conf">fuente oficial</span>'
+        else:
+            conf_badge = ''
+        items = ""
+        for c in v["campanas"]:
+            cat = c.get("categoria", "Otros")
+            icon = CAT_ICON.get(cat, "")
+            tasa = c.get("tasa", "")
+            es_cero = ("0%" in tasa) and ("NO 0%" not in tasa)
+            tasa_html = '<span class="b-cero">SIN INTERES</span>' if es_cero else f'<span class="b-tasa">{html_lib.escape(tasa)}</span>'
+            incons = c.get("inconsistencia", "")
+            incons_html = f'<div class="incons">⚠️ Cruce con Chócale: {html_lib.escape(incons)}</div>' if incons else ""
+            url = html_lib.escape(c.get("url", v.get("url_oficial", "#")))
+            items += (
+                f'<div class="cuota" data-cat="{html_lib.escape(cat)}">'
+                f'<div class="cuota-top"><span class="cuotas-n">{html_lib.escape(c.get("cuotas",""))}</span>{tasa_html}'
+                f'<span class="cat-chip">{icon} {html_lib.escape(cat)}</span></div>'
+                f'<div class="cuota-det">{html_lib.escape(c.get("detalle",""))}</div>'
+                f'<div class="cuota-cond"><b>Condiciones:</b> {html_lib.escape(c.get("condiciones",""))}</div>'
+                f'{incons_html}'
+                f'<div class="cuota-meta"><span>\U0001F4C5 {html_lib.escape(c.get("vigencia",""))}</span>'
+                f'<span>\U0001F4B3 {html_lib.escape(c.get("tarjetas",""))}</span>'
+                f'<a href="{url}" target="_blank" rel="noopener">Ver en el banco ↗</a></div>'
+                f'</div>'
+            )
+        tarjetas += (
+            f'<div class="banco" data-banco="{html_lib.escape(banco)}">'
+            f'<div class="banco-head" style="border-left:5px solid {color}">'
+            f'<img src="{logo}" alt="{html_lib.escape(banco)}" class="banco-logo">'
+            f'<span class="banco-nombre">{html_lib.escape(banco)}</span>{conf_badge}'
+            f'<span class="banco-count">{len(v["campanas"])} campaña(s)</span></div>'
+            f'<div class="banco-body">{items}</div></div>'
+        )
+
+    sin_html = ""
+    if sin_camp:
+        filas = ""
+        for b in sin_camp:
+            filas += f'<div class="sincamp-item"><b>{html_lib.escape(b)}:</b> {html_lib.escape(bancos[b].get("nota",""))}</div>'
+        sin_html = f'<div class="sincamp"><h3>Sin campaña de cuotas sin interés este mes</h3>{filas}</div>'
+
+    page = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cuotas sin interés — {mes_ref}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{{--bg:#f8f7f4;--panel:#fff;--panel2:#f3f1ed;--text:#1a1a2e;--muted:#6b7280;--line:#e5e2da;
+--primary:#059669;--primary2:#047857;--radius:16px;--shadow:0 4px 20px rgba(0,0,0,.06)}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text)}}
+.container{{width:min(1100px,calc(100% - 24px));margin:0 auto;padding:20px 0 60px}}
+.topnav{{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}}
+.topnav a{{text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:var(--muted);transition:all .2s}}
+.topnav a.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;box-shadow:0 2px 8px rgba(5,150,105,.3)}}
+.hero{{background:linear-gradient(135deg,#ecfdf5,#f0fdfa);border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin-bottom:16px}}
+.hero h1{{font-size:clamp(24px,4vw,36px);font-weight:800;background:linear-gradient(135deg,var(--primary),var(--primary2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}}
+.hero p{{color:var(--muted);font-size:14px;line-height:1.6}}
+.stats{{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}}
+.stat{{background:rgba(255,255,255,.7);border-radius:12px;padding:12px 18px;text-align:center;min-width:90px}}
+.stat .v{{font-size:24px;font-weight:800;color:var(--primary)}}
+.stat .l{{font-size:11px;color:var(--muted)}}
+.nota{{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:12px 16px;font-size:13px;margin-bottom:16px;line-height:1.5}}
+.filtros{{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}}
+.filtros select{{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:14px;font-weight:600;color:var(--text)}}
+.cat-filtros{{display:flex;gap:6px;flex-wrap:wrap}}
+.cat-filtro{{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:7px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-weight:600}}
+.cat-filtro.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.banco{{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}}
+.banco-head{{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--panel2);flex-wrap:wrap}}
+.banco-logo{{height:26px;width:auto;max-width:90px;object-fit:contain}}
+.banco-nombre{{font-weight:800;font-size:16px}}
+.conf{{font-size:11px;padding:3px 8px;border-radius:999px;background:#e5e7eb;color:#374151;font-weight:600}}
+.conf.ok{{background:#d1fae5;color:#065f46}}
+.banco-count{{margin-left:auto;font-size:12px;color:var(--muted)}}
+.banco-body{{padding:8px 16px 16px}}
+.cuota{{border-top:1px solid var(--line);padding:14px 0}}
+.cuota:first-child{{border-top:0}}
+.cuota-top{{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}}
+.cuotas-n{{font-size:17px;font-weight:800;color:var(--text)}}
+.b-cero{{background:linear-gradient(135deg,#059669,#047857);color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;letter-spacing:.3px}}
+.b-tasa{{background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px}}
+.cat-chip{{background:var(--panel2);color:var(--muted);font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;margin-left:auto}}
+.cuota-det{{font-size:13px;color:var(--text);line-height:1.5;margin-bottom:6px}}
+.cuota-cond{{font-size:12px;color:var(--muted);line-height:1.5;background:var(--panel2);border-radius:8px;padding:8px 10px;margin-bottom:6px}}
+.incons{{font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;margin-bottom:6px}}
+.cuota-meta{{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}}
+.cuota-meta a{{color:var(--primary);font-weight:700;text-decoration:none;margin-left:auto}}
+.sincamp{{background:var(--panel);border:1px dashed var(--line);border-radius:var(--radius);padding:16px;margin-top:8px}}
+.sincamp h3{{font-size:14px;margin-bottom:8px;color:var(--muted)}}
+.sincamp-item{{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px}}
+.foot{{text-align:center;color:var(--muted);font-size:12px;margin-top:20px;line-height:1.6}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="topnav">
+<a href="/ver">\U0001F37D️ Restaurantes</a>
+<a href="/ver/bencinas">⛽ Bencina</a>
+<a href="/ver/cuotas" class="active">\U0001F4B3 Cuotas sin interés</a>
+</div>
+<div class="hero">
+<h1>Cuotas sin interés</h1>
+<p>Campañas por banco y categoría, tomadas de las páginas oficiales de cada banco con sus condiciones de uso. Referencia: {mes_ref} · actualizado {actualizado}.</p>
+<div class="stats">
+<div class="stat"><div class="v">{len(con_camp)}</div><div class="l">bancos con campaña</div></div>
+<div class="stat"><div class="v">{total_camp}</div><div class="l">campañas</div></div>
+<div class="stat"><div class="v">{len(categorias)}</div><div class="l">categorías</div></div>
+</div>
+</div>
+<div class="nota">ℹ️ {nota_general}</div>
+<div class="filtros">
+<select id="f-banco">{ops}</select>
+<div class="cat-filtros">{chips}</div>
+</div>
+<div id="lista">{tarjetas}</div>
+{sin_html}
+<div class="foot">Cada campaña enlaza a la fuente oficial del banco. Las cuotas de automotriz, educación y salud suelen ser a tasa preferencial (no 0%) — se indica la tasa real.<br>MiCartera · cuotas sin interés · {actualizado}</div>
+</div>
+<script>
+var selBanco=document.getElementById('f-banco');
+var chips=document.querySelectorAll('.cat-filtro');
+var catActiva='todas';
+function aplicarCuotas(){{
+var banco=selBanco.value;
+document.querySelectorAll('.banco').forEach(function(b){{
+var vis=0;
+b.querySelectorAll('.cuota').forEach(function(c){{
+var okCat=(catActiva==='todas'||c.getAttribute('data-cat')===catActiva);
+c.style.display=okCat?'':'none';
+if(okCat)vis++;
+}});
+var okBanco=(banco==='todos'||b.getAttribute('data-banco')===banco);
+b.style.display=(okBanco&&vis>0)?'':'none';
+}});
+}}
+selBanco.addEventListener('change',aplicarCuotas);
+chips.forEach(function(ch){{ch.addEventListener('click',function(){{
+chips.forEach(function(x){{x.classList.remove('active')}});
+ch.classList.add('active');
+catActiva=ch.getAttribute('data-cat');
+aplicarCuotas();
+}});}});
+</script>
+</body></html>"""
     return HTMLResponse(page)
 
 
