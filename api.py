@@ -2870,11 +2870,34 @@ async def ver_cuotas():
     for cat in categorias:
         chips += f'<button class="cat-filtro" data-cat="{html_lib.escape(cat)}">{CAT_ICON.get(cat,"")} {html_lib.escape(cat)}</button>'
 
-    meses_disponibles = [mes_ref] if mes_ref else []
+    # Meses en que cada campaña está vigente (parseado de su 'vigencia') → selector de mes real
+    import re as _re
+    _MN = {'enero':1,'febrero':2,'marzo':3,'abril':4,'mayo':5,'junio':6,'julio':7,'agosto':8,'septiembre':9,'octubre':10,'noviembre':11,'diciembre':12}
+    _AB = {'ene':1,'feb':2,'mar':3,'abr':4,'may':5,'jun':6,'jul':7,'ago':8,'sep':9,'oct':10,'nov':11,'dic':12}
+    _NOM = {v: k for k, v in _MN.items()}
+    def _meses_vig(vig):
+        v = (vig or "").lower()
+        if 'permanente' in v or v.strip().startswith('vigente'):
+            return list(range(6, 13))
+        nums = sorted(set([n for m, n in _MN.items() if m in v] + [n for a, n in _AB.items() if _re.search(r'\b' + a, v)]))
+        if not nums:
+            return [6]
+        if len(nums) >= 2:
+            return list(range(nums[0], nums[-1] + 1))
+        n = nums[0]
+        return list(range(6, n + 1)) if ('hasta' in v and n > 6) else [n]
+    meses_set = set()
+    for _b in con_camp:
+        for _c in bancos[_b]['campanas']:
+            _c['_meses'] = _meses_vig(_c.get('vigencia', ''))
+            meses_set.update(_c['_meses'])
+    meses_ord = sorted(m for m in meses_set if 6 <= m <= 12) or [6]
+    mes_hoy = datetime.now().month
+    mes_default = mes_hoy if mes_hoy in meses_ord else meses_ord[0]
     meses_html = ""
-    for i, m in enumerate(meses_disponibles):
-        cls = "mes-btn active" if i == 0 else "mes-btn"
-        meses_html += f'<button class="{cls}" data-mes="{html_lib.escape(m)}">{html_lib.escape(m.title())}</button>'
+    for n in meses_ord:
+        cls = "mes-btn active" if n == mes_default else "mes-btn"
+        meses_html += f'<button class="{cls}" data-mes="{n}">{_NOM[n].title()} 2026</button>'
 
     bancos_sel = '<button class="banco-btn active" data-banco="todos"><span>Todos</span></button>'
     for b in con_camp:
@@ -2903,8 +2926,9 @@ async def ver_cuotas():
             incons = c.get("inconsistencia", "")
             incons_html = f'<div class="incons">⚠️ Cruce con Chócale: {html_lib.escape(incons)}</div>' if incons else ""
             url = html_lib.escape(c.get("url", v.get("url_oficial", "#")))
+            _meses_c = ",".join(str(x) for x in c.get("_meses", [6]))
             items += (
-                f'<div class="cuota" data-cat="{html_lib.escape(cat)}">'
+                f'<div class="cuota" data-cat="{html_lib.escape(cat)}" data-meses="{_meses_c}">'
                 f'<div class="cuota-top"><span class="cuotas-n">{html_lib.escape(c.get("cuotas",""))}</span>{tasa_html}'
                 f'<span class="cat-chip">{icon} {html_lib.escape(cat)}</span></div>'
                 f'<div class="cuota-det">{html_lib.escape(c.get("detalle",""))}</div>'
@@ -3027,13 +3051,17 @@ var chips=document.querySelectorAll('.cat-filtro');
 var mesBtns=document.querySelectorAll('.mes-btn');
 var catActiva='todas';
 var bancoActivo='todos';
+var mesActivo='{mes_default}';
 function aplicarCuotas(){{
 document.querySelectorAll('.banco').forEach(function(b){{
 var vis=0;
 b.querySelectorAll('.cuota').forEach(function(c){{
 var okCat=(catActiva==='todas'||c.getAttribute('data-cat')===catActiva);
-c.style.display=okCat?'':'none';
-if(okCat)vis++;
+var meses=(c.getAttribute('data-meses')||'').split(',');
+var okMes=(mesActivo==='todos'||meses.indexOf(mesActivo)>=0);
+var show=okCat&&okMes;
+c.style.display=show?'':'none';
+if(show)vis++;
 }});
 var okBanco=(bancoActivo==='todos'||b.getAttribute('data-banco')===bancoActivo);
 b.style.display=(okBanco&&vis>0)?'':'none';
@@ -3054,7 +3082,10 @@ aplicarCuotas();
 mesBtns.forEach(function(m){{m.addEventListener('click',function(){{
 mesBtns.forEach(function(x){{x.classList.remove('active')}});
 m.classList.add('active');
+mesActivo=m.getAttribute('data-mes');
+aplicarCuotas();
 }});}});
+aplicarCuotas();
 </script>
 </body></html>"""
     return HTMLResponse(page)
