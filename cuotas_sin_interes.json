@@ -16,9 +16,9 @@
       "url_oficial": "https://www.bci.cl/beneficios/beneficios-bci/paga-en-cuotas",
       "confianza": "oficial",
       "campanas": [
-        {"categoria": "Todos los comercios", "cuotas": "3 o 6 cuotas sin interés", "tasa": "0%", "detalle": "3 o 6 cuotas sin interés en todos los comercios físicos y online del país con Tarjetas de Crédito BCI.", "condiciones": "Comercios nacionales físicos y online. Requiere pago oportuno.", "tarjetas": "Crédito BCI", "vigencia": "hasta 30-jun-2026", "url": "https://www.bci.cl/beneficios/beneficios-bci/detalle/paga-en-3-o-6-cuotas-con-tus-tarjetas-de-credito-bci.-yvda8qk"},
-        {"categoria": "Automotriz", "cuotas": "18 a 36 cuotas", "tasa": "0,79% a 0,99% mensual (NO 0%)", "detalle": "Tasa preferencial en rubro automotriz, según tipo de tarjeta (0,79% Signature/Infinite/Black; 0,99% estándar).", "condiciones": "Tasa preferencial, no 0%. Según segmento de tarjeta.", "tarjetas": "Crédito BCI", "vigencia": "hasta 30-jun-2026", "url": "https://www.bci.cl/beneficios/beneficios-bci/detalle/18-a-36-cuotas-cpfd6hb"},
-        {"categoria": "Salud", "cuotas": "10 a 12 cuotas", "tasa": "0,79% a 0,99% mensual (NO 0%)", "detalle": "Tasa preferencial en salud/clínicas, según tarjeta.", "condiciones": "Tasa preferencial, no 0%.", "tarjetas": "Crédito BCI", "vigencia": "hasta 30-jun-2026", "url": "https://www.bci.cl/beneficios/beneficios-bci/paga-en-cuotas"}
+        {"categoria": "Todos los comercios", "cuotas": "3 o 6 cuotas sin interés", "tasa": "0%", "detalle": "3 o 6 cuotas sin interés en todos los comercios físicos y online del país con Tarjetas de Crédito BCI.", "condiciones": "Comercios nacionales físicos y online. Requiere pago oportuno. Vigencia extendida a septiembre 2026 (confirmado con el cliente; la campaña en la web pública de BCI aún mostraba ene-jun al 1-jul).", "tarjetas": "Crédito BCI", "vigencia": "hasta septiembre 2026", "url": "https://www.bci.cl/beneficios/beneficios-bci/detalle/paga-en-3-o-6-cuotas-con-tus-tarjetas-de-credito-bci.-yvda8qk"},
+        {"categoria": "Automotriz", "cuotas": "18 a 36 cuotas", "tasa": "0,79% a 0,99% mensual (NO 0%)", "detalle": "Tasa preferencial en rubro automotriz, según tipo de tarjeta (0,79% Signature/Infinite/Black; 0,99% estándar).", "condiciones": "Tasa preferencial, no 0%. Según segmento de tarjeta.", "tarjetas": "Crédito BCI", "vigencia": "vigente 2026", "url": "https://www.bci.cl/beneficios/beneficios-bci/detalle/18-a-36-cuotas-cpfd6hb"},
+        {"categoria": "Salud", "cuotas": "10 a 12 cuotas", "tasa": "0,79% a 0,99% mensual (NO 0%)", "detalle": "Tasa preferencial en salud/clínicas, según tarjeta.", "condiciones": "Tasa preferencial, no 0%.", "tarjetas": "Crédito BCI", "vigencia": "vigente 2026", "url": "https://www.bci.cl/beneficios/beneficios-bci/paga-en-cuotas"}
       ]
     },
     "Santander": {
@@ -95,9 +95,9 @@
       "url_oficial": "https://sitio.consorcio.cl/banca-personas/tarjeta-de-credito",
       "confianza": "oficial",
       "campanas": [
-        {"categoria": "Todos los comercios", "cuotas": "3 a 12 cuotas sin interés", "tasa": "0%", "detalle": "3 cuotas sin interés en cualquier comercio nacional; hasta 3 a 12 cuotas sin interés en comercios asociados. Beneficio propio de la Tarjeta Consorcio Visa.", "condiciones": "CAE referencial 1,18%. Beneficio permanente de la tarjeta, no campaña fechada.", "tarjetas": "Crédito Consorcio Visa", "vigencia": "beneficio permanente (vigente en junio 2026)", "url": "https://sitio.consorcio.cl/banca-personas/tarjeta-de-credito"}
+        {"categoria": "Todos los comercios", "cuotas": "3 a 12 cuotas sin interés", "tasa": "0%", "detalle": "3 cuotas sin interés en cualquier comercio nacional; hasta 3 a 12 cuotas sin interés en comercios asociados. Beneficio propio de la Tarjeta Consorcio Visa.", "condiciones": "CAE referencial 1,18%. Verificado en la web oficial (1-jul-2026).", "tarjetas": "Crédito Consorcio Visa", "vigencia": "hasta 31-dic-2026", "url": "https://sitio.consorcio.cl/banca-personas/tarjeta-de-credito"}
       ],
-      "nota": "Beneficio permanente de la tarjeta (no campaña mensual). Chócale no lista campaña fechada para junio 2026."
+      "nota": "Verificado en la web oficial (barrido 1-jul): 3 cuotas sin interés en cualquier comercio nacional hasta 31/12/2026 (CAE 1,18%), beneficio de la Tarjeta Consorcio Visa."
     },
     "Entel": {
       "url_oficial": "https://www.entel.cl/entel-visa",
