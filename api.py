@@ -2896,8 +2896,14 @@ async def ver_cuotas():
     mes_default = mes_hoy if mes_hoy in meses_ord else meses_ord[0]
     meses_html = ""
     for n in meses_ord:
-        cls = "mes-btn active" if n == mes_default else "mes-btn"
-        meses_html += f'<button class="{cls}" data-mes="{n}">{_NOM[n].title()} 2026</button>'
+        cls = "mes-btn"
+        if n == mes_default:
+            cls += " active"
+        tag = ""
+        if n < mes_hoy:
+            cls += " hist"
+            tag = '<span class="hist-tag">historia</span>'
+        meses_html += f'<button class="{cls}" data-mes="{n}">{_NOM[n].title()} 2026{tag}</button>'
 
     bancos_sel = '<button class="banco-btn active" data-banco="todos"><span>Todos</span></button>'
     for b in con_camp:
@@ -2985,6 +2991,10 @@ body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--te
 .mes-sel,.banco-sel{{display:flex;gap:8px;flex-wrap:wrap;align-items:center}}
 .mes-btn{{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;text-transform:capitalize}}
 .mes-btn.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.mes-btn.hist{{opacity:.6;border-style:dashed;color:var(--muted)}}
+.mes-btn.hist.active{{opacity:1;border-style:solid;color:#fff}}
+.hist-tag{{font-size:9px;text-transform:uppercase;letter-spacing:.5px;background:var(--panel2);color:var(--muted);padding:1px 6px;border-radius:6px;margin-left:6px;font-weight:700}}
+.mes-btn.active .hist-tag{{background:rgba(255,255,255,.25);color:#fff}}
 .banco-btn{{border:1.5px solid var(--line);background:var(--panel);border-radius:12px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;justify-content:center;height:42px;min-width:54px;transition:all .15s}}
 .banco-btn img{{height:20px;width:auto;max-width:68px;object-fit:contain}}
 .banco-btn span{{font-size:13px;font-weight:700;color:var(--text)}}
