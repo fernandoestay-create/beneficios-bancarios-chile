@@ -3076,6 +3076,19 @@ if(show)vis++;
 var okBanco=(bancoActivo==='todos'||b.getAttribute('data-banco')===bancoActivo);
 b.style.display=(okBanco&&vis>0)?'':'none';
 }});
+bancoBtns.forEach(function(btn){{
+var bn=btn.getAttribute('data-banco');
+if(bn==='todos')return;
+var bloque=document.querySelector('.banco[data-banco="'+bn+'"]');
+var tiene=false;
+if(bloque){{bloque.querySelectorAll('.cuota').forEach(function(c){{
+var meses=(c.getAttribute('data-meses')||'').split(',');
+var okM=(mesActivo==='todos'||meses.indexOf(mesActivo)>=0);
+var okC=(catActiva==='todas'||c.getAttribute('data-cat')===catActiva);
+if(okM&&okC)tiene=true;
+}});}}
+btn.style.display=tiene?'':'none';
+}});
 }}
 bancoBtns.forEach(function(btn){{btn.addEventListener('click',function(){{
 bancoBtns.forEach(function(x){{x.classList.remove('active')}});
@@ -3093,6 +3106,9 @@ mesBtns.forEach(function(m){{m.addEventListener('click',function(){{
 mesBtns.forEach(function(x){{x.classList.remove('active')}});
 m.classList.add('active');
 mesActivo=m.getAttribute('data-mes');
+bancoActivo='todos';
+bancoBtns.forEach(function(x){{x.classList.remove('active')}});
+if(bancoBtns[0])bancoBtns[0].classList.add('active');
 aplicarCuotas();
 }});}});
 aplicarCuotas();
