@@ -3040,8 +3040,8 @@ body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--te
 <h1>Cuotas sin interés</h1>
 <p>Campañas por banco y categoría, tomadas de las páginas oficiales de cada banco con sus condiciones de uso. Referencia: {mes_ref} · actualizado {actualizado}.</p>
 <div class="stats">
-<div class="stat"><div class="v">{len(con_camp)}</div><div class="l">bancos con campaña</div></div>
-<div class="stat"><div class="v">{total_camp}</div><div class="l">campañas</div></div>
+<div class="stat"><div class="v" id="st-bancos">{len(con_camp)}</div><div class="l">bancos con campaña</div></div>
+<div class="stat"><div class="v" id="st-camp">{total_camp}</div><div class="l">campañas</div></div>
 <div class="stat"><div class="v">{len(categorias)}</div><div class="l">categorías</div></div>
 </div>
 </div>
@@ -3063,6 +3063,7 @@ var catActiva='todas';
 var bancoActivo='todos';
 var mesActivo='{mes_default}';
 function aplicarCuotas(){{
+var totB=0,totC=0;
 document.querySelectorAll('.banco').forEach(function(b){{
 var vis=0;
 b.querySelectorAll('.cuota').forEach(function(c){{
@@ -3074,7 +3075,9 @@ c.style.display=show?'':'none';
 if(show)vis++;
 }});
 var okBanco=(bancoActivo==='todos'||b.getAttribute('data-banco')===bancoActivo);
-b.style.display=(okBanco&&vis>0)?'':'none';
+var bShow=(okBanco&&vis>0);
+b.style.display=bShow?'':'none';
+if(bShow){{totB++;totC+=vis;}}
 }});
 bancoBtns.forEach(function(btn){{
 var bn=btn.getAttribute('data-banco');
@@ -3089,6 +3092,8 @@ if(okM&&okC)tiene=true;
 }});}}
 btn.style.display=tiene?'':'none';
 }});
+var eb=document.getElementById('st-bancos');if(eb)eb.textContent=totB;
+var ec=document.getElementById('st-camp');if(ec)ec.textContent=totC;
 }}
 bancoBtns.forEach(function(btn){{btn.addEventListener('click',function(){{
 bancoBtns.forEach(function(x){{x.classList.remove('active')}});
