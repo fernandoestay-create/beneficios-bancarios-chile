@@ -26,7 +26,7 @@ from collections import Counter
 # espera 0 a proposito, no se alerta.
 PISOS_BANCOS = {
     "Banco de Chile": 100, "BCI": 50, "Banco Falabella": 40,
-    "Banco Security": 30, "Santander": 30, "Banco Itaú": 25,
+    "Banco Security": 30, "Santander": 30, "Banco Itaú": 15,
     "Scotiabank": 25, "Banco BICE": 25, "Banco Ripley": 20,
     "Entel": 8, "Tenpo": 3, "Lider BCI": 3, "Banco Consorcio": 2, "Mach": 2,
 }
