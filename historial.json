@@ -244,5 +244,29 @@
    "Banco Itaú"
   ],
   "preservados": []
+ },
+ {
+  "fecha": "2026-07-03",
+  "total": 901,
+  "por_banco": {
+   "Banco de Chile": 241,
+   "Banco Falabella": 95,
+   "BCI": 108,
+   "Banco Itaú": 23,
+   "Scotiabank": 62,
+   "Santander": 72,
+   "Banco Consorcio": 8,
+   "Banco Security": 109,
+   "Banco Ripley": 68,
+   "Entel": 24,
+   "Tenpo": 8,
+   "Lider BCI": 11,
+   "Banco BICE": 66,
+   "Mach": 6
+  },
+  "problemas": [
+   "Banco Itaú"
+  ],
+  "preservados": []
  }
 ]
