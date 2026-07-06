@@ -23,7 +23,11 @@ from statistics import median
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 HISTORIAL = os.path.join(ROOT, "historial.json")
-N_VENTANA = 12          # corridas recientes para "aprender" el nivel normal
+N_VENTANA = 7           # corridas recientes (~1 semana) para "aprender" el nivel normal.
+                        # 7 y no 12: así el sistema reconoce un CAMBIO DE NIVEL sostenido en
+                        # ~1 semana (ej. un banco que renueva su campaña mensual con menos
+                        # ofertas, como Itaú 71→23 en jul-2026) y deja de marcarlo DEGRADADO
+                        # en falso. El piso fijo (PISOS_BANCOS) sigue siendo la red mínima.
 FRACCION_PISO = 0.6     # el piso aprendido es 60% del nivel normal
 UMBRAL_TENDENCIA = 0.7  # si cae bajo el 70% de su normal, es tendencia a la baja
 MAX_HIST = 400          # ~1 anio de corridas
