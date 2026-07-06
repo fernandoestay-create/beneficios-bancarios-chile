@@ -102,15 +102,21 @@ def resumen(reporte):
 def generar_asunto(reporte, fecha, total_beneficios):
     """Asunto del email: verde si todo OK (los bancos PRESERVADOS no son alarma — la
     web conserva sus datos), ALERTA solo si hay caídos reales o degradados a revisar."""
+    import aprendizaje as _apr
+    _h = _apr.cargar_historial()
     probs = problemas(reporte)
-    if probs:
-        caidos = [r["banco"] for r in probs if r["estado"] == "CAIDO"]
-        degr = [r["banco"] for r in probs if r["estado"] == "DEGRADADO"]
+    # Solo alarma lo que REQUIERE acción humana; lo auto-gestionado (nuevo nivel,
+    # geo-fence recurrente) no dispara ⚠️ — se aprende del histórico (L-26).
+    revisar = [p for p in probs
+               if _apr.clasificar_incidente(p["banco"], p["nuevo"], p["estado"], _h)[0] == "revisar"]
+    if revisar:
+        caidos = [r["banco"] for r in revisar if r["estado"] == "CAIDO"]
+        degr = [r["banco"] for r in revisar if r["estado"] == "DEGRADADO"]
         partes = []
         if caidos:
             partes.append("caído " + ", ".join(caidos))
         if degr:
-            partes.append("bajó " + ", ".join(degr))
+            partes.append("revisar " + ", ".join(degr))
         return f"⚠️ REVISAR · MiCartera — " + " | ".join(partes) + f" · {fecha}"
     r = resumen(reporte)
     extra = f" ({r['preservado']} preservado)" if r['preservado'] else ""
@@ -190,15 +196,27 @@ def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=No
 
     banner = ""
     if probs:
-        det = "".join(f"<li><b>{p['banco']}</b>: {p['motivo']}</li>" for p in probs)
-        banner = (
-            "<div style='background:#fef2f2;border:1px solid #fecaca;padding:12px 16px;"
-            "border-radius:10px;margin-bottom:16px;color:#9a1c1c;font-size:13px'>"
-            f"<b>⚠️ {len(probs)} banco(s) necesitan tu atención:</b>"
-            f"<ul style='margin:6px 0 0;padding-left:18px'>{det}</ul>"
-            "<div style='margin-top:6px;color:#7f1d1d'>Los <b>caídos</b> conservan sus datos previos (la web no pierde el banco). "
-            "Si fue un cambio de la página del banco, avísame para arreglar el scraper.</div></div>"
-        )
+        import aprendizaje as _apr
+        _hb = _apr.cargar_historial()
+        auto_list, rev_list = [], []
+        for p in probs:
+            clase, nota = _apr.clasificar_incidente(p["banco"], p["nuevo"], p["estado"], _hb)
+            item = f"<li><b>{p['banco']}</b>: {p['motivo']}" + (f" — <i>{nota}</i>" if nota else "") + "</li>"
+            (rev_list if clase == "revisar" else auto_list).append(item)
+        if rev_list:
+            banner += (
+                "<div style='background:#fef2f2;border:1px solid #fecaca;padding:12px 16px;"
+                "border-radius:10px;margin-bottom:10px;color:#9a1c1c;font-size:13px'>"
+                f"<b>🔴 {len(rev_list)} banco(s) requieren tu acción</b> — posible cambio de la página del banco; avísame para arreglar el scraper:"
+                f"<ul style='margin:6px 0 0;padding-left:18px'>{''.join(rev_list)}</ul></div>"
+            )
+        if auto_list:
+            banner += (
+                "<div style='background:#eff6ff;border:1px solid #bfdbfe;padding:11px 16px;"
+                "border-radius:10px;margin-bottom:10px;color:#1e40af;font-size:13px'>"
+                f"<b>🔵 {len(auto_list)} banco(s) se están resolviendo solos</b> (no requieren acción — el sistema lo aprende del histórico):"
+                f"<ul style='margin:6px 0 0;padding-left:18px'>{''.join(auto_list)}</ul></div>"
+            )
     preserv = [r for r in reporte if r["estado"] == "PRESERVADO"]
     if preserv:
         nombres = ", ".join(r["banco"] for r in preserv)

@@ -85,6 +85,36 @@ def tendencia(banco, nuevo, hist=None):
     return None
 
 
+def clasificar_incidente(banco, nuevo, estado, hist=None):
+    """Aprende del histórico de incidentes de un banco: ¿este problema es un PATRÓN
+    CONOCIDO que se resuelve solo, o algo NUEVO que requiere tu acción?
+
+    Devuelve (clase, nota) con clase in {'auto', 'revisar'}:
+      'auto'    -> se está resolviendo solo (no requiere intervención humana).
+      'revisar' -> nuevo o sin estabilizar; probable cambio del sitio -> arreglar scraper.
+    Es la base de la auto-gestión (L-26): el sistema no solo avisa, distingue qué
+    necesita al humano usando lo aprendido de las corridas pasadas."""
+    hist = hist if hist is not None else cargar_historial()
+    serie = [h.get("por_banco", {}).get(banco, 0) for h in hist]
+    previos = serie[:-1]
+
+    if estado == "CAIDO":  # trajo 0
+        # ¿ya cayó a 0 antes Y se recuperó? -> geo-fence / transitorio conocido
+        if any(v == 0 for v in previos) and any(v > 0 for v in previos):
+            return ("auto", "ya cayó a 0 antes y volvió (geo-fence/transitorio) — el refresco desde Chile suele recuperarlo")
+        return ("revisar", "primera caída total — posible cambio de la página del banco; hay que revisar el scraper")
+
+    if estado == "DEGRADADO":
+        recientes = [v for v in serie[-4:] if v > 0]
+        if len(recientes) >= 3:
+            tol = max(2, int(0.15 * (nuevo or 1)))
+            if max(recientes) - min(recientes) <= tol:
+                return ("auto", f"estable en ~{nuevo} hace varios días — es su nuevo nivel (renovación de campaña), no una falla; el piso se recalibra solo")
+        return ("revisar", "bajó del piso y aún no se estabiliza — vigilar por si sigue cayendo")
+
+    return ("auto", "")
+
+
 def resumen_aprendizaje(hist=None):
     """Para el mail: cuanto sabe el sistema (cuantas corridas memorizadas)."""
     hist = hist if hist is not None else cargar_historial()
