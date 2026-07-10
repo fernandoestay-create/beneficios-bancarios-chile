@@ -1,0 +1,7 @@
+{
+ "Banco Security": {
+  "nivel": 70,
+  "fecha": "2026-07-10",
+  "motivo": "Recorte real de oferta: 108->70 el 9-jul. Verificado en la API (Gourmet 68 + Restaurantes 1 + Comida Rapida 1); las categorias Restaurantes y Comida Rapida se vaciaron. Scraper OK."
+ }
+}

@@ -85,6 +85,36 @@ def tendencia(banco, nuevo, hist=None):
     return None
 
 
+CONFIRMADOS = os.path.join(ROOT, "niveles_confirmados.json")
+
+
+def cargar_confirmados():
+    if os.path.exists(CONFIRMADOS):
+        try:
+            with open(CONFIRMADOS, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def confirmar_nivel(banco, nivel, motivo, fecha):
+    """Registra que una baja de un banco fue REVISADA y confirmada como REAL (el banco
+    recortó su oferta, no es un bug del scraper). El sistema deja de alarmar mientras el
+    banco se mantenga en ~ese nivel; si cae MÁS abajo, vuelve a alarmar (nueva caída).
+    Es 'aprender de los errores': la revisión humana se incorpora al auto-diagnóstico (L-26)."""
+    c = cargar_confirmados()
+    c[banco] = {"nivel": int(nivel), "fecha": fecha, "motivo": motivo}
+    with open(CONFIRMADOS, "w", encoding="utf-8") as f:
+        json.dump(c, f, ensure_ascii=False, indent=1)
+    return c
+
+
+def nivel_confirmado(banco):
+    """Nivel ya revisado y confirmado como real para un banco (0 si no hay)."""
+    return int((cargar_confirmados().get(banco) or {}).get("nivel", 0))
+
+
 def clasificar_incidente(banco, nuevo, estado, hist=None):
     """Aprende del histórico de incidentes de un banco: ¿este problema es un PATRÓN
     CONOCIDO que se resuelve solo, o algo NUEVO que requiere tu acción?
@@ -97,6 +127,13 @@ def clasificar_incidente(banco, nuevo, estado, hist=None):
     hist = hist if hist is not None else cargar_historial()
     serie = [h.get("por_banco", {}).get(banco, 0) for h in hist]
     previos = serie[:-1]
+
+    # Aprender de la revisión humana: si esta baja ya fue revisada y confirmada como
+    # real (recorte de oferta del banco), no alarmar mientras se mantenga en ~ese nivel.
+    # Si el banco cae MÁS abajo del nivel confirmado, sí vuelve a alarmar (nueva caída).
+    conf = nivel_confirmado(banco)
+    if conf and nuevo >= int(conf * 0.85):
+        return ("auto", f"~{nuevo} es su nivel ya revisado y confirmado ({conf}) — recorte real de oferta del banco, no una falla")
 
     if estado == "CAIDO":  # trajo 0
         # ¿ya cayó a 0 antes Y se recuperó? -> geo-fence / transitorio conocido
