@@ -67,11 +67,15 @@ ofertas) y se clasifica:
 | Estado | Qué significa | En el mail |
 |--------|---------------|------------|
 | ✅ **OK** | Trajo lo normal o más | verde |
-| ⚠️ **DEGRADADO** | Trajo menos del piso, o cayó respecto a su histórico | ámbar — REVISAR |
-| 🔴 **CAÍDO** | Trajo 0 y **no** había datos previos que conservar | rojo — REVISAR |
+| ⚠️ **DEGRADADO** | Trajo menos del piso, o cayó respecto a su histórico | ámbar |
+| 🔴 **CAÍDO** | Trajo 0 y **no** había datos previos que conservar | rojo |
 | 🔵 **PRESERVADO** | Trajo 0 pero **sí** había datos previos (geo-fence/caída) → se conservan | azul, informativo, NO es alarma |
 
-**El piso no es fijo: se aprende.** Ver sección 6.
+**El piso no es fijo: se aprende (sección 6).** Además, cada DEGRADADO/CAÍDO se
+**auto-diagnostica**: el sistema mira el histórico y decide si **se resuelve solo**
+(🔵 informativo — geo-fence, transitorio, o un recorte real de oferta ya estabilizado o
+confirmado por ti) o si **requiere tu acción** (🔴 — algo nuevo, posible cambio de la
+página del banco). Solo esto último dispara el ⚠️ REVISAR del asunto. Ver sección 6.
 
 ---
 
@@ -94,15 +98,28 @@ puede volver a pasar**.
 Cada corrida deja un "snapshot" en **`historial.json`** (cuántas ofertas trajo cada
 banco). Con ese histórico, el sistema:
 
-- **Aprende el nivel normal** de cada banco (mediana de las últimas 12 corridas).
-- **Ajusta el piso solo**: si BCI crece de 60 a 130 ofertas, su piso sube solo.
+- **Aprende el nivel normal** de cada banco (mediana de las últimas 7 corridas ≈ 1 semana).
+- **Ajusta el piso solo**: si BCI crece de 60 a 130 ofertas, su piso sube solo. Y si un
+  banco recorta su campaña de forma sostenida (ej. Itaú 71→23), en ~1 semana el sistema
+  reconoce ese nuevo nivel y deja de marcarlo en falso.
 - **Detecta tendencias**: si un banco cae bajo el 70% de su nivel habitual, te avisa
   **aunque todavía no llegue a 0** (alerta temprana).
+- **Auto-diagnostica cada problema** (`clasificar_incidente`): mirando el histórico,
+  decide si un DEGRADADO/CAÍDO **se resuelve solo** (ya pasó antes y volvió, o lleva
+  varios días estable en un nuevo nivel) o **requiere tu acción** (algo nuevo, sin
+  estabilizar). El correo separa 🔵 "se resuelven solos" de 🔴 "requieren tu acción",
+  así solo actúas sobre lo segundo.
+- **Aprende de tu revisión** (`confirmar_nivel` → `niveles_confirmados.json`): cuando
+  revisas una baja y confirmas que es real (el banco recortó su oferta, no es un bug),
+  el sistema lo registra y **deja de alarmar** por ese banco mientras se mantenga en
+  ~ese nivel — pero **vuelve a avisarte si cae aún más** (una caída nueva, distinta).
+  Así tu conocimiento entra al sistema y no tienes que revisar lo mismo cada día.
 
 > **Importante / honesto:** esto NO es una "inteligencia artificial que se entrena
-> sola". Es estadística simple sobre tu propio histórico — verificable, sin caja negra.
-> Cuantas más corridas acumula, mejor calibra. No reescribe scrapers solo (eso es
-> peligroso); para eso te avisa y lo arregla un humano.
+> sola". Es estadística simple sobre tu propio histórico + tus confirmaciones —
+> verificable, sin caja negra. Cuantas más corridas acumula, mejor calibra. No reescribe
+> scrapers solo (eso es peligroso); si un banco cambia su página, te avisa con el
+> diagnóstico listo y lo arregla un humano.
 
 ---
 
@@ -111,7 +128,10 @@ banco). Con ese histórico, el sistema:
 Te llega **todos los días a las 9:00 AM (Chile)**, haya o no problemas, para confirmarte que el sistema corrió. (El refresco local corre antes, a las 8:30, así el correo de las 9 ya sale con todo fresco.)
 
 - **Asunto:** arranca con `✅ TODO OK · MiCartera 14/14 bancos · …` (verde) o
-  `⚠️ REVISAR · MiCartera — …` (rojo). Lo marcas de un vistazo.
+  `⚠️ REVISAR · MiCartera — …` (rojo). Lo marcas de un vistazo. Si un banco tuvo un
+  problema pero es de los que se resuelven solos (o una baja real ya confirmada por ti),
+  el asunto sigue verde y lo cuenta como "gestionado" (ej. `14/14 (1 gestionado)`) — no
+  te alarma por algo que está bajo control.
 - **Cuerpo:** tarjetas de resumen + el estado de cada banco (trajo vs piso) + una **sección de cuotas sin interés del mes** (resumen: bancos con campaña + las de 0% en todos los comercios + botón "Ver Cuotas", **con aviso automático si el mes quedó desfasado** — ej. "ya es julio y las cuotas son de junio, actualizar") + una sección "cómo funciona".
 - **Quién lo manda:** el cron, con las credenciales de Gmail que están guardadas
   cifradas en GitHub (Secrets). No necesitás configurar nada.
