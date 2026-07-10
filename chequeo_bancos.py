@@ -119,8 +119,15 @@ def generar_asunto(reporte, fecha, total_beneficios):
             partes.append("revisar " + ", ".join(degr))
         return f"⚠️ REVISAR · MiCartera — " + " | ".join(partes) + f" · {fecha}"
     r = resumen(reporte)
-    extra = f" ({r['preservado']} preservado)" if r['preservado'] else ""
-    return f"✅ TODO OK · MiCartera {r['ok'] + r['preservado']}/{r['total']} bancos{extra} · {total_beneficios} beneficios · {fecha}"
+    auto_gest = len(probs) - len(revisar)  # problemas auto-gestionados (no requieren acción)
+    ok_total = r["ok"] + r["preservado"] + auto_gest
+    extras = []
+    if r["preservado"]:
+        extras.append(f"{r['preservado']} preservado")
+    if auto_gest:
+        extras.append(f"{auto_gest} gestionado")
+    extra = f" ({', '.join(extras)})" if extras else ""
+    return f"✅ TODO OK · MiCartera {ok_total}/{r['total']} bancos{extra} · {total_beneficios} beneficios · {fecha}"
 
 
 def _seccion_cuotas():
