@@ -1,523 +1,38 @@
 {
   "descuentos": [
     {
-      "id": "bencina_aramco_banco_consorcio_lunes",
+      "id": "bencina_aramco_varios_todos",
       "cadena": "Aramco",
-      "banco": "Banco Consorcio",
-      "tarjeta": "Crédito Consorcio",
+      "banco": "Varios",
+      "tarjeta": "Varios",
       "descuento_por_litro": 150,
       "descuento_texto": "$150/L",
       "dias_validos": [
-        "lunes"
-      ],
-      "condicion": "App Aramco",
-      "tope_litros": 0,
-      "tope_monto": 10000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.080955",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "banco consorcio",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_mercado_pago_martes",
-      "cadena": "Aramco",
-      "banco": "Mercado Pago",
-      "tarjeta": "Prepago Mercado Pago",
-      "descuento_por_litro": 50,
-      "descuento_texto": "$50/L",
-      "dias_validos": [
-        "martes"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 5000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.080990",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "mercado pago",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_banco_ripley_miercoles",
-      "cadena": "Aramco",
-      "banco": "Banco Ripley",
-      "tarjeta": "Crédito Ripley Gold",
-      "descuento_por_litro": 150,
-      "descuento_texto": "$150/L",
-      "dias_validos": [
-        "miercoles"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.080999",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "banco ripley",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_banco_ripley_miercoles_2",
-      "cadena": "Aramco",
-      "banco": "Banco Ripley",
-      "tarjeta": "Crédito Ripley Silver",
-      "descuento_por_litro": 125,
-      "descuento_texto": "$125/L",
-      "dias_validos": [
-        "miercoles"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081006",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "banco ripley",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_banco_ripley_miercoles_3",
-      "cadena": "Aramco",
-      "banco": "Banco Ripley",
-      "tarjeta": "Crédito Ripley Plus",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "miercoles"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081013",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "banco ripley",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_abc_visa_jueves",
-      "cadena": "Aramco",
-      "banco": "ABC Visa",
-      "tarjeta": "Crédito ABC Visa",
-      "descuento_por_litro": 150,
-      "descuento_texto": "$150/L",
-      "dias_validos": [
-        "jueves"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081019",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "abc visa",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_tenpo_viernes",
-      "cadena": "Aramco",
-      "banco": "Tenpo",
-      "tarjeta": "Crédito/Prepago Tenpo",
-      "descuento_por_litro": 300,
-      "descuento_texto": "$300/L",
-      "dias_validos": [
-        "viernes"
-      ],
-      "condicion": "Min $5.000, máx 2 tx/mes",
-      "tope_litros": 0,
-      "tope_monto": 4000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081025",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "tenpo",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_sbpay_sabado",
-      "cadena": "Aramco",
-      "banco": "SBPay",
-      "tarjeta": "Crédito SBPay",
-      "descuento_por_litro": 150,
-      "descuento_texto": "$150/L",
-      "dias_validos": [
-        "sabado"
-      ],
-      "condicion": "App Aramco",
-      "tope_litros": 0,
-      "tope_monto": 10000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081036",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "sbpay",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_aramco_spin_domingo",
-      "cadena": "Aramco",
-      "banco": "SPIN",
-      "tarjeta": "Crédito SPIN",
-      "descuento_por_litro": 150,
-      "descuento_texto": "$150/L",
-      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
         "domingo"
       ],
       "condicion": "",
       "tope_litros": 0,
-      "tope_monto": 10000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081043",
-      "activo": true,
-      "tags": [
-        "aramco",
-        "spin",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_shell_lider_bci_martes",
-      "cadena": "Shell",
-      "banco": "Lider BCI",
-      "tarjeta": "Crédito Lider BCI",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "martes"
-      ],
-      "condicion": "App Micopiloto, máx $4.000/carga",
-      "tope_litros": 0,
-      "tope_monto": 8000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081049",
-      "activo": true,
-      "tags": [
-        "shell",
-        "lider bci",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_shell_micopiloto_miercoles",
-      "cadena": "Shell",
-      "banco": "Micopiloto",
-      "tarjeta": "Cualquier tarjeta",
-      "descuento_por_litro": 15,
-      "descuento_texto": "$15/L",
-      "dias_validos": [
-        "miercoles"
-      ],
-      "condicion": "Código \"MIDCTO\", 1x/día, 70L",
-      "tope_litros": 70,
       "tope_monto": 0,
       "combustible": "",
       "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
+      "valido_hasta": "",
       "restricciones_texto": "",
       "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081054",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
       "activo": true,
-      "tags": [
-        "shell",
-        "micopiloto",
-        "bencina",
-        "combustible"
-      ]
+      "tags": []
     },
     {
-      "id": "bencina_shell_banco_bice_domingo",
-      "cadena": "Shell",
-      "banco": "Banco BICE",
-      "tarjeta": "Crédito BICE",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "domingo"
-      ],
-      "condicion": "Máx 1 carga/mes",
-      "tope_litros": 0,
-      "tope_monto": 5000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081059",
-      "activo": true,
-      "tags": [
-        "shell",
-        "banco bice",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_shell_banco_security_domingo",
-      "cadena": "Shell",
-      "banco": "Banco Security",
-      "tarjeta": "Crédito Security",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "domingo"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 5000,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081064",
-      "activo": true,
-      "tags": [
-        "shell",
-        "banco security",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_shell_scotiabank_sabado",
-      "cadena": "Shell",
-      "banco": "Scotiabank",
-      "tarjeta": "Visa Crédito Singular/Premium",
-      "descuento_por_litro": 200,
-      "descuento_texto": "$200/L",
-      "dias_validos": [
-        "sabado"
-      ],
-      "condicion": "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes",
-      "tope_litros": 50,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081069",
-      "activo": true,
-      "tags": [
-        "shell",
-        "scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_shell_scotiabank_sabado_2",
-      "cadena": "Shell",
-      "banco": "Scotiabank",
-      "tarjeta": "Visa Crédito Signature/Platinum",
-      "descuento_por_litro": 150,
-      "descuento_texto": "$150/L",
-      "dias_validos": [
-        "sabado"
-      ],
-      "condicion": "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes",
-      "tope_litros": 50,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081074",
-      "activo": true,
-      "tags": [
-        "shell",
-        "scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_shell_scotiabank_sabado_3",
-      "cadena": "Shell",
-      "banco": "Scotiabank",
-      "tarjeta": "Visa Crédito Gold",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "sabado"
-      ],
-      "condicion": "App Shell (ex Mi Copiloto), 50L máx, 5 cargas/mes",
-      "tope_litros": 50,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081079",
-      "activo": true,
-      "tags": [
-        "shell",
-        "scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_cencosud_scotiabank_lunes",
+      "id": "bencina_copec_banco_internacional_todos",
       "cadena": "Copec",
-      "banco": "Cencosud Scotiabank",
-      "tarjeta": "Black",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "lunes"
-      ],
-      "condicion": "App Copec",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081084",
-      "activo": true,
-      "tags": [
-        "copec",
-        "cencosud scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_cencosud_scotiabank_lunes_2",
-      "cadena": "Copec",
-      "banco": "Cencosud Scotiabank",
-      "tarjeta": "Clásica/Platinum",
-      "descuento_por_litro": 50,
-      "descuento_texto": "$50/L",
-      "dias_validos": [
-        "lunes"
-      ],
-      "condicion": "App Copec",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081089",
-      "activo": true,
-      "tags": [
-        "copec",
-        "cencosud scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_jumbo_prime_lunes",
-      "cadena": "Copec",
-      "banco": "Jumbo Prime",
-      "tarjeta": "Jumbo Prime",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "lunes"
-      ],
-      "condicion": "Máx 100 litros",
-      "tope_litros": 100,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081094",
-      "activo": true,
-      "tags": [
-        "copec",
-        "jumbo prime",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_santander_consumer_semana",
-      "cadena": "Copec",
-      "banco": "Santander Consumer",
-      "tarjeta": "Crédito Auto Santander",
+      "banco": "Banco Internacional",
+      "tarjeta": "Banco Internacional",
       "descuento_por_litro": 100,
       "descuento_texto": "$100/L",
       "dias_validos": [
@@ -525,276 +40,8 @@
         "martes",
         "miercoles",
         "jueves",
-        "viernes"
-      ],
-      "condicion": "70L máx",
-      "tope_litros": 70,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081099",
-      "activo": true,
-      "tags": [
-        "copec",
-        "santander consumer",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_banco_internacional_martes",
-      "cadena": "Copec",
-      "banco": "Banco Internacional",
-      "tarjeta": "MC Clásica/Gold/Black",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "martes"
-      ],
-      "condicion": "App Copec",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081103",
-      "activo": true,
-      "tags": [
-        "copec",
-        "banco internacional",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_scotiabank_miercoles",
-      "cadena": "Copec",
-      "banco": "Scotiabank",
-      "tarjeta": "Visa Crédito Singular",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "miercoles"
-      ],
-      "condicion": "App Copec",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081108",
-      "activo": true,
-      "tags": [
-        "copec",
-        "scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_scotiabank_miercoles_2",
-      "cadena": "Copec",
-      "banco": "Scotiabank",
-      "tarjeta": "Visa Crédito Platinum",
-      "descuento_por_litro": 50,
-      "descuento_texto": "$50/L",
-      "dias_validos": [
-        "miercoles"
-      ],
-      "condicion": "App Copec",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081113",
-      "activo": true,
-      "tags": [
-        "copec",
-        "scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_scotiabank_miercoles_3",
-      "cadena": "Copec",
-      "banco": "Scotiabank",
-      "tarjeta": "Visa Crédito Tradicional",
-      "descuento_por_litro": 25,
-      "descuento_texto": "$25/L",
-      "dias_validos": [
-        "miercoles"
-      ],
-      "condicion": "App Copec",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081117",
-      "activo": true,
-      "tags": [
-        "copec",
-        "scotiabank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_coopeuch_jueves",
-      "cadena": "Copec",
-      "banco": "Coopeuch",
-      "tarjeta": "Crédito Coopeuch",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "jueves"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081122",
-      "activo": true,
-      "tags": [
-        "copec",
-        "coopeuch",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_bci_jueves",
-      "cadena": "Copec",
-      "banco": "BCI",
-      "tarjeta": "Crédito BCI",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "jueves"
-      ],
-      "condicion": "Cashback 7%",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081127",
-      "activo": true,
-      "tags": [
-        "copec",
-        "bci",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_itaú_viernes",
-      "cadena": "Copec",
-      "banco": "Itaú",
-      "tarjeta": "Crédito Legend Itaú",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "viernes"
-      ],
-      "condicion": "Código desde Itaú Beneficios",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081134",
-      "activo": true,
-      "tags": [
-        "copec",
-        "itaú",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_bancoestado_viernes",
-      "cadena": "Copec",
-      "banco": "BancoEstado",
-      "tarjeta": "Rutpay",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "viernes"
-      ],
-      "condicion": "50L máx, estaciones participantes",
-      "tope_litros": 50,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081139",
-      "activo": true,
-      "tags": [
-        "copec",
-        "bancoestado",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_machbank_sabado",
-      "cadena": "Copec",
-      "banco": "MACHBANK",
-      "tarjeta": "Crédito MACHBANK",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
-        "sabado"
-      ],
-      "condicion": "",
-      "tope_litros": 0,
-      "tope_monto": 0,
-      "combustible": "",
-      "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
-      "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081144",
-      "activo": true,
-      "tags": [
-        "copec",
-        "machbank",
-        "bencina",
-        "combustible"
-      ]
-    },
-    {
-      "id": "bencina_copec_banco_bice_domingo",
-      "cadena": "Copec",
-      "banco": "Banco BICE",
-      "tarjeta": "Limitless BICE",
-      "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
-      "dias_validos": [
+        "viernes",
+        "sabado",
         "domingo"
       ],
       "condicion": "",
@@ -802,20 +49,619 @@
       "tope_monto": 0,
       "combustible": "",
       "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
+      "valido_hasta": "",
       "restricciones_texto": "",
       "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081149",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
       "activo": true,
-      "tags": [
-        "copec",
-        "banco bice",
-        "bencina",
-        "combustible"
-      ]
+      "tags": []
     },
     {
-      "id": "bencina_copec_copec_pay_semana",
+      "id": "bencina_copec_varios_todos",
+      "cadena": "Copec",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 400,
+      "descuento_texto": "$400/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_varios_todos_2",
+      "cadena": "Copec",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 50,
+      "descuento_texto": "$50/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_varios_todos_2",
+      "cadena": "Aramco",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 25,
+      "descuento_texto": "$25/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_mercado_pago_todos",
+      "cadena": "Aramco",
+      "banco": "Mercado Pago",
+      "tarjeta": "Mercado Pago",
+      "descuento_por_litro": 50,
+      "descuento_texto": "$50/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_tenpo_todos",
+      "cadena": "Copec",
+      "banco": "Tenpo",
+      "tarjeta": "Tenpo",
+      "descuento_por_litro": 300,
+      "descuento_texto": "$300/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_varios_todos_3",
+      "cadena": "Copec",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_shell_security_todos",
+      "cadena": "Shell",
+      "banco": "Security",
+      "tarjeta": "Security",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_varios_todos_4",
+      "cadena": "Copec",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 200,
+      "descuento_texto": "$200/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_varios_todos_3",
+      "cadena": "Aramco",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 15,
+      "descuento_texto": "$15/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_machbank_todos",
+      "cadena": "Copec",
+      "banco": "MACHBANK",
+      "tarjeta": "MACHBANK",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_cencosud_scotiabank_todos",
+      "cadena": "Copec",
+      "banco": "Cencosud Scotiabank",
+      "tarjeta": "Cencosud Scotiabank",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_spin_todos",
+      "cadena": "Aramco",
+      "banco": "SPIN",
+      "tarjeta": "SPIN",
+      "descuento_por_litro": 150,
+      "descuento_texto": "$150/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_shell_tenpo_viernes",
+      "cadena": "Shell",
+      "banco": "Tenpo",
+      "tarjeta": "Tenpo",
+      "descuento_por_litro": 300,
+      "descuento_texto": "$300/L",
+      "dias_validos": [
+        "viernes"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_shell_varios_todos",
+      "cadena": "Shell",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 4,
+      "descuento_texto": "$4/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.945128",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_tenpo_todos",
+      "cadena": "Aramco",
+      "banco": "Tenpo",
+      "tarjeta": "Tenpo",
+      "descuento_por_litro": 300,
+      "descuento_texto": "$300/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_jumbo_prime_todos",
+      "cadena": "Copec",
+      "banco": "Jumbo Prime",
+      "tarjeta": "Jumbo Prime",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_varios_todos_4",
+      "cadena": "Aramco",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 40,
+      "descuento_texto": "$40/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_shell_bice_todos",
+      "cadena": "Shell",
+      "banco": "BICE",
+      "tarjeta": "BICE",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_rutpay_martes",
+      "cadena": "Copec",
+      "banco": "Rutpay",
+      "tarjeta": "Rutpay",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "martes"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_varios_todos_5",
+      "cadena": "Copec",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 15,
+      "descuento_texto": "$15/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_banco_consorcio_todos",
+      "cadena": "Aramco",
+      "banco": "Banco Consorcio",
+      "tarjeta": "Banco Consorcio",
+      "descuento_por_litro": 150,
+      "descuento_texto": "$150/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_varios_todos_5",
+      "cadena": "Aramco",
+      "banco": "Varios",
+      "tarjeta": "Varios",
+      "descuento_por_litro": 350,
+      "descuento_texto": "$350/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_copec_pay_todos",
       "cadena": "Copec",
       "banco": "Copec Pay",
       "tarjeta": "Copec Pay",
@@ -830,22 +676,157 @@
         "sabado",
         "domingo"
       ],
-      "condicion": "+50% puntos bonus",
+      "condicion": "",
       "tope_litros": 0,
       "tope_monto": 0,
       "combustible": "",
       "vigencia_mes": "2026-07",
-      "valido_hasta": "31-Jul-2026",
+      "valido_hasta": "",
       "restricciones_texto": "",
       "url_fuente": "https://descuentosrata.com/bencina",
-      "fecha_scrape": "2026-07-18T14:13:58.081153",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
       "activo": true,
-      "tags": [
-        "copec",
-        "copec pay",
-        "bencina",
-        "combustible"
-      ]
+      "tags": []
+    },
+    {
+      "id": "bencina_shell_scotiabank_todos",
+      "cadena": "Shell",
+      "banco": "Scotiabank",
+      "tarjeta": "Scotiabank",
+      "descuento_por_litro": 200,
+      "descuento_texto": "$200/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_aramco_banco_ripley_todos",
+      "cadena": "Aramco",
+      "banco": "Banco Ripley",
+      "tarjeta": "Banco Ripley",
+      "descuento_por_litro": 150,
+      "descuento_texto": "$150/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_santander_consumer_todos",
+      "cadena": "Copec",
+      "banco": "Santander Consumer",
+      "tarjeta": "Santander Consumer",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_copec_coopeuch_todos",
+      "cadena": "Copec",
+      "banco": "Coopeuch",
+      "tarjeta": "Coopeuch",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
+    },
+    {
+      "id": "bencina_shell_lider_bci_todos",
+      "cadena": "Shell",
+      "banco": "Lider BCI",
+      "tarjeta": "Lider BCI",
+      "descuento_por_litro": 100,
+      "descuento_texto": "$100/L",
+      "dias_validos": [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo"
+      ],
+      "condicion": "",
+      "tope_litros": 0,
+      "tope_monto": 0,
+      "combustible": "",
+      "vigencia_mes": "2026-07",
+      "valido_hasta": "",
+      "restricciones_texto": "",
+      "url_fuente": "https://descuentosrata.com/bencina",
+      "fecha_scrape": "2026-07-19T08:30:56.946269",
+      "activo": true,
+      "tags": []
     }
   ],
   "estaciones": [
@@ -998,9 +979,9 @@
       "precio_93": 1468,
       "precio_95": 1494,
       "precio_97": 1523,
-      "precio_diesel": 1210,
+      "precio_diesel": 1211,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-17 15:52:13"
+      "precio_fecha": "2026-07-18 14:15:12"
     },
     {
       "id": "bel_56",
@@ -2511,9 +2492,9 @@
       "precio_93": 1486,
       "precio_95": 1519,
       "precio_97": 1553,
-      "precio_diesel": 1255,
+      "precio_diesel": 1256,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-13 11:19:35"
+      "precio_fecha": "2026-07-18 15:44:31"
     },
     {
       "id": "bel_141",
@@ -9210,8 +9191,8 @@
       "precio_95": 1421,
       "precio_97": 1466,
       "precio_diesel": 1161,
-      "precio_kerosene": 1079,
-      "precio_fecha": "2026-07-16 08:13:03"
+      "precio_kerosene": 1077,
+      "precio_fecha": "2026-07-18 12:13:22"
     },
     {
       "id": "bel_679",
@@ -9261,8 +9242,8 @@
       "precio_95": 1421,
       "precio_97": 1465,
       "precio_diesel": 1161,
-      "precio_kerosene": 1075,
-      "precio_fecha": "2026-07-16 08:09:33"
+      "precio_kerosene": 1073,
+      "precio_fecha": "2026-07-18 10:38:25"
     },
     {
       "id": "bel_683",
@@ -11875,12 +11856,12 @@
       "latitud": -36.825,
       "longitud": -73.057,
       "servicios": [],
-      "precio_93": 1363,
-      "precio_95": 1396,
-      "precio_97": 1430,
-      "precio_diesel": 1132,
+      "precio_93": 1413,
+      "precio_95": 1446,
+      "precio_97": 1480,
+      "precio_diesel": 1182,
       "precio_kerosene": 1057,
-      "precio_fecha": "2026-07-17 12:50:05"
+      "precio_fecha": "2026-07-18 14:50:25"
     },
     {
       "id": "bel_911",
@@ -13289,9 +13270,9 @@
       "precio_93": 1392,
       "precio_95": 1425,
       "precio_97": 1481,
-      "precio_diesel": 1176,
-      "precio_kerosene": 1074,
-      "precio_fecha": "2026-07-17 10:13:41"
+      "precio_diesel": 1162,
+      "precio_kerosene": 1072,
+      "precio_fecha": "2026-07-18 12:45:01"
     },
     {
       "id": "bel_1166",
@@ -16519,9 +16500,9 @@
       "precio_93": 1451,
       "precio_95": 1494,
       "precio_97": 1539,
-      "precio_diesel": 1293,
+      "precio_diesel": 1294,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-09 09:55:29"
+      "precio_fecha": "2026-07-18 13:11:26"
     },
     {
       "id": "bel_1538",
@@ -20804,8 +20785,8 @@
       "precio_95": 1390,
       "precio_97": 1451,
       "precio_diesel": 1145,
-      "precio_kerosene": 1082,
-      "precio_fecha": "2026-07-17 09:05:26"
+      "precio_kerosene": 1080,
+      "precio_fecha": "2026-07-18 15:10:36"
     },
     {
       "id": "bel_1936",
@@ -20889,8 +20870,8 @@
       "precio_95": 1459,
       "precio_97": 1509,
       "precio_diesel": 1202,
-      "precio_kerosene": 1077,
-      "precio_fecha": "2026-07-16 09:47:40"
+      "precio_kerosene": 1075,
+      "precio_fecha": "2026-07-18 10:17:34"
     },
     {
       "id": "bel_1968",
@@ -21161,8 +21142,8 @@
       "precio_95": 1404,
       "precio_97": 1425,
       "precio_diesel": 1186,
-      "precio_kerosene": 1084,
-      "precio_fecha": "2026-07-16 13:25:32"
+      "precio_kerosene": 1082,
+      "precio_fecha": "2026-07-18 14:06:23"
     },
     {
       "id": "bel_2145",
@@ -21786,12 +21767,12 @@
       "latitud": -33.474318976492036,
       "longitud": -70.60649693012238,
       "servicios": [],
-      "precio_93": 1337,
-      "precio_95": 1389,
-      "precio_97": 1439,
-      "precio_diesel": 1155,
+      "precio_93": 1330,
+      "precio_95": 1382,
+      "precio_97": 1432,
+      "precio_diesel": 1148,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-09 10:27:00"
+      "precio_fecha": "2026-07-18 10:36:37"
     },
     {
       "id": "bel_1756",
@@ -24268,12 +24249,12 @@
       "latitud": -40.297522137794495,
       "longitud": -73.08026075363159,
       "servicios": [],
-      "precio_93": 1454,
+      "precio_93": 1455,
       "precio_95": 1487,
       "precio_97": 1518,
       "precio_diesel": 1226,
       "precio_kerosene": 1107,
-      "precio_fecha": "2026-07-15 09:30:25"
+      "precio_fecha": "2026-07-18 13:36:39"
     },
     {
       "id": "bel_1346",
@@ -24391,8 +24372,8 @@
       "precio_95": 1587,
       "precio_97": 1617,
       "precio_diesel": 1379,
-      "precio_kerosene": 1089,
-      "precio_fecha": "2026-07-17 12:23:46"
+      "precio_kerosene": 1087,
+      "precio_fecha": "2026-07-18 13:09:05"
     },
     {
       "id": "bel_1333",
@@ -25973,9 +25954,9 @@
       "precio_93": 1468,
       "precio_95": 1494,
       "precio_97": 1523,
-      "precio_diesel": 1210,
+      "precio_diesel": 1211,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-17 15:52:13"
+      "precio_fecha": "2026-07-18 14:15:12"
     },
     {
       "id": "bel_56",
@@ -27588,9 +27569,9 @@
       "precio_93": 1486,
       "precio_95": 1519,
       "precio_97": 1553,
-      "precio_diesel": 1255,
+      "precio_diesel": 1256,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-13 11:19:35"
+      "precio_fecha": "2026-07-18 15:44:31"
     },
     {
       "id": "bel_141",
@@ -33557,7 +33538,7 @@
       "precio_97": 1496,
       "precio_diesel": 1218,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-09 09:45:08"
+      "precio_fecha": "2026-07-18 12:09:00"
     },
     {
       "id": "bel_529",
@@ -36306,12 +36287,12 @@
       "latitud": -36.147123644839574,
       "longitud": -71.82654798030853,
       "servicios": [],
-      "precio_93": 1396,
-      "precio_95": 1427,
+      "precio_93": 1366,
+      "precio_95": 1397,
       "precio_97": 0,
-      "precio_diesel": 1178,
-      "precio_kerosene": 995,
-      "precio_fecha": "2026-07-14 14:39:07"
+      "precio_diesel": 1148,
+      "precio_kerosene": 1005,
+      "precio_fecha": "2026-07-19 01:14:08"
     },
     {
       "id": "bel_828",
@@ -36323,12 +36304,12 @@
       "latitud": -36.13004151962789,
       "longitud": -71.81857109069824,
       "servicios": [],
-      "precio_93": 1396,
-      "precio_95": 1427,
+      "precio_93": 1366,
+      "precio_95": 1397,
       "precio_97": 0,
-      "precio_diesel": 1178,
-      "precio_kerosene": 995,
-      "precio_fecha": "2026-07-14 14:39:07"
+      "precio_diesel": 1148,
+      "precio_kerosene": 1005,
+      "precio_fecha": "2026-07-19 01:14:08"
     },
     {
       "id": "bel_830",
@@ -36412,8 +36393,8 @@
       "precio_95": 1421,
       "precio_97": 1466,
       "precio_diesel": 1161,
-      "precio_kerosene": 1079,
-      "precio_fecha": "2026-07-16 08:13:03"
+      "precio_kerosene": 1077,
+      "precio_fecha": "2026-07-18 12:13:22"
     },
     {
       "id": "bel_679",
@@ -36463,8 +36444,8 @@
       "precio_95": 1421,
       "precio_97": 1465,
       "precio_diesel": 1161,
-      "precio_kerosene": 1075,
-      "precio_fecha": "2026-07-16 08:09:33"
+      "precio_kerosene": 1073,
+      "precio_fecha": "2026-07-18 10:38:25"
     },
     {
       "id": "bel_683",
@@ -39910,12 +39891,12 @@
       "latitud": -36.825,
       "longitud": -73.057,
       "servicios": [],
-      "precio_93": 1363,
-      "precio_95": 1396,
-      "precio_97": 1430,
-      "precio_diesel": 1132,
+      "precio_93": 1413,
+      "precio_95": 1446,
+      "precio_97": 1480,
+      "precio_diesel": 1182,
       "precio_kerosene": 1057,
-      "precio_fecha": "2026-07-17 12:50:05"
+      "precio_fecha": "2026-07-18 14:50:25"
     },
     {
       "id": "bel_898",
@@ -41593,12 +41574,12 @@
       "latitud": -38.15819451046697,
       "longitud": -72.90773869317934,
       "servicios": [],
-      "precio_93": 1439,
-      "precio_95": 1467,
+      "precio_93": 1426,
+      "precio_95": 1455,
       "precio_97": 0,
-      "precio_diesel": 1224,
+      "precio_diesel": 1210,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-09 14:35:44"
+      "precio_fecha": "2026-07-18 11:47:19"
     },
     {
       "id": "bel_1277",
@@ -41936,9 +41917,9 @@
       "precio_93": 1392,
       "precio_95": 1425,
       "precio_97": 1481,
-      "precio_diesel": 1176,
-      "precio_kerosene": 1074,
-      "precio_fecha": "2026-07-17 10:13:41"
+      "precio_diesel": 1162,
+      "precio_kerosene": 1072,
+      "precio_fecha": "2026-07-18 12:45:01"
     },
     {
       "id": "bel_1166",
@@ -45455,9 +45436,9 @@
       "precio_93": 1451,
       "precio_95": 1494,
       "precio_97": 1539,
-      "precio_diesel": 1293,
+      "precio_diesel": 1294,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-09 09:55:29"
+      "precio_fecha": "2026-07-18 13:11:26"
     },
     {
       "id": "bel_1538",
@@ -49464,12 +49445,12 @@
       "latitud": -33.254232225251464,
       "longitud": -70.69731477182768,
       "servicios": [],
-      "precio_93": 1412,
-      "precio_95": 1461,
-      "precio_97": 1511,
-      "precio_diesel": 1205,
+      "precio_93": 1407,
+      "precio_95": 1454,
+      "precio_97": 1503,
+      "precio_diesel": 1195,
       "precio_kerosene": 1086,
-      "precio_fecha": "2026-07-09 09:35:13"
+      "precio_fecha": "2026-07-18 12:09:00"
     },
     {
       "id": "bel_2035",
@@ -50590,8 +50571,8 @@
       "precio_95": 1390,
       "precio_97": 1451,
       "precio_diesel": 1145,
-      "precio_kerosene": 1082,
-      "precio_fecha": "2026-07-17 09:05:26"
+      "precio_kerosene": 1080,
+      "precio_fecha": "2026-07-18 15:10:36"
     },
     {
       "id": "bel_1936",
@@ -50675,8 +50656,8 @@
       "precio_95": 1459,
       "precio_97": 1509,
       "precio_diesel": 1202,
-      "precio_kerosene": 1077,
-      "precio_fecha": "2026-07-16 09:47:40"
+      "precio_kerosene": 1075,
+      "precio_fecha": "2026-07-18 10:17:34"
     },
     {
       "id": "bel_1968",
@@ -50947,8 +50928,8 @@
       "precio_95": 1404,
       "precio_97": 1425,
       "precio_diesel": 1186,
-      "precio_kerosene": 1084,
-      "precio_fecha": "2026-07-16 13:25:32"
+      "precio_kerosene": 1082,
+      "precio_fecha": "2026-07-18 14:06:23"
     },
     {
       "id": "bel_2145",
@@ -51589,12 +51570,12 @@
       "latitud": -33.474318976492036,
       "longitud": -70.60649693012238,
       "servicios": [],
-      "precio_93": 1337,
-      "precio_95": 1389,
-      "precio_97": 1439,
-      "precio_diesel": 1155,
+      "precio_93": 1330,
+      "precio_95": 1382,
+      "precio_97": 1432,
+      "precio_diesel": 1148,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-09 10:27:00"
+      "precio_fecha": "2026-07-18 10:36:37"
     },
     {
       "id": "bel_1756",
@@ -54377,12 +54358,12 @@
       "latitud": -40.297522137794495,
       "longitud": -73.08026075363159,
       "servicios": [],
-      "precio_93": 1454,
+      "precio_93": 1455,
       "precio_95": 1487,
       "precio_97": 1518,
       "precio_diesel": 1226,
       "precio_kerosene": 1107,
-      "precio_fecha": "2026-07-15 09:30:25"
+      "precio_fecha": "2026-07-18 13:36:39"
     },
     {
       "id": "bel_1346",
@@ -54585,8 +54566,8 @@
       "precio_95": 1587,
       "precio_97": 1617,
       "precio_diesel": 1379,
-      "precio_kerosene": 1089,
-      "precio_fecha": "2026-07-17 12:23:46"
+      "precio_kerosene": 1087,
+      "precio_fecha": "2026-07-18 13:09:05"
     },
     {
       "id": "bel_1333",
@@ -56664,10 +56645,10 @@
     }
   ],
   "meta": {
-    "fecha_scrape": "2026-07-18T14:13:59.514007",
-    "fecha_precios": "2026-07-18T14:13:59.514015",
+    "fecha_scrape": "2026-07-19T08:30:58.664510",
+    "fecha_precios": "2026-07-19T08:30:58.664510",
     "vigencia_mes": "2026-07",
-    "total_descuentos": 31,
+    "total_descuentos": 30,
     "total_estaciones": 1468,
     "total_con_precios": 1815,
     "fuente_precios": "Bencinas en Línea - Comisión Nacional de Energía",
