@@ -1117,6 +1117,7 @@ Filtra por banco, día, zona y descuento mínimo.</p>
 </div>
 <div id="map"></div>
 <div id="mapNote" style="display:none"></div>
+<div id="mapCards" class="grid" style="display:none;margin-top:14px"></div>
 <p style="color:var(--muted);font-size:11px;margin-top:8px;text-align:center">📍 Ubicaciones aproximadas por región · Activa tu GPS para verte en el mapa</p>
 </div>
 </main>
@@ -1258,11 +1259,11 @@ let f=deals.filter(d=>{{
 const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.ubicacion||'',d.direccion||''].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
-const mR=!regions||regions.includes(d.ubicacion);
+const mR=!regions||!d.ubicacion||regions.includes(d.ubicacion);
 const mC=!comunas||comunas.includes(d.comuna);
 const mD=d.descuento_valor>=min;
 const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
-const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
+const mMode=mode==='all'||(mode==='presencial'&&(d.presencial||!d.online))||(mode==='online'&&d.online);
 return mS&&mB&&mR&&mC&&mD&&mDay&&mMode}});
 f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
 case'name':return a.restaurante.localeCompare(b.restaurante);
@@ -1289,7 +1290,8 @@ if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.s
 grid.innerHTML='';
 if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
 empty.style.display='none';countEl.textContent=f.length+' encontrados';
-f.forEach(d=>{{
+f.forEach(d=>{{const el=document.createElement('article');el.className='deal';el.innerHTML=dealCardHTML(d);grid.appendChild(el)}})}}
+function dealCardHTML(d){{
 const imgSrc=d.imagen_url||d.logo_url;
 const imgHtml=imgSrc?`<img src="${{imgSrc}}" alt="${{d.restaurante}}" loading="lazy">`
 :`<div class="no-img">🍽️</div>`;
@@ -1300,8 +1302,7 @@ return `<div class="day-circle${{on?' active':''}}">${{l}}</div>`}}).join('');
 const modeBadge=d.online?'<span class="mode-badge online">💻 Online</span>'
 :'<span class="mode-badge presencial">🏪 Pres.</span>';
 const linkHtml=d.url_fuente?`<a class="link" href="${{d.url_fuente}}" target="_blank">Ver detalle</a>`:'';
-const el=document.createElement('article');el.className='deal';
-el.innerHTML=`<div class="deal-img">${{imgHtml}}
+return `<div class="deal-img">${{imgHtml}}
 <div class="badge">${{d.descuento_texto||d.descuento_valor+'%'}}</div>
 <div class="bank-badge">${{bankBadgeHtml(d.banco)}}</div></div>
 <div class="deal-body"><div class="deal-title">${{d.restaurante}}</div>
@@ -1315,7 +1316,7 @@ ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${
 <div class="deal-footer">
 <div class="validity">⏳ Vigencia: ${{d.valido_hasta?'hasta '+d.valido_hasta:'Sin fecha'}}</div>
 <div class="disclaimer">⚠️ Siempre revisar condiciones especiales en el banco</div></div>`;
-grid.appendChild(el)}})}}
+}}
 
 function renderAll(){{render();if(currentView==='mapa'&&mapObj)renderMapMarkers()}}
 function resetAll(){{
@@ -1388,11 +1389,11 @@ withAddr.forEach((d,i)=>{{
 const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||'',d.ubicacion||''].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
-const mR=!regions||regions.includes(d.ubicacion);
+const mR=!regions||!d.ubicacion||regions.includes(d.ubicacion);
 const mC=!comunas||comunas.includes(d.comuna);
 const mD=d.descuento_valor>=min;
 const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
-const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
+const mMode=mode==='all'||(mode==='presencial'&&(d.presencial||!d.online))||(mode==='online'&&d.online);
 if(!mS||!mB||!mR||!mC||!mD||!mDay||!mMode)return;
 const coords=getCoords(d.ubicacion,i);
 if(!coords)return;
@@ -1420,15 +1421,16 @@ const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
 const mD=d.descuento_valor>=min;
 const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
-const mMode=mode==='all'||(mode==='presencial'&&d.presencial)||(mode==='online'&&d.online);
+const mMode=mode==='all'||(mode==='presencial'&&(d.presencial||!d.online))||(mode==='online'&&d.online);
 return mS&&mB&&mD&&mDay&&mMode}});
 const note=document.getElementById('mapNote');
+var mc=document.getElementById('mapCards');
 if(sinU.length){{const bks=[...new Set(sinU.map(d=>d.banco))].sort();
 note.style.display='block';
-note.innerHTML='<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px;color:#9a3412"><b>'+sinU.length+' ofertas sin local fijo</b> ('+bks.join(', ')+') aplican en toda la cadena y no se ubican en el mapa. <a href="#" id="verListaLink" style="color:#c2410c;font-weight:700">Verlas en la Lista &rarr;</a></div>';
-var _vl=document.getElementById('verListaLink');
-if(_vl)_vl.onclick=function(){{document.querySelector('.view-btn[data-view=tarjetas]').click();return false}};
-}}else{{note.style.display='none';note.innerHTML=''}}
+note.innerHTML='<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px;color:#9a3412"><b>'+sinU.length+' ofertas sin local fijo</b> ('+bks.join(', ')+') aplican en toda la cadena, por eso no tienen pin en el mapa. Te las mostramos aquí abajo &darr;</div>';
+mc.style.display='grid';
+mc.innerHTML=sinU.map(function(d){{return '<article class="deal">'+dealCardHTML(d)+'</article>'}}).join('');
+}}else{{note.style.display='none';note.innerHTML='';mc.style.display='none';mc.innerHTML=''}}
 }}
 
 // ── Geolocation ──
@@ -2414,7 +2416,7 @@ empty.style.display='none';
 // ── Group deals by banco+cadena+day (one card per group) ──
 const groups={{}};
 f.forEach(d=>{{
-const dayKey=d.dias_validos.sort().join(',');
+const dayKey=[...d.dias_validos].sort().join(',');
 const key=d.banco+'||'+d.cadena+'||'+dayKey;
 if(!groups[key])groups[key]={{deals:[],banco:d.banco,cadena:d.cadena,dias_validos:d.dias_validos,
 condicion:d.condicion,valido_hasta:d.valido_hasta,vigencia_mes:d.vigencia_mes}};

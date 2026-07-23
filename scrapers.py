@@ -55,6 +55,14 @@ class Beneficio:
         # Ningún beneficio sin texto visible: si no hay % ni texto, etiqueta genérica.
         if not (self.descuento_texto or '').strip() and not self.descuento_valor:
             self.descuento_texto = "Beneficio exclusivo"
+        # Días válidos normalizados (chokepoint único, L-14/L-18/L-28): minúscula + sin
+        # tilde + sin vacíos, para que SIEMPRE calcen con el filtro del front (data-day="miercoles").
+        if self.dias_validos:
+            _t = str.maketrans('áéíóú', 'aeiou')
+            self.dias_validos = [
+                d.strip().lower().translate(_t)
+                for d in self.dias_validos if (d or '').strip()
+            ]
 
     def to_dict(self):
         return asdict(self)
