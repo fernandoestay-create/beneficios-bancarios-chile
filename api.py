@@ -1256,7 +1256,7 @@ const qWords=qRaw?norm(qRaw).split(/\\s+/).filter(w=>w.length>0):[];
 const banks=bankMS.vals(),regions=regionMS.vals(),comunas=comunaMS.vals();
 const sort=sortF.value,min=+minD.value,selDays=getSelectedDays(),mode=chipVal('modeChips','mode');
 let f=deals.filter(d=>{{
-const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.ubicacion||'',d.direccion||''].join(' '));
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.ubicacion||'',d.direccion||'',d.comuna||'',(d.tags||[]).join(' ')].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
 const mR=!regions||!d.ubicacion||regions.includes(d.ubicacion);
@@ -1386,7 +1386,7 @@ const min=+minD.value,selDays=getSelectedDays(),mode=chipVal('modeChips','mode')
 let count=0;
 const withAddr=deals.filter(d=>d.direccion||d.ubicacion);
 withAddr.forEach((d,i)=>{{
-const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||'',d.ubicacion||''].join(' '));
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.direccion||'',d.ubicacion||'',d.comuna||'',(d.tags||[]).join(' ')].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
 const mR=!regions||!d.ubicacion||regions.includes(d.ubicacion);
@@ -1416,7 +1416,7 @@ document.getElementById('mapCount').textContent=count+' en mapa';
 // Ofertas sin local fijo (Falabella, Entel, Lider BCI, Mach, Tenpo, Santander): aplican
 // en toda la cadena, no son geolocalizables. Avisamos para que no "desaparezcan" del mapa.
 const sinU=deals.filter(d=>!d.direccion&&!d.ubicacion).filter(d=>{{
-const txt=norm([d.restaurante,d.banco,d.descripcion||''].join(' '));
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.comuna||'',(d.tags||[]).join(' ')].join(' '));
 const mS=!qWords.length||qWords.every(w=>txt.includes(w));
 const mB=!banks||banks.includes(d.banco);
 const mD=d.descuento_valor>=min;
