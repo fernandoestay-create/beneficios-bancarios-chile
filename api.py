@@ -4,12 +4,12 @@ API REST - BENEFICIOS BANCARIOS
 FastAPI + OpenAI RAG
 """
 
-from fastapi import FastAPI, HTTPException, Query, Form, Response, Cookie
+from fastapi import FastAPI, HTTPException, Query, Form, Response, Cookie, Depends, Header
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from urllib.parse import quote_plus
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import json
 import os
@@ -91,7 +91,7 @@ class EstacionBencinaResponse(BaseModel):
         from_attributes = True
 
 class ConsultaRAG(BaseModel):
-    pregunta: str
+    pregunta: str = Field(..., max_length=1000)
     banco: Optional[str] = None
     dia: Optional[str] = None
 
@@ -113,9 +113,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["https://api-beneficios-chile.onrender.com"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -182,8 +182,16 @@ def buscar_beneficios(
     resultados = beneficios_db
 
     if restaurante:
-        restaurante_lower = restaurante.lower()
-        resultados = [b for b in resultados if restaurante_lower in b.restaurante.lower()]
+        # Buscar el término en nombre + descripción + comuna + tags, no solo el nombre:
+        # 93 locales tienen nombre genérico ("Dcto en Restaurante") y la geografía vive
+        # en comuna/tags. Sin tildes para tolerar "nunoa"/"ñuñoa" (L-06/L-19/L-28).
+        _t = str.maketrans('áéíóúñ', 'aeioun')
+        q = restaurante.lower().translate(_t)
+        def _match_texto(b):
+            blob = ' '.join([b.restaurante, b.descripcion or '', b.comuna or '',
+                             ' '.join(b.tags or [])]).lower().translate(_t)
+            return q in blob
+        resultados = [b for b in resultados if _match_texto(b)]
 
     if banco:
         banco_lower = banco.lower()
@@ -404,9 +412,17 @@ async def top_restaurantes(limit: int = Query(10, ge=1, le=50)):
     ]
 
 
+def _requiere_admin(x_admin_token: str = Header(None)):
+    """Cierra endpoints sensibles: exige ADMIN_TOKEN (env) en el header X-Admin-Token.
+    Fail-closed: sin ADMIN_TOKEN configurado queda cerrado (nada interno usa /rag)."""
+    esperado = os.getenv("ADMIN_TOKEN")
+    if not esperado or x_admin_token != esperado:
+        raise HTTPException(403, "No autorizado")
+
+
 @app.post("/rag", response_model=RespuestaRAG)
-async def consulta_rag(consulta: ConsultaRAG):
-    """Consulta con IA usando RAG (Pinecone + OpenAI)"""
+async def consulta_rag(consulta: ConsultaRAG, _: None = Depends(_requiere_admin)):
+    """Consulta con IA usando RAG (Pinecone + OpenAI). Requiere ADMIN_TOKEN (header X-Admin-Token)."""
     pregunta = consulta.pregunta
 
     # 1. Búsqueda semántica en Pinecone
@@ -465,32 +481,10 @@ async def consulta_rag(consulta: ConsultaRAG):
 # SCRAPING ENDPOINTS
 # ============================================
 
-@app.post("/scrape/ejecutar")
-async def ejecutar_scrape():
-    """Ejecuta scraping (solo Banco de Chile por API, Falabella requiere CLI)"""
-    global beneficios_db, timestamp_ultimo_scrape
-
-    print("🚀 Ejecutando scraping de Banco de Chile...")
-    from scrapers import ScraperBancoChile
-    scraper = ScraperBancoChile()
-    nuevos = scraper.scrapear()
-
-    # Mantener beneficios de Falabella existentes
-    falabella_existentes = [b for b in beneficios_db if 'Falabella' in b.banco]
-    beneficios_db = nuevos + falabella_existentes
-    timestamp_ultimo_scrape = datetime.now().isoformat()
-
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    json_path = os.path.join(script_dir, "beneficios.json")
-    data = [b.to_dict() for b in beneficios_db]
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    return {
-        "status": "Scraping completado",
-        "total_beneficios": len(beneficios_db),
-        "timestamp": timestamp_ultimo_scrape,
-    }
+# [SEGURIDAD 2026-07] /scrape/ejecutar ELIMINADO: un POST anónimo reemplazaba
+# beneficios_db con solo Banco de Chile + Falabella y sobreescribía beneficios.json,
+# borrando 12 bancos de la web para todos hasta el próximo cron. El scrape real lo hace
+# el cron/refresco corriendo scrapers.py directo, no un endpoint HTTP público.
 
 
 @app.get("/scrape/status")
@@ -702,44 +696,18 @@ async def resumen_precios():
     }
 
 
-@app.post("/scrape/bencinas")
-async def ejecutar_scrape_bencinas():
-    """Ejecuta scraping de descuentos de bencina y precios"""
-    global bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta
-
-    orquestador = OrquestadorScrapers()
-    desc, est = orquestador.scrapear_bencinas()
-    orquestador.guardar_bencinas_json(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "bencinas.json")
-    )
-
-    bencinas_descuentos = desc
-    bencinas_estaciones = est
-    bencinas_precios_todas = orquestador.precios_todas
-    bencinas_meta = {
-        "fecha_scrape": datetime.now().isoformat(),
-        "fecha_precios": datetime.now().isoformat(),
-        "vigencia_mes": datetime.now().strftime("%Y-%m"),
-    }
-
-    return {
-        "status": "Scraping de bencinas completado",
-        "total_descuentos": len(desc),
-        "total_estaciones": len(est),
-        "total_con_precios": len(bencinas_precios_todas),
-        "vigencia_mes": bencinas_meta["vigencia_mes"],
-    }
+# [SEGURIDAD 2026-07] /scrape/bencinas ELIMINADO por el mismo motivo: endpoint
+# destructivo sin auth ni consumidor HTTP. El scrape lo hace el cron con scrapers.py.
 
 
 # ============================================
 # ACCESO TEMPORAL — tokens con fecha de expiración
 # ============================================
 
-# Tokens de acceso: {"clave": fecha_expiración}
-# Para agregar uno nuevo: TOKENS_ACCESO["nuevaclave"] = datetime(2026, 3, 20)
-TOKENS_ACCESO = {
-    "prueba": datetime(2026, 3, 15, 23, 59, 59),   # caduca 15 marzo 2026
-}
+# [SEGURIDAD 2026-07] Tokens NUNCA hardcodeados: la clave "prueba" estaba caducada
+# (mar-2026) y viva en el repo. Hoy ACCESO_PUBLICO=True desactiva el gate, así que va
+# vacío. Si se reactiva: cargar desde una env var (ACCESO_TOKENS), no en código.
+TOKENS_ACCESO = {}
 
 # Modo público: si es True, no pide clave (para cuando quieras abrir la página)
 ACCESO_PUBLICO = True
