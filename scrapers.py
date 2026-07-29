@@ -485,6 +485,21 @@ class ScraperBancoFalabella:
             cards.append(obj)
         return cards
 
+    @staticmethod
+    def _nombre_desde_slug(link: str) -> str:
+        """Recupera el nombre real del local desde el slug del link de Falabella (el
+        'title' suele ser genérico 'Dcto en Restaurante'). L-19: dato en campo hermano."""
+        slug = (link or '').rstrip('/').split('/')[-1]
+        if not slug:
+            return ''
+        slug = re.sub(r'^\d+-de-dcto-en-restaurantes-', '', slug, flags=re.IGNORECASE)
+        slug = re.sub(r'^(mall-?plaza|vivo-[a-z]+|open-[a-z]+|portal-[a-z]+|arauco-[a-z]+|'
+                      r'paseo-[a-z]+|espacio-[a-z]+)-', '', slug, flags=re.IGNORECASE)
+        nombre = slug.replace('-', ' ').strip().title()
+        if not nombre or re.match(r'^(dcto|descuento)', nombre, re.IGNORECASE):
+            return ''
+        return nombre
+
     def _parsear_card(self, card: dict) -> Optional[Beneficio]:
         """Convierte un benefitCard del SSR en un objeto Beneficio."""
         try:
@@ -492,7 +507,14 @@ class ScraperBancoFalabella:
             restaurante = re.sub(
                 r'^Descuentos?\s+en\s+(Restaurante\s+|Café\s+|Cervecer[ií]a\s+)?',
                 '', title, flags=re.IGNORECASE
-            ).strip() or title or ''
+            ).strip()
+            # Falabella pone en 'title' un texto genérico ("Dcto en Restaurante"); el
+            # nombre real vive en el slug del link (L-19). Si es genérico, des-slugificar.
+            if not restaurante or re.match(r'^(dcto|descuento)s?\s+en\s+', title, re.IGNORECASE):
+                nombre = self._nombre_desde_slug(card.get('linkUrl') or '')
+                if nombre:
+                    restaurante = nombre
+            restaurante = restaurante or title or ''
             if not restaurante:
                 return None
 
