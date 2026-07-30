@@ -103,5 +103,17 @@
 6. Verificar en **producción** tras el deploy (curl + reproducir el caso).
 
 ---
+
+## 🌙 Guardia automática — `revision_madrugada.py`
+Cada madrugada (~03:00 Chile, workflow `revision_madrugada.yml`) se convierte CADA bug de
+este doc en un **check automático** contra producción (curl + `node --check`) + la data, y
+se manda **correo SOLO si algo reaparece**. Es este fine-tuning hecho código (patrón L-07:
+cada bug resuelto → un guard permanente). Cubre: página viva + JS sano (L-13/L-21),
+seguridad (`/scrape`→404, `/rag`→403), nombres reales (L-29), no-vacíos (L-10/L-14), ids
+únicos (L-11), búsqueda por comuna y filtro de modalidad (L-28), no-colapso (L-16).
+Correrlo a mano: GitHub Actions → "Revisión Madrugada" → Run workflow.
+**Al agregar un bug nuevo a este doc, agregar también su guard en `revision_madrugada.py`.**
+
+---
 _Este doc es fine-tuning operativo (evoluciona con cada corrida). Lo de desarrollo va en
 `LECCIONES_APRENDIDAS.md`; lo cross-project sube a `Claude_code/LECCIONES.md` y al global._
