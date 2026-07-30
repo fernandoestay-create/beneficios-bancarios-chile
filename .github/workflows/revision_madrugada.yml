@@ -1,0 +1,43 @@
+name: Revisión Madrugada - Guardia de páginas
+
+# Corre cada madrugada y revisa que NINGÚN bug conocido de las páginas haya reaparecido.
+# Cada check está anclado a una lección (ver revision_madrugada.py). Solo avisa si algo falla.
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # 07:00 UTC = 03:00 Chile (madrugada)
+  workflow_dispatch: {}    # permite correrlo a mano desde GitHub para probarlo
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Revisar páginas (guardia)
+        id: rev
+        run: python revision_madrugada.py 2>&1 | tee rev_output.txt
+        continue-on-error: true
+
+      - name: Correo de alerta si reapareció un problema
+        if: steps.rev.outcome == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "⚠️ MiCartera — un problema conocido de las páginas REAPARECIÓ (revisión madrugada)"
+          to: fernando.estay@gmail.com
+          from: MiCartera Guardia <${{ secrets.GMAIL_USER }}>
+          body: file://rev_output.txt
+
+      - name: Marcar el job como fallido si hubo problemas
+        if: steps.rev.outcome == 'failure'
+        run: exit 1
