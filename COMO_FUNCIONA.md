@@ -252,15 +252,16 @@ restaurantes (que es la que más se usa) con datos de otra naturaleza:
   en su propio archivo.
 - **Hoy:** 228 beneficios "otros" (**Santander 224 + Consorcio 4**). El resto de bancos
   todavía no aporta a esta sección.
-- **Misma lógica prevista para mostrarlos:** filtros por día / categoría / tarjeta +
+- **Misma lógica para mostrarlos:** filtros por día / categoría / tarjeta +
   búsqueda por nombre, igual que las otras páginas.
 
-> ⚠️ **Estado del apartado web `/ver/beneficios` (a la fecha de esta actualización):** el
-> **dato ya está capturado y separado**, pero la **página web para mostrarlo todavía NO
-> está desplegada**: `/ver/beneficios` devuelve **404** en producción y `api.py` aún no la
-> sirve ni lee `beneficios_otros.json`. Es el **próximo paso** (construir la vista). Nota
-> técnica: el dato "otro" aún no trae un campo `categoria`, así que habrá que derivar las
-> categorías (farmacia, transporte, ski…) al armar la página.
+> ✅ **Estado del apartado web `/ver/beneficios`:** DESPLEGADO y funcionando en producción
+> (HTTP 200, 228 beneficios). `api.py` carga `beneficios_otros.json` (variable `otros_db`) y
+> el endpoint `/ver/beneficios` reusa `_render_deals` (la MISMA lógica de `/ver`): filtros
+> día/categoría/tarjeta + búsqueda por nombre + tarjetas con condiciones. La página de
+> restaurantes (`/ver`) quedó **intacta** (dataset separado). El link "🎁 Otros beneficios"
+> está en las 4 barras. Verificado: boot + `node --check` ambas vistas + curl a producción
+> (Clínica Dental, El Colorado, La Parva, Kaufmann…). Pendiente: sumar los otros 12 bancos.
 
 ---
 
