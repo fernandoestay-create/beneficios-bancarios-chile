@@ -49,6 +49,7 @@ class Beneficio:
     activo: bool = True
     tags: List[str] = field(default_factory=list)
     descripcion: str = ""
+    seccion: str = "restaurante"  # "restaurante" (default) | "otro" (beneficios de tarjeta variados)
 
     def __post_init__(self):
         self.fecha_scrape = self.fecha_scrape or datetime.now().isoformat()
@@ -1206,8 +1207,9 @@ class ScraperSantander:
 
             texto_buscar = f"{nombre} {descripcion}".lower()
             es_restaurante = any(kw in texto_buscar for kw in self.RESTAURANT_KEYWORDS)
-            if not es_restaurante:
-                return None
+            # No descartar los no-restaurante: se capturan como sección "otro" (apartado
+            # de beneficios variados: farmacias, transporte, retail, etc.).
+            seccion = "restaurante" if es_restaurante else "otro"
 
             descuento_valor = 0
             match = re.search(r'(\d+)\s*%', f"{nombre} {descripcion}")
@@ -1236,6 +1238,7 @@ class ScraperSantander:
                 imagen_url=imagen_url,
                 descripcion=descripcion[:200],
                 activo=True,
+                seccion=seccion,
             )
         except Exception:
             return None
@@ -1353,8 +1356,8 @@ class ScraperConsorcio:
 
             texto = f"{nombre} {subtitulo} {complemento} {body_html}".lower()
             es_restaurante = any(kw in texto for kw in self.RESTAURANT_KEYWORDS)
-            if not es_restaurante:
-                return None
+            # No descartar los no-restaurante: se capturan como sección "otro".
+            seccion = "restaurante" if es_restaurante else "otro"
 
             descuento_valor = 0
             descuento_tipo = "otro"
@@ -1413,6 +1416,7 @@ class ScraperConsorcio:
                 imagen_url=imagen_url,
                 descripcion=descripcion,
                 activo=True,
+                seccion=seccion,
             )
         except Exception:
             return None
@@ -3308,6 +3312,7 @@ class OrquestadorScrapers:
 
     def __init__(self):
         self.all_beneficios: List[Beneficio] = []
+        self.otros_beneficios: List[Beneficio] = []  # sección "otro" (apartado de beneficios variados)
         self.descuentos_bencina: List[DescuentoBencina] = []
         self.estaciones_bencina: List[EstacionBencina] = []
         self.precios_todas: List[EstacionBencina] = []
@@ -3408,6 +3413,13 @@ class OrquestadorScrapers:
         self.all_beneficios = _asegurar_ids_unicos(self.all_beneficios)
         if len(self.all_beneficios) != _antes_ids:
             print(f"🔑 ids únicos: {_antes_ids} -> {len(self.all_beneficios)} (dup exacto dropeado / colisión suffixada)")
+
+        # Separar la sección "otro" (beneficios variados: farmacias, transporte, retail…) del
+        # flujo de restaurantes: NO entra a beneficios.json ni afecta pisos/red de seguridad.
+        self.otros_beneficios = [b for b in self.all_beneficios if getattr(b, 'seccion', 'restaurante') == 'otro']
+        self.all_beneficios = [b for b in self.all_beneficios if getattr(b, 'seccion', 'restaurante') != 'otro']
+        if self.otros_beneficios:
+            print(f"🎁 Otros beneficios (apartado separado): {len(self.otros_beneficios)}")
 
         print("=" * 50)
         print(f"✅ TOTAL BENEFICIOS EXTRAÍDOS: {len(self.all_beneficios)}")
@@ -3701,6 +3713,14 @@ class OrquestadorScrapers:
             json.dump(data, f, ensure_ascii=False, indent=2)
         print(f"💾 Datos guardados en: {filename} ({len(data)} beneficios)")
 
+    def guardar_otros_json(self, filename: str = "beneficios_otros.json"):
+        """Guarda la sección 'otro' (apartado de beneficios variados) en un JSON SEPARADO,
+        sin tocar beneficios.json (restaurantes)."""
+        data = [b.to_dict() for b in getattr(self, 'otros_beneficios', [])]
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"🎁 Otros beneficios guardados en: {filename} ({len(data)})")
+
     def guardar_csv(self, filename: str = "beneficios.csv"):
         """Guarda los beneficios en CSV"""
         import csv
@@ -3735,6 +3755,7 @@ if __name__ == "__main__":
     # que cayeron a 0 ANTES de sobreescribir, y clasificar los 14 para el reporte.
     orquestador.aplicar_red_de_seguridad("beneficios.json")
     orquestador.guardar_json("beneficios.json")
+    orquestador.guardar_otros_json("beneficios_otros.json")
     orquestador.guardar_csv("beneficios.csv")
 
     # Scraping de bencinas
