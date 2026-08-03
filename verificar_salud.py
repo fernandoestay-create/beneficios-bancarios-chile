@@ -281,14 +281,16 @@ def check_bencinas():
     else:
         print("   OK: 0 ids duplicados en descuentos")
 
-    # Guard de regresión: Scotiabank Shell sábado debe existir (fix 2026-06-01)
-    scotia_sab = [d for d in descuentos
-                  if d.get("banco") == "Scotiabank" and "sabado" in (d.get("dias_validos") or [])]
-    if not scotia_sab:
-        fail("REGRESIÓN: no está el descuento Scotiabank Shell sábado (App Shell ex Mi Copiloto)")
+    # Guard de regresión: Scotiabank Shell debe existir. La campaña cambió de sábado a
+    # JUEVES (confirmado por Fernando 2026-08-03; corregido en bencinas.json).
+    scotia_shell = [d for d in descuentos
+                    if d.get("banco") == "Scotiabank" and d.get("cadena") == "Shell"
+                    and "jueves" in (d.get("dias_validos") or [])]
+    if not scotia_shell:
+        fail("REGRESIÓN: no está el descuento Scotiabank Shell jueves")
     else:
-        tiers = ", ".join(f"{d['tarjeta']}={d['descuento_texto']}" for d in scotia_sab)
-        print(f"   OK: Scotiabank sábado presente ({len(scotia_sab)} tiers: {tiers})")
+        tiers = ", ".join(f"{d['tarjeta']}={d['descuento_texto']}" for d in scotia_shell)
+        print(f"   OK: Scotiabank Shell jueves presente ({len(scotia_shell)} tiers: {tiers})")
 
 
 def main():
