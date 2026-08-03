@@ -941,6 +941,7 @@ padding:8px 20px;border-radius:10px;font-weight:700;font-size:13px;transition:op
 .deal-footer{{background:#f8f7f5;border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:3px}}
 .deal-footer .validity{{color:var(--muted);font-size:11px}}
 .deal-footer .disclaimer{{color:#aaa;font-size:10px;font-style:italic}}
+.deal-footer .deal-cond{{color:#6b7280;font-size:10px;line-height:1.35}}
 .empty{{display:none;text-align:center;padding:40px;color:var(--muted);border:2px dashed var(--line);border-radius:var(--radius)}}
 .no-img{{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f3f1ed,#e8e5de);font-size:40px}}
 .footer{{text-align:center;margin-top:24px;color:var(--muted);font-size:12px}}
@@ -1269,7 +1270,7 @@ const on=d.dias_validos.includes(k)||d.dias_validos.includes('todos');
 return `<div class="day-circle${{on?' active':''}}">${{l}}</div>`}}).join('');
 const modeBadge=d.online?'<span class="mode-badge online">💻 Online</span>'
 :'<span class="mode-badge presencial">🏪 Pres.</span>';
-const linkHtml=d.url_fuente?`<a class="link" href="${{d.url_fuente}}" target="_blank">Ver detalle</a>`:'';
+const linkHtml=d.url_fuente?`<a class="link" href="${{d.url_fuente}}" target="_blank">Comprobar en la página ↗</a>`:'';
 return `<div class="deal-img">${{imgHtml}}
 <div class="badge">${{d.descuento_texto||d.descuento_valor+'%'}}</div>
 <div class="bank-badge">${{bankBadgeHtml(d.banco)}}</div></div>
@@ -1283,6 +1284,7 @@ ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${
 <div class="cta-row">${{linkHtml}}</div></div>
 <div class="deal-footer">
 <div class="validity">⏳ Vigencia: ${{d.valido_hasta?'hasta '+d.valido_hasta:'Sin fecha'}}</div>
+${{d.restricciones_texto?`<div class="deal-cond">📋 ${{d.restricciones_texto}}</div>`:''}}
 <div class="disclaimer">⚠️ Siempre revisar condiciones especiales en el banco</div></div>`;
 }}
 
