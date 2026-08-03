@@ -500,6 +500,27 @@ class ScraperBancoFalabella:
             return ''
         return nombre
 
+    @staticmethod
+    def _mall_desde_slug(link: str) -> str:
+        """Mall/local puntual del slug de Falabella (algunas ofertas son por mall específico:
+        Tanta de Mallplaza ≠ otro Tanta). Se preserva para acotar DÓNDE aplica."""
+        slug = (link or '').rstrip('/').split('/')[-1]
+        m = re.search(r'40-de-dcto-en-restaurantes-(mall-?plaza|vivo-[a-z]+|open-[a-z]+|'
+                      r'portal-[a-z]+|paseo-[a-z]+|espacio-[a-z]+)-', slug, re.IGNORECASE)
+        return m.group(1).replace('-', ' ').title() if m else ''
+
+    @staticmethod
+    def _restriccion_falabella(bottom: str, mall: str) -> str:
+        """Restricción consistente y trazable: tope (si hay) + local + 'revisa locales' +
+        'comprueba en la página' (siempre, para que el usuario verifique dónde aplica)."""
+        partes = []
+        if 'tope' in (bottom or '').lower():
+            partes.append(bottom.strip())
+        if mall:
+            partes.append(f"Aplica en locales de {mall}.")
+        partes.append("Revisa los locales del beneficio. Comprueba en la página oficial.")
+        return ' '.join(partes)
+
     def _parsear_card(self, card: dict) -> Optional[Beneficio]:
         """Convierte un benefitCard del SSR en un objeto Beneficio."""
         try:
@@ -517,6 +538,7 @@ class ScraperBancoFalabella:
             restaurante = restaurante or title or ''
             if not restaurante:
                 return None
+            mall = self._mall_desde_slug(card.get('linkUrl') or '')
 
             top = (card.get('topDiscountText') or '').strip()
             center = (card.get('centerDiscountText') or '').strip()
@@ -570,7 +592,7 @@ class ScraperBancoFalabella:
                 valido_desde=valido_desde,
                 valido_hasta=valido_hasta,
                 ubicacion="",
-                restricciones_texto=bottom if 'tope' in bottom.lower() else "",
+                restricciones_texto=self._restriccion_falabella(bottom, mall),
                 presencial=True,
                 online=False,
                 url_fuente=url_fuente,
