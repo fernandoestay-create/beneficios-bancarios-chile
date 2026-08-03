@@ -1,9 +1,9 @@
 # Cómo funciona MiCartera — guía completa
 
 > **Para qué es este documento:** explicar, en lenguaje claro, cómo funciona todo el
-> sistema tal como quedó al 2026-06-22. Si abrís esto dentro de 6 meses y no te
-> acordás de nada, acá está todo.
-> **Última actualización:** 2026-07-01
+> sistema tal como funciona hoy. Si abres esto dentro de 6 meses y no te acuerdas de
+> nada, acá está todo.
+> **Última actualización:** 2026-08-03
 
 ---
 
@@ -13,8 +13,8 @@ Un sistema que **scrapea descuentos bancarios de restaurantes en Chile** (15 ban
 los limpia, y los muestra en una web pública + un bot de WhatsApp con IA. También
 trae **precios y descuentos de bencina**.
 
-- **Web pública:** https://api-beneficios-chile.onrender.com/ver (restaurantes) y `/ver/bencinas`.
-- **Datos:** ~950 beneficios de 14 bancos activos + 31 descuentos de bencina.
+- **Web pública:** https://api-beneficios-chile.onrender.com/ver (restaurantes), `/ver/bencinas` y `/ver/cuotas`.
+- **Datos:** ~885 beneficios de restaurantes (14 bancos) + 31 descuentos de bencina + campañas de cuotas sin interés. Además hay **228 "otros beneficios"** de tarjeta (Santander/Consorcio) capturados en un dataset aparte (sección 13).
 - **Costo de operación:** ~$0 (todo en planes gratuitos: GitHub Actions, Render, tu PC).
 
 ---
@@ -30,6 +30,7 @@ trae **precios y descuentos de bencina**.
 | **`api.py`** | Render (nube) | La web + la API + el bot de WhatsApp (todo junto) |
 | **Cron** (`.github/workflows/scraper.yml`) | GitHub Actions (nube, USA) | Corre diario: scrapea, chequea, **manda el mail**, publica |
 | **Refresco local** (`refrescar_local.ps1`) | Tu PC (Chile) | Corre diario: trae los bancos geo-fenceados frescos (ej. Falabella) |
+| **Guardia de madrugada** (`revision_madrugada.py`) | GitHub Actions (nube) | Corre ~03:00: revisa que ningún bug conocido reapareció; avisa por mail **solo si algo falla** (sección 14) |
 
 ---
 
@@ -184,11 +185,17 @@ beneficios-bancarios-chile/
 ├── verificar_salud.py     # chequeo de calidad (gate antes de publicar)
 ├── diagnosticar.py        # guarda el HTML de bancos caídos
 ├── refrescar_local.ps1    # refresco diario desde Chile (tu PC)
-├── beneficios.json        # los ~950 descuentos (la fuente de verdad de la web)
+├── revision_madrugada.py  # guardia de madrugada: re-chequea bugs conocidos vs producción
+├── beneficios.json        # los ~885 descuentos de restaurantes (la fuente de verdad de /ver)
+├── beneficios_otros.json  # dataset SEPARADO: beneficios de tarjeta NO-restaurante (seccion="otro")
 ├── bencinas.json          # descuentos + precios de combustible
+├── cuotas_sin_interes.json# campañas de cuotas sin interés del mes (curado mensual)
 ├── historial.json         # la MEMORIA del aprendizaje (1 snapshot por corrida)
+├── TUNING_PAGINAS.md      # fine-tuning operativo de las páginas (síntoma→causa→fix)
 └── .github/workflows/
-    └── scraper.yml        # el cron diario (scrape + chequeo + mail)
+    ├── scraper.yml            # el cron diario (scrape + chequeo + mail)
+    ├── revision_madrugada.yml # la guardia de madrugada (~03:00 Chile)
+    └── keepalive.yml          # ping cada 10 min para que la web no duerma
 ```
 
 ---
@@ -229,8 +236,79 @@ Además de restaurantes y bencina, hay un tercer apartado (botón **💳 Cuotas*
 
 ---
 
-## 13. Una línea para recordar
+## 13. "Otros beneficios" — beneficios de tarjeta que NO son restaurante
+
+Algunos bancos (hoy **Santander** y **Banco Consorcio**) publican, junto a sus descuentos
+de restaurantes, muchos **otros beneficios de tarjeta**: farmacias, transporte, ski,
+hoteles, retail, salud, etc. Desde la sesión 2026-08-03 el sistema los **captura y los
+separa** del flujo de restaurantes, para no ensuciar ni arriesgar la página de
+restaurantes (que es la que más se usa) con datos de otra naturaleza:
+
+- **Campo `seccion` en cada beneficio** (`scrapers.py`): vale `"restaurante"` (por
+  defecto) o `"otro"`. Santander y Consorcio marcan como `"otro"` lo que no es restaurante.
+- **Dataset separado `beneficios_otros.json`:** el orquestador saca los `seccion="otro"`
+  de la lista principal **antes** de guardar, así **no entran a `beneficios.json`** (la
+  página de restaurantes) **ni afectan los pisos ni la red de seguridad**. Quedan aparte,
+  en su propio archivo.
+- **Hoy:** 228 beneficios "otros" (**Santander 224 + Consorcio 4**). El resto de bancos
+  todavía no aporta a esta sección.
+- **Misma lógica prevista para mostrarlos:** filtros por día / categoría / tarjeta +
+  búsqueda por nombre, igual que las otras páginas.
+
+> ⚠️ **Estado del apartado web `/ver/beneficios` (a la fecha de esta actualización):** el
+> **dato ya está capturado y separado**, pero la **página web para mostrarlo todavía NO
+> está desplegada**: `/ver/beneficios` devuelve **404** en producción y `api.py` aún no la
+> sirve ni lee `beneficios_otros.json`. Es el **próximo paso** (construir la vista). Nota
+> técnica: el dato "otro" aún no trae un campo `categoria`, así que habrá que derivar las
+> categorías (farmacia, transporte, ski…) al armar la página.
+
+---
+
+## 14. La guardia de madrugada (`revision_madrugada.py`)
+
+Cada **madrugada (~03:00 Chile)**, un workflow aparte (`revision_madrugada.yml`) corre
+`revision_madrugada.py`: una **guardia automática** que revisa que **ningún bug ya resuelto
+haya reaparecido**. Es el "fine-tuning hecho código" (patrón L-07): cada error que alguna
+vez rompió una página se convierte en un **check permanente**.
+
+Revisa dos capas, contra **producción viva** + los datos:
+
+- **Runtime (la web viva):** que `/ver`, `/ver/bencinas` y `/ver/cuotas` respondan de
+  verdad (no un shell vacío), que el `<script>` de cada una **compile** (`node --check` —
+  porque "200 ≠ funciona", L-21), y que los **endpoints peligrosos sigan cerrados**
+  (`/scrape/*` → 404, `/rag` sin token → 403).
+- **Datos (lo que se sirve):** que no reaparezcan nombres genéricos ("Dcto en Restaurante",
+  L-29), que nada quede con nombre o descuento vacío (L-10/L-14), que **no haya ids
+  duplicados** (L-11), que la búsqueda siga indexando comuna/tags (L-28), que el filtro de
+  modalidad no esconda todo (L-28), y que la web no quede casi vacía (proceso estéril, L-16).
+
+**Solo te manda correo si algo falla** (silencio = todo OK, no molesta). Se puede correr a
+mano: GitHub → Actions → "Revisión Madrugada" → Run workflow. El catálogo completo de bugs
+de página vive en **`TUNING_PAGINAS.md`**; cada bug nuevo que se agregue ahí debe agregar
+también su check en `revision_madrugada.py`.
+
+---
+
+## 15. Falabella: nombre real por local + restricción trazable
+
+Falabella es un caso especial en dos frentes, ambos ya resueltos:
+
+- **Nombre real por local:** su página pone un título genérico ("Dcto en Restaurante") en
+  todas las cards; el nombre real del local vive en el **slug del link**. El scraper lo
+  recupera (`_nombre_desde_slug`) — Petit, Vapiano, Muu Grill, Tanta, etc. — en vez de
+  mostrar el genérico (L-19/L-29). **Se recupera, nunca se inventa.**
+- **Restricción honesta y trazable (📋 en la tarjeta):** muchas ofertas de Falabella
+  aplican a nivel cadena (sin un local fijo). Por eso cada beneficio lleva una restricción
+  consistente: el tope (si lo hay) + el mall donde aplica + **"Revisa los locales del
+  beneficio. Comprueba en la página oficial."** (las 95 ofertas la llevan). En la web esa
+  condición se muestra en la tarjeta con el ícono **📋** (`deal-cond`), para que **verifiques
+  dónde aplica** antes de ir. No se inventan direcciones ni pins en el mapa.
+
+---
+
+## 16. Una línea para recordar
 
 > **El cron te manda el mail diario y publica; tu PC mantiene Falabella fresco; la red
-> de seguridad evita que algo desaparezca; el aprendizaje calibra los pisos solo. Tu
-> única tarea es leer el mail — y avisarme sólo si un banco cambió su web.**
+> de seguridad evita que algo desaparezca; el aprendizaje calibra los pisos solo; la
+> guardia de madrugada avisa si un bug conocido reaparece. Tu única tarea es leer el mail
+> — y avisarme sólo si un banco cambió su web.**
