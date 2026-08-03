@@ -1212,7 +1212,12 @@ class ScraperSantander:
             seccion = "restaurante" if es_restaurante else "otro"
 
             descuento_valor = 0
-            match = re.search(r'(\d+)\s*%', f"{nombre} {descripcion}")
+            # Excluir el CAE del financiamiento ("CAE 1,54%"): el regex tomaba el "54" de
+            # "1,54%" como un 54% de descuento (ej. Bip Solar = paneles solares en cuotas).
+            # Solo % de 1-2 dígitos NO precedido de dígito/coma y fuera de la frase del CAE.
+            # (L-19: no inventar un % que no existe.)
+            _txt_pct = re.sub(r'CAE[^.]*', '', f"{nombre} {descripcion}", flags=re.IGNORECASE)
+            match = re.search(r'(?<![\d,])(\d{1,2})\s*%', _txt_pct)
             if match:
                 descuento_valor = int(match.group(1))
             # Santander gastronómico no expone % (ni en listado, detalle ni API): son
