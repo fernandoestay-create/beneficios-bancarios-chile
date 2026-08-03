@@ -125,6 +125,7 @@ if os.path.isdir(_static_dir):
     app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 beneficios_db: List[Beneficio] = []
+otros_db: List[Beneficio] = []  # beneficios sección "otro" (apartado /ver/beneficios)
 bencinas_descuentos: List[DescuentoBencina] = []
 bencinas_estaciones: List[EstacionBencina] = []
 bencinas_precios_todas: List[EstacionBencina] = []
@@ -136,7 +137,7 @@ timestamp_ultimo_scrape = None
 # ============================================
 
 def inicializar_datos():
-    global beneficios_db, bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta, timestamp_ultimo_scrape
+    global beneficios_db, otros_db, bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta, timestamp_ultimo_scrape
 
     # Resolver ruta relativa al directorio del script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -156,6 +157,16 @@ def inicializar_datos():
         scraper = ScraperBancoChile()
         beneficios_db = scraper.scrapear()
         timestamp_ultimo_scrape = datetime.now().isoformat()
+
+    # Cargar el apartado "otros beneficios" (dataset SEPARADO, no restaurantes)
+    otros_path = os.path.join(script_dir, "beneficios_otros.json")
+    if os.path.exists(otros_path):
+        try:
+            with open(otros_path, 'r', encoding='utf-8') as f:
+                otros_db = [Beneficio(**item) for item in json.load(f)]
+            print(f"🎁 Cargados {len(otros_db)} otros beneficios")
+        except Exception as e:
+            print(f"⚠️ No se pudo cargar beneficios_otros.json: {e}")
 
     # Cargar datos de bencinas
     bencinas_path = os.path.join(script_dir, "bencinas.json")
@@ -775,8 +786,25 @@ async def ver_resultados(
     key: Optional[str] = Query(None, description="Clave de acceso temporal"),
     acceso_key: Optional[str] = Cookie(None),
 ):
-    """Genera página HTML con cards de beneficios, filtros interactivos e imágenes"""
+    return await _render_deals(beneficios_db, "restaurantes", dia, banco, q, key, acceso_key)
+
+
+@app.get("/ver/beneficios", response_class=HTMLResponse)
+async def ver_otros_beneficios(
+    dia: Optional[str] = Query(None, description="Día de la semana"),
+    banco: Optional[List[str]] = Query(None, description="Banco"),
+    q: Optional[str] = Query(None, description="Búsqueda libre"),
+    key: Optional[str] = Query(None, description="Clave de acceso temporal"),
+    acceso_key: Optional[str] = Cookie(None),
+):
+    return await _render_deals(otros_db, "otros", dia, banco, q, key, acceso_key)
+
+
+async def _render_deals(all_data_param, modo, dia, banco, q, key, acceso_key):
+    """Genera la página de /ver (restaurantes) o /ver/beneficios (otros): MISMA lógica,
+    distinto dataset. modo: 'restaurantes' | 'otros'."""
     import html as html_lib
+    es_otros = (modo == "otros")
 
     # --- Control de acceso temporal ---
     if not ACCESO_PUBLICO:
@@ -789,7 +817,7 @@ async def ver_resultados(
         # Si vino por query param, setear cookie para no pedir de nuevo
         # (se hace al final del response)
 
-    all_data = beneficios_db
+    all_data = all_data_param
     # Serializar a JSON para filtros en JS
     deals_json = json.dumps([
         {
@@ -840,11 +868,17 @@ async def ver_resultados(
     vals = [b.descuento_valor for b in all_data if b.descuento_valor > 0]
     max_desc = max(vals) if vals else 0
 
+    titulo_pagina = "Otros Beneficios de Tarjeta" if es_otros else "Descuentos Bancarios Chile"
+    _act = "background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3)"
+    _ina = "color:#6b7280;transition:all .2s"
+    est_rest = _ina if es_otros else _act
+    est_otros = _act if es_otros else _ina
+
     page_html = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Descuentos Bancarios Chile</title>
+<title>{titulo_pagina}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
@@ -1003,7 +1037,8 @@ font-weight:600;cursor:pointer;transition:all .2s}}
 <body>
 <div class="container">
 <nav style="display:flex;gap:4px;margin-bottom:20px;background:var(--panel);padding:4px;border-radius:14px;box-shadow:var(--shadow);width:fit-content">
-<a href="/ver" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3)">🍽️ Restaurantes</a>
+<a href="/ver" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;{est_rest}">🍽️ Restaurantes</a>
+<a href="/ver/beneficios" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;{est_otros}">🎁 Otros beneficios</a>
 <a href="/ver/bencinas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">⛽ Bencina</a>
 <a href="/ver/cuotas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">💳 Cuotas</a>
 </nav>
