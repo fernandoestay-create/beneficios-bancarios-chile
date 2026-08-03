@@ -2027,6 +2027,7 @@ font-weight:600;cursor:pointer;transition:all .2s}}
 <div class="container">
 <nav style="display:flex;gap:4px;margin-bottom:20px;background:var(--panel);padding:4px;border-radius:14px;box-shadow:var(--shadow);width:fit-content">
 <a href="/ver" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">🍽️ Restaurantes</a>
+<a href="/ver/beneficios" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">🎁 Otros beneficios</a>
 <a href="/ver/bencinas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;background:linear-gradient(135deg,#ea580c,#dc2626);color:#fff;box-shadow:0 2px 8px rgba(234,88,12,.3)">⛽ Bencina</a>
 <a href="/ver/cuotas" style="text-decoration:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;color:#6b7280;transition:all .2s">💳 Cuotas</a>
 </nav>
@@ -3040,6 +3041,7 @@ body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--te
 <div class="container">
 <div class="topnav">
 <a href="/ver">\U0001F37D️ Restaurantes</a>
+<a href="/ver/beneficios">🎁 Otros beneficios</a>
 <a href="/ver/bencinas">⛽ Bencina</a>
 <a href="/ver/cuotas" class="active">\U0001F4B3 Cuotas sin interés</a>
 </div>
