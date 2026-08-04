@@ -852,7 +852,19 @@ async def _render_deals(all_data_param, modo, dia, banco, q, key, acceso_key):
     # chequeado, mejor no mostrar"). Vive en CÓDIGO para sobrevivir a un re-scrape que
     # regenere beneficios_otros.json completo (L-33/L-35/L-37); no depende de curar el JSON.
     if es_otros:
-        all_data = [b for b in all_data if (b.descuento_valor or 0) > 0]
+        # Excluir financiamiento disfrazado de descuento (paneles solares, CAE, cuenta de
+        # luz, crédito) aunque traiga un "%": es el patrón L-34/L-40 y vive en el render
+        # para sobrevivir a cualquier re-scrape que regenere beneficios_otros.json.
+        _FIN = ('panel solar', 'paneles solares', 'cuenta de luz', 'financiamiento',
+                'crédito de consumo', 'credito de consumo', 'hipotecar', 'cae ', 'cae:')
+        def _es_verificable(b):
+            if (b.descuento_valor or 0) <= 0:
+                return False
+            t = ((getattr(b, 'restaurante', '') or '') + ' ' +
+                 (getattr(b, 'descripcion', '') or '') + ' ' +
+                 (getattr(b, 'descuento_texto', '') or '')).lower()
+            return not any(k in t for k in _FIN)
+        all_data = [b for b in all_data if _es_verificable(b)]
     # Serializar a JSON para filtros en JS
     deals_json = json.dumps([
         {

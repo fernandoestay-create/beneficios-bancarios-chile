@@ -667,11 +667,10 @@ class ScraperBCI:
 
                 ofertas = data.get('ofertas', [])
                 for oferta in ofertas:
-                    # Filtrar solo restaurantes
+                    # Capturar TODAS: restaurantes → beneficios.json; el resto → "otro" (L-32).
                     tags = [t.get('nombre', '') for t in oferta.get('tags', [])]
-                    if 'Restaurantes' not in tags:
-                        continue
-                    beneficio = self._parsear_oferta(oferta, tags)
+                    seccion = "restaurante" if 'Restaurantes' in tags else "otro"
+                    beneficio = self._parsear_oferta(oferta, tags, seccion)
                     if beneficio:
                         self.beneficios.append(beneficio)
 
@@ -685,7 +684,7 @@ class ScraperBCI:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
             return self.beneficios
 
-    def _parsear_oferta(self, oferta: dict, tags: list) -> Optional[Beneficio]:
+    def _parsear_oferta(self, oferta: dict, tags: list, seccion: str = "restaurante") -> Optional[Beneficio]:
         """Parsea una oferta de la API a Beneficio"""
         try:
             comercio = oferta.get('comercio', {})
@@ -730,6 +729,7 @@ class ScraperBCI:
             return Beneficio(
                 id=f"bci_{oferta_id}",
                 banco=self.BANCO,
+                seccion=seccion,
                 tarjeta="Tarjetas de Crédito BCI",
                 restaurante=nombre,
                 descuento_valor=float(descuento_valor),
