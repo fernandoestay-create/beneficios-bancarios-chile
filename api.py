@@ -818,6 +818,12 @@ async def _render_deals(all_data_param, modo, dia, banco, q, key, acceso_key):
         # (se hace al final del response)
 
     all_data = all_data_param
+    # (#1) Otros beneficios: mostrar SOLO los VERIFICABLES (con % de descuento real).
+    # Los de financiamiento/servicios/CAE sin % chequeado NO se muestran ("si no está
+    # chequeado, mejor no mostrar"). Vive en CÓDIGO para sobrevivir a un re-scrape que
+    # regenere beneficios_otros.json completo (L-33/L-35/L-37); no depende de curar el JSON.
+    if es_otros:
+        all_data = [b for b in all_data if (b.descuento_valor or 0) > 0]
     # Serializar a JSON para filtros en JS
     deals_json = json.dumps([
         {
@@ -928,6 +934,7 @@ cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
 .day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
 .day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
 .day-off{{opacity:.28;pointer-events:none;filter:grayscale(1)}}
+.ms-option.ms-off{{opacity:.38;pointer-events:none}}
 .day-sel-all{{width:auto;padding:0 8px;border-radius:999px;font-size:9px;letter-spacing:.3px;flex-shrink:0}}
 .range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
 input[type=range]{{accent-color:var(--primary)}}
@@ -1283,6 +1290,21 @@ return mS&&mB&&mR&&mC&&mD&&mMode}});
 const _diasOK=new Set();
 _base.forEach(d=>{{(d.dias_validos.includes('todos')?['lunes','martes','miercoles','jueves','viernes','sabado','domingo']:d.dias_validos).forEach(x=>_diasOK.add(x))}});
 daySels.forEach(s=>{{s.classList.toggle('day-off',_diasOK.size>0&&!_diasOK.has(s.dataset.day))}});
+// (#3) Región y comuna DINÁMICAS: atenuar+deshabilitar las opciones sin resultados según los otros filtros activos
+const _mm=(d,sk)=>{{
+const t=norm([d.restaurante,d.banco,d.descripcion||'',d.ubicacion||'',d.direccion||'',d.comuna||'',(d.tags||[]).join(' ')].join(' '));
+const okS=!qWords.length||qWords.every(w=>t.includes(w));
+const okB=!banks||banks.includes(d.banco);
+const okR=sk==='r'||!regions||!d.ubicacion||regions.includes(d.ubicacion);
+const okC=sk==='c'||!comunas||comunas.includes(d.comuna);
+const okDv=d.descuento_valor>=min;
+const okDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
+const okMode=mode==='all'||(mode==='presencial'&&(d.presencial||!d.online))||(mode==='online'&&d.online);
+return okS&&okB&&okR&&okC&&okDv&&okDay&&okMode}};
+const _regOK=new Set();deals.forEach(d=>{{if(d.ubicacion&&_mm(d,'r'))_regOK.add(d.ubicacion)}});
+regionMS.el.querySelectorAll('.ms-option').forEach(l=>{{const i=l.querySelector('input'),off=_regOK.size>0&&!_regOK.has(i.value)&&!regionMS.sel.has(i.value);l.classList.toggle('ms-off',off);i.disabled=off}});
+const _comOK=new Set();deals.forEach(d=>{{if(d.comuna&&_mm(d,'c'))_comOK.add(d.comuna)}});
+comunaMS.el.querySelectorAll('.ms-option').forEach(l=>{{const i=l.querySelector('input'),off=_comOK.size>0&&!_comOK.has(i.value)&&!comunaMS.sel.has(i.value);l.classList.toggle('ms-off',off);i.disabled=off}});
 f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
 case'name':return a.restaurante.localeCompare(b.restaurante);
 case'bank':return a.banco.localeCompare(b.banco);
@@ -1894,6 +1916,7 @@ cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
 .day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
 .day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
 .day-off{{opacity:.28;pointer-events:none;filter:grayscale(1)}}
+.ms-option.ms-off{{opacity:.38;pointer-events:none}}
 .day-sel-all{{width:auto;padding:0 8px;border-radius:999px;font-size:9px;letter-spacing:.3px;flex-shrink:0}}
 button{{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}}
 .btn-primary{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;flex:1}}
@@ -2409,6 +2432,15 @@ const mB=!banks||banks.includes(d.banco);
 const mCad=cadena==='all'||(cadena==='otra'?!['Copec','Shell','Aramco'].includes(d.cadena):d.cadena===cadena);
 const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
 return mS&&mB&&mCad&&mDay}});
+// (#3) Días DINÁMICOS: atenuar los días sin resultados según banco/cadena/búsqueda
+const _base=deals.filter(d=>{{
+const txt=norm([d.cadena,d.banco,d.tarjeta,d.condicion||'',d.descuento_texto||''].join(' '));
+const mS=!qWords.length||qWords.every(w=>txt.includes(w));
+const mB=!banks||banks.includes(d.banco);
+const mCad=cadena==='all'||(cadena==='otra'?!['Copec','Shell','Aramco'].includes(d.cadena):d.cadena===cadena);
+return mS&&mB&&mCad}});
+const _diasOK=new Set();_base.forEach(d=>{{(d.dias_validos.includes('todos')?['lunes','martes','miercoles','jueves','viernes','sabado','domingo']:d.dias_validos).forEach(x=>_diasOK.add(x))}});
+daySels.forEach(s=>{{s.classList.toggle('day-off',_diasOK.size>0&&!_diasOK.has(s.dataset.day))}});
 f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_por_litro-b.descuento_por_litro;
 case'name':return a.cadena.localeCompare(b.cadena);
 case'bank':return a.banco.localeCompare(b.banco);
@@ -3026,6 +3058,7 @@ body{{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--te
 .cat-filtros{{display:flex;gap:6px;flex-wrap:wrap}}
 .cat-filtro{{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:7px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-weight:600}}
 .cat-filtro.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.cat-filtro.cat-off{{opacity:.35;pointer-events:none;filter:grayscale(1)}}
 .banco{{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden}}
 .banco-head{{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--panel2);flex-wrap:wrap}}
 .banco-logo{{height:26px;width:auto;max-width:90px;object-fit:contain}}
@@ -3115,6 +3148,22 @@ var okC=(catActiva==='todas'||c.getAttribute('data-cat')===catActiva);
 if(okM&&okC)tiene=true;
 }});}}
 btn.style.display=tiene?'':'none';
+}});
+// (#3) Categorías DINÁMICAS: atenuar las que no tienen cuotas para el mes+banco actual
+chips.forEach(function(ch){{
+var ct=ch.getAttribute('data-cat');
+if(ct==='todas')return;
+var tiene=false;
+document.querySelectorAll('.banco').forEach(function(b){{
+var okB=(bancoActivo==='todos'||b.getAttribute('data-banco')===bancoActivo);
+if(!okB)return;
+b.querySelectorAll('.cuota').forEach(function(c){{
+var meses=(c.getAttribute('data-meses')||'').split(',');
+var okM=(mesActivo==='todos'||meses.indexOf(mesActivo)>=0);
+if(okM&&c.getAttribute('data-cat')===ct)tiene=true;
+}});
+}});
+ch.classList.toggle('cat-off',!tiene);
 }});
 var eb=document.getElementById('st-bancos');if(eb)eb.textContent=totB;
 var ec=document.getElementById('st-camp');if(ec)ec.textContent=totC;
