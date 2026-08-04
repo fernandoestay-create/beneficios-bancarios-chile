@@ -48,6 +48,7 @@
 | L-35 | Curar desde la fuente OFICIAL + campo `confianza` por dato + guardia que verifica trazabilidad SIEMPRE; si no hay dato chequeado, mostrar "estamos confirmando" en vez de un dato dudoso (agregador ≠ fuente, L-24) | Datos y calidad / Meta | 2026-08-03 |
 | L-36 | Filtros DINÁMICOS/faceteados: al elegir un eje (banco), recalcular los otros ejes (día, comuna, %) y ATENUAR/bloquear las opciones sin resultados, en vez de dejarlas seleccionables y devolver vacío; un guard vigila que siga así; sin data → "estamos confirmando" | UX / Frontend | 2026-08-03 |
 | L-37 | Curación manual protegida SOLO por un guard, PERO el generador (scraper) sigue produciendo la data mala desde el agregador → el output del scraper falla el guard y BLOQUEA todo el pipeline (deadlock) → la curación debe PRESERVARSE en el generador (el `guardar` conserva el dato curado), no solo defenderse con un guard | Datos y calidad / Deploy | 2026-08-04 |
+| L-38 | Al configurar/activar algo en un webhook (firma, seguridad), VERIFICAR en la consola del proveedor a qué URL/servicio apunta REALMENTE — no asumir. El Sandbox de Twilio apuntaba a OTRO servicio y OTRA ruta (`micartera-ttaa/api/webhooks/whatsapp`), no al que yo modificaba → el bot "no respondía" y la firma quedó en el servicio equivocado; se confirma con los logs del destino (¿llega el POST? ¿200/403?) | Integraciones / Deploy | 2026-08-04 |
 
 ---
 
@@ -899,8 +900,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 37 lecciones formalizadas (L-01 a L-37; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-37 (2026-08-04)
+**Contador:** 38 lecciones formalizadas (L-01 a L-38; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-38 (2026-08-04)
 **Última actualización:** 2026-08-04
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.
