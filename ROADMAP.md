@@ -115,7 +115,7 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 3. **Apartado "Otros beneficios" — cubrir más bancos:** hoy solo Santander/Consorcio (24 beneficios verificables mostrados, de 228 capturados). Faltan ~12 bancos: scrapear sus páginas de beneficios generales, mismo enfoque (dataset separado, `seccion="otro"`, filtro de verificabilidad L-33/L-35).
 4. **Cuotas — re-curar los bancos que aún muestran meses viejos** (~6 bancos publican en imágenes/SPA no legibles): leer las oficiales desde Chile + cruce con Chócale (L-24) cuando publiquen el mes en curso. La detección de desfase ya avisa sola en el correo. Barrer SIEMPRE los 14.
 5. **Webhook Twilio — ACTIVAR la firma** (ya IMPLEMENTADA opt-in el 2026-08-04, `9ad0e7f`): setear `TWILIO_AUTH_TOKEN` (+ `TWILIO_WEBHOOK_URL` con la URL pública si difiere tras el proxy) en Render y **probar el bot en vivo**. Sin el token procesa como hoy; con el token rechaza (403) lo no firmado.
-6. (Backlog) **Migración Pinecone → pgvector** + **revectorización RAG**: toca **costo de API** → requiere OK explícito de Fernando antes de ejecutar (regla de costos del workspace).
+6. ~~Revectorización RAG~~ ✅ **HECHA (2026-08-04)**: 887 restaurantes re-vectorizados a Pinecone (verificado: 887 vectores en el namespace), costo ~US$0.002. Queda en backlog la **migración Pinecone → pgvector** (estándar del workspace).
 7. **Falabella — filtrar ofertas que no son restaurantes:** excluir `app-copec`, `pronto-copec`, `novedades-cmr-puntos` (no son gastronomía).
 8. **Itaú:** confirmar si el bajón a ~23 es transición o nivel nuevo; ajustar el piso si es permanente.
 9. **BancoEstado** (diferido — revisar cuando relance su campaña de sabores).
