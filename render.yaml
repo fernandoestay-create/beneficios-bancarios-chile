@@ -22,6 +22,13 @@ services:
         sync: false
       - key: TWILIO_WEBHOOK_URL
         value: https://api-beneficios-chile.onrender.com/webhook
+      # Bot de Telegram (opt-in, gratis). El token de BotFather es SECRETO:
+      # sync:false => se pega en el dashboard de Render. Al setearlo, el arranque
+      # auto-registra el webhook de Telegram en TELEGRAM_WEBHOOK_URL.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_URL
+        value: https://api-beneficios-chile.onrender.com/telegram
 
   - type: web
     name: whatsapp-bot-beneficios
