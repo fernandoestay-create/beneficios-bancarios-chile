@@ -15,6 +15,13 @@ services:
         value: beneficios-bancarios
       - key: PINECONE_HOST
         value: beneficios-bancarios-96gaajy.svc.aped-4627-b74a.pinecone.io
+      # Firma del webhook de Twilio (opt-in). El token es SECRETO: sync:false =>
+      # se setea en el dashboard de Render, nunca en git. Al setearlo, la firma
+      # se valida y se rechaza (403) toda request no firmada por Twilio.
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WEBHOOK_URL
+        value: https://api-beneficios-chile.onrender.com/webhook
 
   - type: web
     name: whatsapp-bot-beneficios
