@@ -365,7 +365,7 @@
       "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
-      "id": "bencina_shell_scotiabank_sabado",
+      "id": "bencina_shell_scotiabank_jueves",
       "cadena": "Shell",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Singular/Premium",
@@ -393,7 +393,7 @@
       "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
-      "id": "bencina_shell_scotiabank_sabado_2",
+      "id": "bencina_shell_scotiabank_jueves_2",
       "cadena": "Shell",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Signature/Platinum",
@@ -421,7 +421,7 @@
       "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
-      "id": "bencina_shell_scotiabank_sabado_3",
+      "id": "bencina_shell_scotiabank_jueves_3",
       "cadena": "Shell",
       "banco": "Scotiabank",
       "tarjeta": "Visa Crédito Gold",
@@ -731,7 +731,7 @@
       "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
-      "id": "bencina_copec_itaú_viernes",
+      "id": "bencina_copec_itaú_martes",
       "cadena": "Copec",
       "banco": "Itaú",
       "tarjeta": "Crédito Legend Itaú",
@@ -759,7 +759,7 @@
       "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
-      "id": "bencina_copec_bancoestado_viernes",
+      "id": "bencina_copec_bancoestado_martes",
       "cadena": "Copec",
       "banco": "BancoEstado",
       "tarjeta": "Rutpay",

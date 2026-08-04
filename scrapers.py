@@ -10,6 +10,7 @@ from datetime import datetime
 import json
 import os
 import re
+import unicodedata
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, asdict, field
 
@@ -1872,9 +1873,6 @@ class ScraperBancoRipley:
             if match:
                 descuento_valor = int(match.group(1))
 
-            # Location from txtDetalleCard (e.g. "R.M. (Vitacura)")
-            ubicacion = self._val(params.get('txtDetalleCard'))
-
             # Days from txtValidezBeneficio (e.g. "Jueves", "Lunes a Viernes")
             validez_dias = self._val(params.get('txtValidezBeneficio'))
             dias_validos = self._parsear_dias_ripley(validez_dias) if validez_dias else ['todos']
@@ -1900,6 +1898,19 @@ class ScraperBancoRipley:
                     arr = arr_dir.get('array', [])
                     if arr and isinstance(arr, list):
                         direccion = self._val(arr[0].get('txtItem', ''))
+
+            # Location: derivar la REGIÓN desde la ciudad REAL en `direccion` (específica
+            # de esta sucursal), NO desde el texto de campaña `txtDetalleCard` crudo.
+            # Bug (auditoría 2026-08-04, >=7 sucursales con región mala): txtDetalleCard
+            # para cadenas multi-sede lista TODAS las regiones a la vez (ej. "II, V y VIII
+            # Región (Antofagasta / Viña del Mar / Concepción)") y el normalizador global
+            # hace matching por substring, agarrando la región que aparece primero en su
+            # diccionario — no la de ESTA sucursal. Además los numerales romanos (IV/VII/
+            # VIII/XIV/XV) colisionan por substring con "V región"/"I región" sueltos
+            # (ej. "XIV Región" contiene literalmente "V región"). direccion es confiable
+            # (trae la ciudad real); txtDetalleCard solo se usa como red final.
+            txt_detalle_card = self._val(params.get('txtDetalleCard'))
+            ubicacion = self._region_desde_direccion(direccion, txt_detalle_card) or txt_detalle_card
 
             # Subtitle (type of restaurant)
             subtitulo = self._val(params.get('txtSubtitulo'))
@@ -1965,6 +1976,117 @@ class ScraperBancoRipley:
         # Single day or comma-separated
         found = [dias_map[d.strip()] for d in texto_lower.replace(',', ' ').split() if d.strip() in dias_map]
         return found if found else ['todos']
+
+    # Mapeo ciudad/comuna -> región de Chile (claves sin tilde y en minúscula, ver
+    # `_sin_tilde`). Usado para derivar `ubicacion` desde la CIUDAD real de cada
+    # sucursal (campo `direccion`), no desde el texto de campaña de Ripley.
+    _COMUNA_REGION = {
+        # Arica y Parinacota
+        'arica': 'Arica y Parinacota', 'putre': 'Arica y Parinacota',
+        # Tarapacá
+        'iquique': 'Tarapacá', 'alto hospicio': 'Tarapacá', 'pozo almonte': 'Tarapacá',
+        # Antofagasta
+        'antofagasta': 'Antofagasta', 'calama': 'Antofagasta', 'tocopilla': 'Antofagasta',
+        'mejillones': 'Antofagasta', 'san pedro de atacama': 'Antofagasta',
+        # Atacama
+        'copiapo': 'Atacama', 'vallenar': 'Atacama', 'chanaral': 'Atacama', 'caldera': 'Atacama',
+        # Coquimbo
+        'la serena': 'Coquimbo', 'coquimbo': 'Coquimbo', 'ovalle': 'Coquimbo',
+        'illapel': 'Coquimbo', 'vicuna': 'Coquimbo',
+        # Valparaíso
+        'valparaiso': 'Valparaíso', 'vina del mar': 'Valparaíso', 'quilpue': 'Valparaíso',
+        'villa alemana': 'Valparaíso', 'san antonio': 'Valparaíso', 'los andes': 'Valparaíso',
+        'san felipe': 'Valparaíso', 'quillota': 'Valparaíso', 'la calera': 'Valparaíso',
+        'casablanca': 'Valparaíso', 'limache': 'Valparaíso',
+        # Metropolitana (Santiago + comunas)
+        'santiago': 'Metropolitana', 'maipu': 'Metropolitana', 'puente alto': 'Metropolitana',
+        'la florida': 'Metropolitana', 'las condes': 'Metropolitana', 'providencia': 'Metropolitana',
+        'nunoa': 'Metropolitana', 'vitacura': 'Metropolitana', 'lo barnechea': 'Metropolitana',
+        'la reina': 'Metropolitana', 'penalolen': 'Metropolitana', 'macul': 'Metropolitana',
+        'san joaquin': 'Metropolitana', 'san miguel': 'Metropolitana', 'independencia': 'Metropolitana',
+        'recoleta': 'Metropolitana', 'quilicura': 'Metropolitana', 'huechuraba': 'Metropolitana',
+        'renca': 'Metropolitana', 'conchali': 'Metropolitana', 'cerro navia': 'Metropolitana',
+        'pudahuel': 'Metropolitana', 'lo prado': 'Metropolitana', 'quinta normal': 'Metropolitana',
+        'estacion central': 'Metropolitana', 'cerrillos': 'Metropolitana', 'san bernardo': 'Metropolitana',
+        'buin': 'Metropolitana', 'paine': 'Metropolitana', 'melipilla': 'Metropolitana',
+        'talagante': 'Metropolitana', 'colina': 'Metropolitana', 'lampa': 'Metropolitana',
+        'til til': 'Metropolitana', 'pirque': 'Metropolitana', 'la pintana': 'Metropolitana',
+        'el bosque': 'Metropolitana', 'la cisterna': 'Metropolitana', 'lo espejo': 'Metropolitana',
+        'san ramon': 'Metropolitana', 'la granja': 'Metropolitana',
+        'pedro aguirre cerda': 'Metropolitana', 'penaflor': 'Metropolitana',
+        'padre hurtado': 'Metropolitana', 'isla de maipo': 'Metropolitana',
+        'calera de tango': 'Metropolitana', 'san jose de maipo': 'Metropolitana',
+        # O'Higgins
+        'rancagua': "O'Higgins", 'san fernando': "O'Higgins", 'rengo': "O'Higgins",
+        'machali': "O'Higgins", 'santa cruz': "O'Higgins", 'pichilemu': "O'Higgins",
+        # Maule
+        'talca': 'Maule', 'curico': 'Maule', 'linares': 'Maule',
+        'constitucion': 'Maule', 'cauquenes': 'Maule', 'san javier': 'Maule',
+        # Ñuble
+        'chillan': 'Ñuble', 'chillan viejo': 'Ñuble', 'san carlos': 'Ñuble',
+        # Biobío
+        'concepcion': 'Biobío', 'talcahuano': 'Biobío', 'los angeles': 'Biobío',
+        'coronel': 'Biobío', 'san pedro de la paz': 'Biobío', 'chiguayante': 'Biobío',
+        'hualpen': 'Biobío', 'tome': 'Biobío', 'lota': 'Biobío',
+        # Araucanía
+        'temuco': 'Araucanía', 'padre las casas': 'Araucanía', 'villarrica': 'Araucanía',
+        'angol': 'Araucanía', 'pucon': 'Araucanía',
+        # Los Ríos
+        'valdivia': 'Los Ríos', 'la union': 'Los Ríos', 'rio bueno': 'Los Ríos',
+        'panguipulli': 'Los Ríos',
+        # Los Lagos
+        'puerto montt': 'Los Lagos', 'osorno': 'Los Lagos', 'castro': 'Los Lagos',
+        'ancud': 'Los Lagos', 'puerto varas': 'Los Lagos', 'quellon': 'Los Lagos',
+        # Aysén
+        'coyhaique': 'Aysén', 'puerto aysen': 'Aysén', 'chile chico': 'Aysén',
+        # Magallanes
+        'punta arenas': 'Magallanes', 'puerto natales': 'Magallanes', 'porvenir': 'Magallanes',
+    }
+
+    @staticmethod
+    def _sin_tilde(texto: str) -> str:
+        """minúscula + sin tildes, para matchear ciudad sin depender del acento exacto."""
+        if not texto:
+            return ''
+        limpio = ''.join(
+            c for c in unicodedata.normalize('NFD', texto)
+            if unicodedata.category(c) != 'Mn'
+        )
+        return limpio.lower().strip()
+
+    def _region_desde_direccion(self, direccion: str, texto_extra: str = '') -> str:
+        """Deriva la región chilena desde la CIUDAD real de `direccion` (específica de
+        ESTA sucursal), en vez de confiar en el texto de campaña `txtDetalleCard` de
+        Ripley completo. Ver comentario en `_parsear_item` para el detalle del bug.
+        `texto_extra` (típicamente txtDetalleCard) solo se usa como red final si la
+        dirección no aporta una ciudad reconocible.
+        """
+        candidatos = []
+        if direccion:
+            partes = [p.strip() for p in direccion.split(',') if p.strip()]
+            candidatos.extend(reversed(partes))  # la ciudad suele ir al final
+
+        for cand in candidatos:
+            key = self._sin_tilde(cand)
+            if key in self._COMUNA_REGION:
+                return self._COMUNA_REGION[key]
+
+        if texto_extra:
+            m = re.search(r'\(([^)]+)\)', texto_extra)
+            if m:
+                for cand in re.split(r'/|,', m.group(1)):
+                    key = self._sin_tilde(cand)
+                    if key in self._COMUNA_REGION:
+                        return self._COMUNA_REGION[key]
+
+        # Red final: buscar cualquier ciudad/comuna conocida dentro del texto completo
+        # (más larga primero, para preferir matches específicos sobre genéricos)
+        texto_completo = self._sin_tilde(f"{direccion} {texto_extra}")
+        for comuna, region in sorted(self._COMUNA_REGION.items(), key=lambda kv: -len(kv[0])):
+            if comuna in texto_completo:
+                return region
+
+        return ''
 
 
 # ============================================
