@@ -1,14 +1,14 @@
 # TUNING_PAGINAS.md — Fine-tuning operativo de las páginas de MiCartera
 
 > **Qué es:** el catálogo de TODOS los errores que aparecieron de cara al usuario en las
-> páginas (`/ver`, `/ver/bencinas`, `/ver/cuotas`) y en los scrapers que las alimentan,
-> con **síntoma → causa → fix → cómo evitarlo**. Es fine-tuning OPERATIVO: se actualiza
-> cada vez que se toca una página. Complementa `LECCIONES_APRENDIDAS.md` (desarrollo);
-> aquí vive lo que se ROMPE de cara al usuario y cómo no repetirlo.
+> páginas (`/ver`, `/ver/beneficios`, `/ver/bencinas`, `/ver/cuotas`) y en los scrapers que
+> las alimentan, con **síntoma → causa → fix → cómo evitarlo**. Es fine-tuning OPERATIVO: se
+> actualiza cada vez que se toca una página. Complementa `LECCIONES_APRENDIDAS.md`
+> (desarrollo); aquí vive lo que se ROMPE de cara al usuario y cómo no repetirlo.
 >
 > **Cómo usarlo:** ANTES de tocar una página, leer su sección + los patrones raíz.
 > DESPUÉS de arreglar un bug de página, agregar la entrada aquí.
-> Última actualización: 2026-07-29.
+> Última actualización: 2026-08-03.
 
 ---
 
@@ -26,6 +26,13 @@
    Falabella en el slug). Jamás un 0% falso, un pin inventado o un nombre a dedo. (L-14, L-19)
 4. **Verificar MIDIENDO.** Reproducir el bug en la data real / el navegador antes de tocar
    lógica. "No aparece X" → pregunta 1 es "¿el dato existe?", no "¿el filtro falla?". (L-06)
+5. **Trazabilidad: la data de cara al usuario viene de fuente OFICIAL marcada.** Un agregador
+   es control de calidad, NO fuente (se desactualiza y comete errores). Cada dato lleva
+   `url_fuente` + `confianza`; la guardia de madrugada lo vigila SIEMPRE. Si no hay dato
+   chequeado → **"estamos confirmando descuentos"**, nunca mostrar lo dudoso. (L-24, L-33, L-35)
+6. **Filtros dinámicos.** Al fijar un eje (banco), los otros (día/comuna/%) recalculan sus
+   opciones y **atenúan/bloquean** las sin resultados, en vez de dejarlas devolver vacío. Es
+   el complemento activo de #1. (L-36)
 
 ---
 
@@ -38,6 +45,7 @@
 | Filtro **Modalidad** ("Presencial"/"Online") esconde 222 ofertas (Banco de Chile 200) | `presencial=False` Y `online=False` (sin flag) → no matchean ningún modo salvo "Todas" | `(mode==='presencial' && (d.presencial\|\|!d.online))` — presencial incluye las indeterminadas | Un flag booleano ausente ≠ false semántico; el filtro debe contemplar el "sin dato" |
 | Filtro **Zona/Región** borra 277 ofertas nacionales | `regions.includes(d.ubicacion)` con `ubicacion=''` → nunca matchea | `!regions \|\| !d.ubicacion \|\| regions.includes(...)` — sin ubicación = nacional = pasa | Patrón raíz #1 |
 | "No aparece el descuento Y" | Casi siempre **gap de datos**, no bug de filtro | Verificar la data cruda filtrando por la condición exacta ANTES de tocar el filtro | Patrón raíz #4 (L-06) |
+| Un banco solo tiene descuentos L-V pero sábado/domingo se pueden elegir → devuelven vacío | Filtros **estáticos**: cada control ofrece todo el universo sin mirar los otros filtros | **Faceteado dinámico**: tras cada cambio, recalcular `_base` (todos los filtros menos el eje pintado) y marcar `.day-off` (atenuado + `pointer-events:none`) las opciones sin resultados | Patrón raíz #6 (L-36); pendiente extender a comuna/región y a bencinas/cuotas |
 
 ### Búsqueda
 | Síntoma | Causa | Fix | Evitar |
@@ -60,8 +68,35 @@
 
 ---
 
+## 🎁 Página `/ver/beneficios` — Otros beneficios (retail, viajes, salud, entretención)
+
+> Apartado NUEVO (ago-2026), SEPARADO de restaurantes. Descuentos "por debajo" con tarjeta
+> que no son restaurante/bencina/cuota. **Dataset propio `beneficios_otros.json`** (campo
+> `seccion="otro"`), misma lógica filtrable que `/ver`. El apartado `/ver` NO se tocó.
+
+| Síntoma | Causa | Fix | Evitar |
+|---|---|---|---|
+| "Bip Solar" Santander mostraba **54% de descuento** (irreal) | Regex laxo `(\d+)\s*%` sobre la descripción cruda leía el **CAE 1,54%** del financiamiento como si fuera descuento | Excluir la frase del CAE (`re.sub(r'CAE[^.]*','')`) + exigir solo % de 1-2 dígitos sin decimal/dígito previo (`(?<![\d,])(\d{1,2})\s*%`) | Un número junto a "CAE"/"tasa" es financiamiento, NO descuento (L-34) |
+| "Salen solo 2 bancos, hay muchos" | Solo Santander/Consorcio traían la sección "otros"; el resto aún no curado | Se muestran los **24 verificables** (con % real); faltan ~12 bancos por curar | No inflar con datos sin % real ("si no está chequeado, mejor no mostrar") |
+| 228 candidatos → 24 mostrados | ~204 eran financiamiento/servicios/CAE sin descuento % real | Filtrar a `descuento_valor>0` verificable | Patrón raíz #3/#5 — no mostrar lo no chequeado |
+| Días sin resultados seleccionables | Filtros estáticos | Faceteado dinámico (`.day-off`), igual que `/ver` | Patrón raíz #6 (L-36) |
+
+**Cómo se separan las secciones:** `scrapers.py` etiqueta cada `Beneficio` con `seccion`
+("restaurante"/"otro"); el orquestador parte las dos y guarda `beneficios_otros.json` aparte;
+`api.py` usa `_render_deals()` reusable + dos endpoints finos `/ver` y `/ver/beneficios`. Así
+el apartado nuevo NO toca el pipeline de restaurantes (pisos, red de seguridad, health check). (L-31, L-32)
+
+---
+
 ## ⛽ Página `/ver/bencinas`
-- "No sale el descuento Scotiabank sábado" → era **gap de datos**, el filtro por día estaba bien (L-06).
+- ⚠️ **Trazabilidad (ago-2026):** los descuentos venían 100% de un **agregador** (descuentosrata.com)
+  con **5 errores reales** → re-curados desde **fuente oficial** (Copec `ww2.copec.cl`) + medios
+  verificados (Aramco/Shell). Correcciones: **Shell/Scotiabank es JUEVES, no sábado**; Itaú martes;
+  BancoEstado martes $50; BCI 7% cashback; Santander Consumer vie-dom. Cada dato con `confianza` +
+  `url_fuente`; la web marca la procedencia. **Pendiente:** re-curar Shell/Aramco desde sus apps
+  oficiales (hoy medios; solo Copec es oficial). (L-33, L-35)
+- El guard de la guardia **falla** si un descuento de bencina pierde `confianza` o vuelve al agregador.
+- "No sale el descuento X un día" → verificar primero si es **gap de datos**, el filtro suele estar bien (L-06).
 - Logos: **no hotlinkear** Wikimedia/Google (dan 400) → self-hostear en `static/logos/` (L-05).
 - Montos por tier tras SPA no parseable → mantener con caveat, no adivinar (L-06/decisión).
 
@@ -108,9 +143,11 @@
 Cada madrugada (~03:00 Chile, workflow `revision_madrugada.yml`) se convierte CADA bug de
 este doc en un **check automático** contra producción (curl + `node --check`) + la data, y
 se manda **correo SOLO si algo reaparece**. Es este fine-tuning hecho código (patrón L-07:
-cada bug resuelto → un guard permanente). Cubre: página viva + JS sano (L-13/L-21),
-seguridad (`/scrape`→404, `/rag`→403), nombres reales (L-29), no-vacíos (L-10/L-14), ids
-únicos (L-11), búsqueda por comuna y filtro de modalidad (L-28), no-colapso (L-16).
+cada bug resuelto → un guard permanente). Es "el agente que revisa que todo esté bien
+siempre" (pedido de Fernando). Cubre: página viva + JS sano (L-13/L-21), seguridad
+(`/scrape`→404, `/rag`→403), nombres reales (L-29), no-vacíos (L-10/L-14), ids únicos (L-11),
+búsqueda por comuna y filtro de modalidad (L-28), no-colapso (L-16) y **trazabilidad**
+(bencina con `confianza` y sin agregador; otros beneficios de fuente oficial — L-33/L-35).
 Correrlo a mano: GitHub Actions → "Revisión Madrugada" → Run workflow.
 **Al agregar un bug nuevo a este doc, agregar también su guard en `revision_madrugada.py`.**
 

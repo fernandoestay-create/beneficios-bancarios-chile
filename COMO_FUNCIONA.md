@@ -13,8 +13,8 @@ Un sistema que **scrapea descuentos bancarios de restaurantes en Chile** (15 ban
 los limpia, y los muestra en una web pública + un bot de WhatsApp con IA. También
 trae **precios y descuentos de bencina**.
 
-- **Web pública:** https://api-beneficios-chile.onrender.com/ver (restaurantes), `/ver/bencinas` y `/ver/cuotas`.
-- **Datos:** ~885 beneficios de restaurantes (14 bancos) + 31 descuentos de bencina + campañas de cuotas sin interés. Además hay **228 "otros beneficios"** de tarjeta (Santander/Consorcio) capturados en un dataset aparte (sección 13).
+- **Web pública:** https://api-beneficios-chile.onrender.com/ver (restaurantes), `/ver/bencinas`, `/ver/cuotas` y `/ver/beneficios` (otros beneficios de tarjeta).
+- **Datos:** ~887 beneficios de restaurantes (14 bancos) + 31 descuentos de bencina (re-curados desde fuente oficial, sección 16) + campañas de cuotas sin interés. Además hay un apartado de **"otros beneficios"** de tarjeta (Santander/Consorcio) en `/ver/beneficios`: **24 verificados** con descuento real, filtrados de 228 candidatos (sección 13).
 - **Costo de operación:** ~$0 (todo en planes gratuitos: GitHub Actions, Render, tu PC).
 
 ---
@@ -30,7 +30,7 @@ trae **precios y descuentos de bencina**.
 | **`api.py`** | Render (nube) | La web + la API + el bot de WhatsApp (todo junto) |
 | **Cron** (`.github/workflows/scraper.yml`) | GitHub Actions (nube, USA) | Corre diario: scrapea, chequea, **manda el mail**, publica |
 | **Refresco local** (`refrescar_local.ps1`) | Tu PC (Chile) | Corre diario: trae los bancos geo-fenceados frescos (ej. Falabella) |
-| **Guardia de madrugada** (`revision_madrugada.py`) | GitHub Actions (nube) | Corre ~03:00: revisa que ningún bug conocido reapareció; avisa por mail **solo si algo falla** (sección 14) |
+| **Guardia de madrugada** (`revision_madrugada.py`) | GitHub Actions (nube) | Corre ~03:00: revisa que ningún bug conocido reapareció + que los datos sigan siendo trazables; avisa por mail **solo si algo falla** (sección 14) |
 
 ---
 
@@ -186,9 +186,9 @@ beneficios-bancarios-chile/
 ├── diagnosticar.py        # guarda el HTML de bancos caídos
 ├── refrescar_local.ps1    # refresco diario desde Chile (tu PC)
 ├── revision_madrugada.py  # guardia de madrugada: re-chequea bugs conocidos vs producción
-├── beneficios.json        # los ~885 descuentos de restaurantes (la fuente de verdad de /ver)
-├── beneficios_otros.json  # dataset SEPARADO: beneficios de tarjeta NO-restaurante (seccion="otro")
-├── bencinas.json          # descuentos + precios de combustible
+├── beneficios.json        # los ~887 descuentos de restaurantes (la fuente de verdad de /ver)
+├── beneficios_otros.json  # dataset SEPARADO: 24 beneficios de tarjeta verificados con % real (de 228 candidatos; seccion="otro")
+├── bencinas.json          # descuentos + precios de combustible (re-curado desde fuente oficial, campo confianza)
 ├── cuotas_sin_interes.json# campañas de cuotas sin interés del mes (curado mensual)
 ├── historial.json         # la MEMORIA del aprendizaje (1 snapshot por corrida)
 ├── TUNING_PAGINAS.md      # fine-tuning operativo de las páginas (síntoma→causa→fix)
@@ -250,18 +250,23 @@ restaurantes (que es la que más se usa) con datos de otra naturaleza:
   de la lista principal **antes** de guardar, así **no entran a `beneficios.json`** (la
   página de restaurantes) **ni afectan los pisos ni la red de seguridad**. Quedan aparte,
   en su propio archivo.
-- **Hoy:** 228 beneficios "otros" (**Santander 224 + Consorcio 4**). El resto de bancos
-  todavía no aporta a esta sección.
-- **Misma lógica para mostrarlos:** filtros por día / categoría / tarjeta +
-  búsqueda por nombre, igual que las otras páginas.
+- **De 228 candidatos a 24 verificables:** de los 228 beneficios "otros" capturados
+  (Santander 224 + Consorcio 4), en la web **solo se muestran 24** — los que tienen un
+  **descuento % real** verificable (ski, retail, viajes, entretención, salud). Los ~204
+  restantes son de financiamiento en cuotas o servicios sin porcentaje real (detalle en la
+  sección 16) y **no se muestran**: el criterio es *"si no está chequeado, mejor no
+  mostrar"*, igual que con la bencina. El resto de bancos todavía no aporta a esta sección.
+- **Misma lógica para mostrarlos:** filtros por día / categoría / tarjeta + búsqueda por
+  nombre, igual que las otras páginas (más los filtros dinámicos de la sección 17).
 
 > ✅ **Estado del apartado web `/ver/beneficios`:** DESPLEGADO y funcionando en producción
-> (HTTP 200, 228 beneficios). `api.py` carga `beneficios_otros.json` (variable `otros_db`) y
-> el endpoint `/ver/beneficios` reusa `_render_deals` (la MISMA lógica de `/ver`): filtros
-> día/categoría/tarjeta + búsqueda por nombre + tarjetas con condiciones. La página de
-> restaurantes (`/ver`) quedó **intacta** (dataset separado). El link "🎁 Otros beneficios"
-> está en las 4 barras. Verificado: boot + `node --check` ambas vistas + curl a producción
-> (Clínica Dental, El Colorado, La Parva, Kaufmann…). Pendiente: sumar los otros 12 bancos.
+> (24 beneficios verificados — Corralco, Pomeriggio, Valle Nevado, entre otros). `api.py`
+> carga `beneficios_otros.json` (variable `otros_db`) y el endpoint `/ver/beneficios` reusa
+> `_render_deals` (la MISMA lógica de `/ver`): filtros día/categoría/tarjeta + búsqueda por
+> nombre + tarjetas con condiciones. La página de restaurantes (`/ver`) quedó **intacta**
+> (dataset separado). El link "🎁 Otros beneficios" está en las 4 barras. Verificado: boot +
+> `node --check` ambas vistas + curl a producción. **Pendiente:** sumar los otros 12 bancos
+> (hoy solo Santander/Consorcio aportan) — detalle en la sección 18.
 
 ---
 
@@ -272,16 +277,19 @@ Cada **madrugada (~03:00 Chile)**, un workflow aparte (`revision_madrugada.yml`)
 haya reaparecido**. Es el "fine-tuning hecho código" (patrón L-07): cada error que alguna
 vez rompió una página se convierte en un **check permanente**.
 
-Revisa dos capas, contra **producción viva** + los datos:
+Revisa tres capas, contra **producción viva** + los datos:
 
-- **Runtime (la web viva):** que `/ver`, `/ver/bencinas` y `/ver/cuotas` respondan de
-  verdad (no un shell vacío), que el `<script>` de cada una **compile** (`node --check` —
-  porque "200 ≠ funciona", L-21), y que los **endpoints peligrosos sigan cerrados**
-  (`/scrape/*` → 404, `/rag` sin token → 403).
+- **Runtime (la web viva):** que `/ver`, `/ver/bencinas`, `/ver/cuotas` y `/ver/beneficios`
+  respondan de verdad (no un shell vacío), que el `<script>` de cada una **compile**
+  (`node --check` — porque "200 ≠ funciona", L-21), y que los **endpoints peligrosos sigan
+  cerrados** (`/scrape/*` → 404, `/rag` sin token → 403).
 - **Datos (lo que se sirve):** que no reaparezcan nombres genéricos ("Dcto en Restaurante",
   L-29), que nada quede con nombre o descuento vacío (L-10/L-14), que **no haya ids
   duplicados** (L-11), que la búsqueda siga indexando comuna/tags (L-28), que el filtro de
   modalidad no esconda todo (L-28), y que la web no quede casi vacía (proceso estéril, L-16).
+- **Trazabilidad (desde 2026-08-03, L-35):** que la bencina no pierda el campo `confianza`
+  ni vuelva a depender de un agregador en vez de la fuente oficial, y que los "otros
+  beneficios" sigan siendo oficiales verificables. Detalle en la sección 16.
 
 **Solo te manda correo si algo falla** (silencio = todo OK, no molesta). Se puede correr a
 mano: GitHub → Actions → "Revisión Madrugada" → Run workflow. El catálogo completo de bugs
@@ -299,17 +307,112 @@ Falabella es un caso especial en dos frentes, ambos ya resueltos:
   recupera (`_nombre_desde_slug`) — Petit, Vapiano, Muu Grill, Tanta, etc. — en vez de
   mostrar el genérico (L-19/L-29). **Se recupera, nunca se inventa.**
 - **Restricción honesta y trazable (📋 en la tarjeta):** muchas ofertas de Falabella
-  aplican a nivel cadena (sin un local fijo). Por eso cada beneficio lleva una restricción
+  aplican solo en ciertos locales de la cadena (ej. el Tanta de Alonso de Córdova, no el del
+  mall) y no siempre a nivel nacional. Por eso cada beneficio lleva una restricción
   consistente: el tope (si lo hay) + el mall donde aplica + **"Revisa los locales del
   beneficio. Comprueba en la página oficial."** (las 95 ofertas la llevan). En la web esa
-  condición se muestra en la tarjeta con el ícono **📋** (`deal-cond`), para que **verifiques
-  dónde aplica** antes de ir. No se inventan direcciones ni pins en el mapa.
+  condición se muestra en la tarjeta con el ícono **📋** (`deal-cond`), más un link
+  **"Comprobar en la página"** hacia la fuente, para que **verifiques dónde aplica** antes de
+  ir. No se inventan direcciones ni pins en el mapa.
 
 ---
 
-## 16. Una línea para recordar
+## 16. Trazabilidad: de dónde sale cada dato (2026-08-03)
+
+Pedido de Fernando: **"todo trazable y chequeado; si no, no mostrar."** El sistema audita
+la trazabilidad **midiendo el dominio real de `url_fuente`** de cada dato (no asumiendo), y
+clasifica cada dataset como fuente **oficial**, **agregador** o **sin fuente**:
+
+| Dataset | Cobertura | Fuente |
+|---------|-----------|--------|
+| Restaurantes (`beneficios.json`) | 887 | 100% fuente oficial (la web del banco) |
+| Otros beneficios (`beneficios_otros.json`) | 24 | 100% fuente oficial |
+| Cuotas sin interés (`cuotas_sin_interes.json`) | 28 | 100% fuente oficial |
+| Bencina (`bencinas.json`) | 31 | **Re-curada** (antes 100% agregador — ver abajo) |
+
+### La bencina se re-curó desde la fuente oficial
+
+Los 31 descuentos de bencina venían **100% de un agregador** (`descuentosrata.com`), sin
+forma de saber qué tan confiable era cada dato. Al auditar la trazabilidad, esa falta de
+fuente propia escondía **errores reales** que nadie había notado. Se re-curó:
+
+- **Copec (15 descuentos):** desde la página oficial `ww2.copec.cl/personas/promociones`.
+- **Aramco/Shell (16 descuentos):** desde medios verificados (agosto 2026) — Aramco/Shell
+  todavía no tiene una página oficial fácil de leer; es la excepción pendiente (sección 18).
+
+Cada descuento de bencina ahora lleva dos campos nuevos: **`confianza`** (`"oficial (...)"`
+o `"secundaria (medios...)"`) y **`url_fuente`** (el link oficial de la cadena). La web
+muestra esa procedencia junto al descuento, para que verifiques en tu banco.
+
+### 5 errores del agregador que nadie había visto
+
+Comparar contra la fuente oficial destapó estos errores (el agregador decía una cosa, la
+fuente oficial dice otra):
+
+| Descuento | Agregador decía | Dato real (oficial) |
+|-----------|------------------|----------------------|
+| Shell + Scotiabank | Sábado | **Jueves** |
+| Copec + Itaú | Viernes | **Martes** |
+| Copec + BancoEstado | Viernes, $100/L | **Martes, $50/L** |
+| Copec + BCI | $100/L | **7% cashback, tope $7.000** |
+| Copec + Santander Consumer | Lunes a viernes | **Viernes a domingo** |
+
+**Lección:** un agregador de terceros sirve como **control de calidad** (cruzar contra él
+para detectar inconsistencias), pero **nunca es la fuente de verdad** — se desactualiza y
+comete errores sin que nadie lo note, sobre todo en datos que casi no se revisan (el día
+exacto de un descuento de bencina, por ejemplo). (Lecciones L-24, L-33, L-34, L-35.)
+
+### Otros beneficios: mismo criterio, aplicado al armar el dataset
+
+El mismo principio se aplicó al construir `beneficios_otros.json` (sección 13): de 228
+candidatos, solo se muestran los **24 con un descuento % real y verificable**. Ahí el riesgo
+no era un agregador sino un regex de extracción demasiado laxo: el caso real fue **Bip
+Solar** (paneles solares), donde el regex tomaba el "54" de "CAE 1,54%" (el Costo Anual
+Equivalente del financiamiento) y lo mostraba como un descuento del "54%", cuando el CAE
+real era 1,54%. Se corrigió excluyendo la frase del CAE antes de extraer el % y acotando el
+formato. Cuando un dato no está chequeado, la regla es **no mostrarlo** (o avisar "estamos
+confirmando", sección 17) — nunca mostrar un número dudoso.
+
+---
+
+## 17. Filtros dinámicos y "estamos confirmando"
+
+Además del selector de mes dinámico de Cuotas (sección 12), `/ver` y `/ver/beneficios`
+tienen sus propios filtros dinámicos, agregados en esta sesión:
+
+- **Días atenuados/bloqueados según el banco:** al elegir un banco en el filtro, los días
+  de la semana en los que ese banco **no tiene ofertas** quedan atenuados y no se pueden
+  seleccionar — así no eliges una combinación banco+día que da una lista vacía sin
+  explicación.
+- **"⏳ Estamos confirmando los descuentos de esta sección":** si una sección todavía no
+  tiene datos verificados que mostrar, aparece este mensaje en vez de una lista vacía o un
+  dato sin chequear. Mismo principio que la sección 16: mejor avisar honestamente que
+  mostrar algo dudoso.
+
+**Pendiente:** extender este mismo patrón (día dinámico, como el mes dinámico de Cuotas) a
+región/comuna y a las vistas de bencinas y cuotas, que hoy no lo tienen — detalle en la
+sección 18.
+
+---
+
+## 18. Pendientes actuales (honesto)
+
+- **Re-curar Shell/Aramco desde su propia fuente oficial:** hoy están verificados desde
+  medios (agosto 2026), no desde una página oficial propia como Copec. Cuando Aramco/Shell
+  publique una página de promociones estable, migrar esos 16 descuentos a fuente oficial
+  directa.
+- **Extender los filtros dinámicos** (día bloqueado según banco, sección 17) a
+  región/comuna, y a las vistas de `/ver/bencinas` y `/ver/cuotas` (hoy solo `/ver` y
+  `/ver/beneficios` los tienen).
+- **Sumar más bancos a "Otros beneficios"** (sección 13): hoy solo Santander y Consorcio
+  aportan (24 datos verificados); quedan 12 bancos sin revisar para esta sección.
+
+---
+
+## 19. Una línea para recordar
 
 > **El cron te manda el mail diario y publica; tu PC mantiene Falabella fresco; la red
-> de seguridad evita que algo desaparezca; el aprendizaje calibra los pisos solo; la
-> guardia de madrugada avisa si un bug conocido reaparece. Tu única tarea es leer el mail
-> — y avisarme sólo si un banco cambió su web.**
+> de seguridad evita que algo desaparezca; el aprendizaje calibra los pisos solo; cada
+> dato de bencina y de "otros beneficios" lleva su fuente y su nivel de confianza; la
+> guardia de madrugada avisa si un bug conocido —o la trazabilidad— se rompe. Tu única
+> tarea es leer el mail y avisarme sólo si un banco cambió su web.**
