@@ -707,7 +707,7 @@
       "cadena": "Copec",
       "banco": "BCI",
       "tarjeta": "Crédito BCI",
-      "descuento_por_litro": 100,
+      "descuento_por_litro": 0,
       "descuento_texto": "7% cashback (tope $7.000/día)",
       "dias_validos": [
         "jueves"
@@ -728,8 +728,7 @@
         "bencina",
         "combustible"
       ],
-      "confianza": "oficial (ww2.copec.cl, ago-2026)",
-      "descuento_valor": 0
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_itaú_viernes",
@@ -764,7 +763,7 @@
       "cadena": "Copec",
       "banco": "BancoEstado",
       "tarjeta": "Rutpay",
-      "descuento_por_litro": 100,
+      "descuento_por_litro": 50,
       "descuento_texto": "$50/L",
       "dias_validos": [
         "martes"
@@ -785,8 +784,7 @@
         "bencina",
         "combustible"
       ],
-      "confianza": "oficial (ww2.copec.cl, ago-2026)",
-      "descuento_valor": 50
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_machbank_sabado",

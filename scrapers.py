@@ -89,6 +89,7 @@ class DescuentoBencina:
     url_fuente: str = ""
     fecha_scrape: str = ""
     activo: bool = True
+    confianza: str = ""      # trazabilidad: "oficial (...)" | "secundaria (medios...)"
     tags: List[str] = field(default_factory=list)
 
     def __post_init__(self):
