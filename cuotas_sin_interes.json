@@ -1,7 +1,7 @@
 {
   "mes_referencia": "agosto 2026",
   "actualizado": "2026-08-04",
-  "nota_general": "Re-verificado el 2026-08-04 vía las páginas oficiales de cada banco desde Chile. Confirmados VIGENTES en agosto 2026: Santander (1-31 ago), Scotiabank, Banco de Chile, Banco Falabella, BCI (hasta sep), Banco Itaú. Los demás bancos (BICE, Security, Lider BCI, Tenpo, Consorcio, Entel) mantienen su última curación con su link oficial — verifícalo en el link de cada campaña. OJO: automotriz/educación/salud normalmente NO son 0% sino tasa preferencial (0,79%-1,19% mensual) — se indica la tasa real. Siempre verificar en el link oficial.",
+  "nota_general": "Re-verificado el 2026-08-04 vía las páginas oficiales de cada banco desde Chile. VIGENTES confirmados en agosto 2026: Santander (1-31 ago), Scotiabank, Banco de Chile, Banco Falabella, Banco Itaú, BCI (hasta sep), Banco BICE (programa permanente), Banco Security (todos los días). Lider BCI, Consorcio y Entel tienen vigencias que ya cubren agosto (hasta dic / permanente). Tenpo: su campaña de junio venció y no se pudo verificar una de agosto — revisar el link. OJO: automotriz/educación/salud suelen ser tasa preferencial (0,79%-1,19% mensual), NO 0%. Siempre verificar en el link oficial de cada campaña.",
   "categorias": [
     "Todos los comercios",
     "Automotriz",
@@ -195,7 +195,7 @@
     },
     "Banco BICE": {
       "url_oficial": "https://banco.bice.cl/personas/beneficios/cuotas-sin-interes",
-      "confianza": "oficial",
+      "confianza": "oficial-verificada",
       "campanas": [
         {
           "categoria": "Todos los comercios",
@@ -204,7 +204,7 @@
           "detalle": "3 cuotas sin interés en todos los rubros con tarjetas Visa Gold, Platinum, Signature e Infinite.",
           "condiciones": "Aplica a segmentos Gold/Platinum/Signature/Infinite.",
           "tarjetas": "Visa Gold / Platinum / Signature / Infinite",
-          "vigencia": "junio 2026",
+          "vigencia": "vigente en agosto 2026 (programa permanente, verificado en la web oficial 2026-08-04)",
           "url": "https://banco.bice.cl/personas/beneficios/todos-los-rubros-csi"
         },
         {
@@ -214,7 +214,7 @@
           "detalle": "12 cuotas con tasa preferencial en educación (también hay tramo 3 a 12 CSI según institución).",
           "condiciones": "Tasa preferencial, no 0%.",
           "tarjetas": "Visa Banco BICE",
-          "vigencia": "junio 2026",
+          "vigencia": "vigente en agosto 2026 (programa permanente, verificado en la web oficial 2026-08-04)",
           "url": "https://banco.bice.cl/personas/beneficios/cuotas-sin-interes"
         },
         {
@@ -224,7 +224,7 @@
           "detalle": "25 a 48 cuotas con tasa preferencial en automotriz.",
           "condiciones": "Tasa preferencial, no 0%.",
           "tarjetas": "Crédito Banco BICE",
-          "vigencia": "hasta 30-jun-2026",
+          "vigencia": "vigente en agosto 2026 (programa permanente, verificado en la web oficial 2026-08-04)",
           "url": "https://banco.bice.cl/personas/beneficios/cuotas-sin-interes"
         },
         {
@@ -234,7 +234,7 @@
           "detalle": "Contribuciones de 6 a 12 cuotas sin interés.",
           "condiciones": "Requiere pago oportuno.",
           "tarjetas": "Crédito Banco BICE",
-          "vigencia": "junio 2026",
+          "vigencia": "vigente en agosto 2026 (programa permanente, verificado en la web oficial 2026-08-04)",
           "url": "https://banco.bice.cl/personas/beneficios/cuotas-sin-interes"
         }
       ],
@@ -259,7 +259,7 @@
     },
     "Banco Security": {
       "url_oficial": "https://personas.bancosecurity.cl/beneficios/shopping-y-servicios",
-      "confianza": "oficial",
+      "confianza": "oficial-verificada",
       "campanas": [
         {
           "categoria": "Todos los comercios",
@@ -268,7 +268,7 @@
           "detalle": "3 cuotas sin interés en todos los rubros con Tarjeta One.",
           "condiciones": "Exclusivo Tarjeta One.",
           "tarjetas": "Tarjeta One (Banco Security)",
-          "vigencia": "junio 2026",
+          "vigencia": "vigente en agosto 2026 (todos los días, verificado en la web oficial 2026-08-04)",
           "url": "https://personas.bancosecurity.cl/beneficios/6-12-cuotas-sin-interes"
         },
         {
@@ -278,7 +278,7 @@
           "detalle": "Contribuciones en 6 a 12 cuotas con tasa preferencial con Tarjeta One.",
           "condiciones": "Tasa preferencial, no 0%. CAE referencial 2,75%.",
           "tarjetas": "Tarjeta One (Banco Security)",
-          "vigencia": "hasta 30-jun-2026",
+          "vigencia": "vigente en agosto 2026 (todos los días, verificado en la web oficial 2026-08-04)",
           "url": "https://personas.bancosecurity.cl/beneficios/shopping-y-servicios"
         }
       ]
@@ -294,7 +294,7 @@
           "detalle": "3 cuotas precio contado, sin pie y sin interés, con Tarjeta de Crédito Lider BCI. Presencial en Lider, Express, SuperBodega aCuenta y Central Mayorista, y online en Lider.cl y app.",
           "condiciones": "CAE 0%. Sin pie. Aplica en canales Lider (incluye alimentos).",
           "tarjetas": "Crédito Lider BCI",
-          "vigencia": "01-ene al 31-dic-2026 (cubre junio)",
+          "vigencia": "01-ene al 31-dic-2026 (cubre agosto 2026)",
           "url": "https://www.liderbci.cl/descuentos/3-cuotas-precio-contado-sin-pie-y-sin-intereses"
         },
         {
@@ -311,7 +311,7 @@
     },
     "Tenpo": {
       "url_oficial": "https://www.tenpo.cl/productos/tarjeta-de-credito/home",
-      "confianza": "oficial",
+      "confianza": "secundaria (no verificada en agosto)",
       "campanas": [
         {
           "categoria": "Todos los comercios",
@@ -320,7 +320,7 @@
           "detalle": "3 cuotas sin interés en todo con la Tarjeta de Crédito Tenpo.",
           "condiciones": "Requiere pagar el total facturado al vencimiento para mantener el beneficio.",
           "tarjetas": "Crédito Tenpo",
-          "vigencia": "01 al 30-jun-2026",
+          "vigencia": "campaña de junio vencida; no se verificó una vigente en agosto — revisar el link oficial",
           "url": "https://www.tenpo.cl/productos/tarjeta-de-credito/home"
         }
       ]
@@ -336,7 +336,7 @@
           "detalle": "3 cuotas sin interés en cualquier comercio nacional; hasta 3 a 12 cuotas sin interés en comercios asociados. Beneficio propio de la Tarjeta Consorcio Visa.",
           "condiciones": "CAE referencial 1,18%. Verificado en la web oficial (1-jul-2026).",
           "tarjetas": "Crédito Consorcio Visa",
-          "vigencia": "hasta 31-dic-2026",
+          "vigencia": "hasta 31-dic-2026 (cubre agosto 2026)",
           "url": "https://sitio.consorcio.cl/banca-personas/tarjeta-de-credito"
         }
       ],
@@ -353,7 +353,7 @@
           "detalle": "3 cuotas sin interés en todo comercio afiliado (nacional e internacional) con la Tarjeta Entel Visa (emitida con Banco de Chile).",
           "condiciones": "Beneficio permanente de la tarjeta, no campaña fechada.",
           "tarjetas": "Tarjeta Entel Visa",
-          "vigencia": "beneficio permanente (vigente en junio 2026)",
+          "vigencia": "beneficio permanente (cubre agosto 2026)",
           "url": "https://www.entel.cl/entel-visa"
         },
         {
@@ -363,7 +363,7 @@
           "detalle": "3 a 24 cuotas sin interés en equipos y servicios en canales propios Entel (Entel.cl, tiendas y App Entel).",
           "condiciones": "Solo en canales propios Entel.",
           "tarjetas": "Tarjeta Entel Visa",
-          "vigencia": "beneficio permanente (vigente en junio 2026)",
+          "vigencia": "beneficio permanente (cubre agosto 2026)",
           "url": "https://www.entel.cl/entel-visa"
         }
       ]
