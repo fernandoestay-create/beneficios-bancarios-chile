@@ -13,7 +13,8 @@
 - **Revisión (2 agentes independientes, punto por punto):**
   - *Código:* los 4 flujos OK. Fix aplicado: `ask_banco` (restaurantes) ahora **avisa** ante un banco inválido (ej. "999") en vez de mostrar todos en silencio — consistente con `ask_banco_generico`; + docstring corregido.
   - *Datos:* se **quitó "Proyecta Energía"** (financiamiento con CAE colado como "90% dcto." en los otros — mismo patrón L-34; **otros 24→23**) y se limpió el nombre del masaje de Consorcio.
-  - *Pendientes → ROADMAP:* **cuotas desactualizadas** (mes_referencia junio, ~20/28 vencidas → re-curar a agosto); **Ripley con región mal** en ≥7/72 (afecta filtro/mapa); menores (5 ids de bencina con día viejo en el nombre —cosmético—, 1 duplicado Security).
+  - *Cerrados tras el audit (`849b708`):* **Ripley región** — raíz arreglada (nuevo `_region_desde_direccion()` deriva la región de la ciudad real; 8 registros corregidos, Kunstmann→Los Ríos); **5 ids de bencina** renombrados al día real; el "duplicado" de Security ya no existe.
+  - *Pendientes → ROADMAP (necesitan acceso desde Chile / apps):* **cuotas a agosto** (mes_ref junio, ~20/28 vencidas); Shell/Aramco desde apps oficiales; ~12 bancos más en "Otros".
 - Lecciones **L-38, L-39, L-40**. Commits: `9ad0e7f` firma Twilio · `d7603a3`/`680db29` vars Render · `bdf8646` Telegram · `637b7bf` bot 4 opciones · `79fc554` Scotiabank+Telegram · (+ fixes del audit en este cierre).
 
 **Sesión 2026-08-04 — Fix pipeline bencina (desbloqueo) + doc accesible HTML + respaldo total:**

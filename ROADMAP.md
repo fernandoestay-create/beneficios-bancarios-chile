@@ -131,9 +131,10 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 5. ~~Webhook Twilio — activar la firma~~ ✅ **HECHO (2026-08-04)**: `TWILIO_AUTH_TOKEN` seteado en Render, verificado en vivo (POST Twilio→200, falso→403).
 
 ### 🔎 Hallazgos del audit de datos (2026-08-04) — pendientes
-6. **Cuotas DESACTUALIZADAS a agosto:** `mes_referencia`="junio 2026"; ~20/28 campañas ya vencieron (vigencia hasta 30-jun). Solo Scotiabank/BCI están re-curadas a jul/ago. **Re-curar los 14 bancos a agosto** (barrer las webs oficiales desde Chile) — el bot y `/ver/cuotas` muestran junio.
-7. **Ripley — región mal asignada** en ≥7/72 restaurantes (ej. Cervecería Kunstmann tagueada "Valparaíso" siendo Los Ríos; Antofagasta/La Serena/Arica→"Valparaíso"; Calama/Curicó→"Tarapacá"). Afecta el filtro de región/mapa → revisar la lógica de `ubicacion` en el scraper de Ripley.
-8. **Menores:** 5 ids de bencina con el día viejo en el nombre (cosmético, el filtro usa `dias_validos`); Santander/Contribuciones sin nº de cuotas; 1 duplicado real en Security (mismo Rappi 30%, 2 ids).
+6. **Cuotas DESACTUALIZADAS a agosto** (PENDIENTE — necesita acceso desde Chile): `mes_referencia`="junio 2026"; ~20/28 campañas ya vencieron. Solo Scotiabank/BCI re-curadas. **Re-curar los 14 bancos a agosto** (barrer las webs oficiales desde Chile, o vía el Chrome de Fernando).
+7. ~~Ripley — región mal asignada~~ ✅ **HECHO (2026-08-04, `849b708`)**: la raíz era que la región salía del texto multi-sede de la card + los numerales romanos colisionaban por substring ("XIV Región"→Valparaíso). Nuevo `_region_desde_direccion()` + `_COMUNA_REGION` (16 regiones) derivan la región desde la ciudad real; 8 registros corregidos (Kunstmann→Los Ríos, etc.).
+8. ~~Menores (bencina ids, Security dup)~~ ✅ **HECHO/RESUELTO**: 5 ids de bencina renombrados al día real; el "duplicado" de Security ya no existe (la data cambió). Queda menor: Santander/Contribuciones sin nº de cuotas.
+9. **Otros pendientes (necesitan acceso externo):** Shell/Aramco desde sus apps oficiales (hoy medios); ~12 bancos más en "Otros beneficios".
 6. ~~Revectorización RAG~~ ✅ **HECHA (2026-08-04)**: 887 restaurantes re-vectorizados a Pinecone (verificado: 887 vectores en el namespace), costo ~US$0.002. Queda en backlog la **migración Pinecone → pgvector** (estándar del workspace).
 7. **Falabella — filtrar ofertas que no son restaurantes:** excluir `app-copec`, `pronto-copec`, `novedades-cmr-puntos` (no son gastronomía).
 8. **Itaú:** confirmar si el bajón a ~23 es transición o nivel nuevo; ajustar el piso si es permanente.
