@@ -8,6 +8,7 @@ usando sus APIs internas (CMS).
 import requests
 from datetime import datetime
 import json
+import os
 import re
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, asdict, field
@@ -3353,19 +3354,47 @@ class OrquestadorScrapers:
         return self.descuentos_bencina, self.estaciones_bencina
 
     def guardar_bencinas_json(self, filename: str = "bencinas.json"):
-        """Guarda descuentos de bencina, estaciones y precios en JSON"""
+        """Guarda descuentos de bencina, estaciones y precios en JSON.
+
+        IMPORTANTE (L-33/L-35): los DESCUENTOS de bencina son CURADOS desde fuente
+        oficial (Copec ww2.copec.cl + medios verificados) con campo `confianza` por
+        dato. El agregador (descuentosrata) tenía errores (Shell sábado en vez de
+        jueves, etc.), así que NO se regeneran los descuentos desde el scrape: se
+        PRESERVAN los curados del archivo existente. Solo estaciones/precios se
+        actualizan desde la CNE (Bencinas en Línea), que sí es fuente oficial.
+        Esto evita que el cron/refresco pisen la curación y fallen el health check.
+        """
+        # Preservar los descuentos ya curados en el archivo (no pisarlos con el agregador)
+        descuentos_out = None
+        try:
+            if os.path.exists(filename):
+                with open(filename, 'r', encoding='utf-8') as f:
+                    prev = json.load(f)
+                if prev.get("descuentos"):
+                    descuentos_out = prev["descuentos"]
+        except Exception as e:
+            print(f"[AVISO] No se pudieron leer los descuentos curados de {filename}: {e}")
+
+        if descuentos_out is not None:
+            print(f"[OK] Preservados {len(descuentos_out)} descuentos de bencina CURADOS "
+                  f"(no se pisan con el agregador; solo se actualizan los precios CNE)")
+        else:
+            # Fallback: solo si no hay archivo curado previo (primera corrida)
+            descuentos_out = [d.to_dict() for d in self.descuentos_bencina]
+
         data = {
-            "descuentos": [d.to_dict() for d in self.descuentos_bencina],
+            "descuentos": descuentos_out,
             "estaciones": [e.to_dict() for e in self.estaciones_bencina],
             "precios_todas": [e.to_dict() for e in self.precios_todas],
             "meta": {
                 "fecha_scrape": datetime.now().isoformat(),
                 "fecha_precios": datetime.now().isoformat(),
                 "vigencia_mes": datetime.now().strftime("%Y-%m"),
-                "total_descuentos": len(self.descuentos_bencina),
+                "total_descuentos": len(descuentos_out),
                 "total_estaciones": len(self.estaciones_bencina),
                 "total_con_precios": len(self.precios_todas),
                 "fuente_precios": "Bencinas en Línea - Comisión Nacional de Energía",
+                "fuente_descuentos": "Curado desde fuente oficial (Copec ww2.copec.cl + medios); campo confianza por dato",
                 "disclaimer": "Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes",
             }
         }
