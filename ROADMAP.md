@@ -1,7 +1,7 @@
 # Roadmap — MiCartera (Scrapers + Bot descuentos)
 
 > Estado real del proyecto. Se actualiza después de cada sesión de trabajo.
-> Última actualización: 2026-08-03
+> Última actualización: 2026-08-04
 
 ## ✅ Hecho (sesión 2026-08-03 — parte final: trazabilidad, filtros dinámicos y apartado completado)
 
@@ -111,10 +111,10 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 ## ⏳ Pendiente priorizado
 
 1. **Bencina — re-curar Shell/Aramco desde sus apps oficiales** (hoy vienen de medios verificados, no de la fuente primaria; solo Copec es 100% oficial). Objetivo: que los 2 quedan con `confianza="oficial"` como Copec.
-2. **Extender los filtros dinámicos** (día) a **región/comuna** y a las vistas de **bencinas y cuotas** — hoy el filtro dinámico solo cubre día en `/ver` y `/ver/beneficios`.
+2. ~~Extender los filtros dinámicos a región/comuna y a bencinas/cuotas~~ ✅ **HECHO (2026-08-04)**: `/ver` y `/ver/beneficios` atenúan región+comuna; `/ver/bencinas` día; `/ver/cuotas` categorías. (Opcional restante: faceteado del filtro de banco en bencinas.)
 3. **Apartado "Otros beneficios" — cubrir más bancos:** hoy solo Santander/Consorcio (24 beneficios verificables mostrados, de 228 capturados). Faltan ~12 bancos: scrapear sus páginas de beneficios generales, mismo enfoque (dataset separado, `seccion="otro"`, filtro de verificabilidad L-33/L-35).
 4. **Cuotas — re-curar los bancos que aún muestran meses viejos** (~6 bancos publican en imágenes/SPA no legibles): leer las oficiales desde Chile + cruce con Chócale (L-24) cuando publiquen el mes en curso. La detección de desfase ya avisa sola en el correo. Barrer SIEMPRE los 14.
-5. **Webhook Twilio — validación de firma** (seguridad, de la sesión 2026-07-29): agregar validación de firma Twilio en `/webhook`. No se aplicó a ciegas porque requiere **prueba en vivo del bot** para no romperlo.
+5. **Webhook Twilio — ACTIVAR la firma** (ya IMPLEMENTADA opt-in el 2026-08-04, `9ad0e7f`): setear `TWILIO_AUTH_TOKEN` (+ `TWILIO_WEBHOOK_URL` con la URL pública si difiere tras el proxy) en Render y **probar el bot en vivo**. Sin el token procesa como hoy; con el token rechaza (403) lo no firmado.
 6. (Backlog) **Migración Pinecone → pgvector** + **revectorización RAG**: toca **costo de API** → requiere OK explícito de Fernando antes de ejecutar (regla de costos del workspace).
 7. **Falabella — filtrar ofertas que no son restaurantes:** excluir `app-copec`, `pronto-copec`, `novedades-cmr-puntos` (no son gastronomía).
 8. **Itaú:** confirmar si el bajón a ~23 es transición o nivel nuevo; ajustar el piso si es permanente.
@@ -148,9 +148,9 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 - Bancos activos: **14** / bloqueados: **1** (solo BancoEstado, diferido)
 - Health check `verificar_salud.py`: **✅ exit 0** (guards: ids dup, crash-parity, pisos/banco, mojibake, `restaurante=''`, `descuento_texto=''`)
 - **Buscador `/ver`:** indexa nombre + descripción + **comuna + tags** ("providencia" 41→75, "ñuñoa" 8→15)
-- **Filtros dinámicos de día** en `/ver` y `/ver/beneficios`: días sin resultados se atenúan/bloquean en vez de mostrar vacío sin explicación (pendiente extender a región/comuna/bencinas/cuotas)
+- **Filtros dinámicos** (2026-08-04): `/ver` y `/ver/beneficios` atenúan/bloquean **día + región + comuna** sin resultados; `/ver/bencinas` día; `/ver/cuotas` categorías. El apartado "Otros beneficios" filtra a verificables (`descuento_valor>0`) **en código** (sobrevive re-scrapes)
 - **Falabella:** 95 ofertas con local específico (mall preservado) + restricción trazable "Comprueba en la página oficial"
-- **Seguridad:** endpoints `/scrape/*` destructivos eliminados · `/rag` con `ADMIN_TOKEN` · CORS restringido · webhook Twilio sin firma validada aún (pendiente)
+- **Seguridad:** endpoints `/scrape/*` destructivos eliminados · `/rag` con `ADMIN_TOKEN` · CORS restringido · webhook Twilio con **validación de firma opt-in** (activar con `TWILIO_AUTH_TOKEN` + probar en vivo)
 - Lecciones formalizadas: **35** (L-01 a L-35)
 - Deploy verificado en vivo el **2026-08-03**
 - Último tag: **`v2.0-otros-trazabilidad-filtros`** (trazabilidad + filtros dinámicos) · anterior `v1.9-otros-beneficios` (apartado desplegado) · anterior `v1.8-estable-pre-beneficios` (punto de retorno)
