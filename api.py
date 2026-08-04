@@ -316,6 +316,23 @@ async def consultar_openai(pregunta: str, contexto: str) -> str:
 @app.on_event("startup")
 async def startup():
     inicializar_datos()
+    # Auto-registrar el webhook de Telegram si hay token (así solo hay que setear
+    # TELEGRAM_BOT_TOKEN en Render; la URL se detecta sola con RENDER_EXTERNAL_URL).
+    _tg = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    if _tg:
+        _url = os.getenv("TELEGRAM_WEBHOOK_URL", "").strip()
+        if not _url:
+            _base = os.getenv("RENDER_EXTERNAL_URL", "").strip()
+            _url = (_base + "/telegram") if _base else ""
+        if _url:
+            try:
+                import urllib.request as _u
+                _u.urlopen(f"https://api.telegram.org/bot{_tg}/setWebhook?url={_url}", timeout=15)
+                print(f"✅ Telegram webhook registrado en: {_url}")
+            except Exception as e:  # noqa
+                print(f"⚠️ No se pudo registrar el webhook de Telegram: {e}")
+        else:
+            print("⚠️ TELEGRAM_BOT_TOKEN seteado pero sin URL (setea TELEGRAM_WEBHOOK_URL o usa Render).")
 
 
 @app.get("/")
@@ -3241,6 +3258,47 @@ async def webhook_whatsapp(request: Request):
 @app.get("/webhook")
 async def webhook_verify():
     return {"status": "ok", "webhook": "activo"}
+
+
+# ============================================
+# TELEGRAM (mismo bot que WhatsApp: menú, datos locales, SIN OpenAI, gratis)
+# ============================================
+
+@app.post("/telegram")
+async def telegram_webhook(request: Request):
+    """Webhook de Telegram. Reusa procesar_comando_whatsapp (mismo bot de menú).
+    Opt-in: si TELEGRAM_BOT_TOKEN no está seteado en el entorno, no hace nada.
+    Telegram NO cobra por mensaje (a diferencia de Twilio)."""
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    if not token:
+        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN no configurado"}
+    try:
+        data = await request.json()
+    except Exception:  # noqa
+        return {"ok": True}
+    msg = data.get("message") or data.get("edited_message") or {}
+    chat_id = (msg.get("chat") or {}).get("id")
+    texto = (msg.get("text") or "").strip()
+    if not chat_id or not texto:
+        return {"ok": True}  # updates sin texto (stickers, fotos): se ignoran
+    print(f"  Telegram de {chat_id}: {texto}")
+    # usuario con prefijo tg_ para NO mezclar el flujo con los de WhatsApp
+    respuesta = await procesar_comando_whatsapp(texto, usuario=f"tg_{chat_id}")
+    try:
+        import urllib.request as _u
+        payload = json.dumps({"chat_id": chat_id, "text": respuesta}).encode("utf-8")
+        req = _u.Request(f"https://api.telegram.org/bot{token}/sendMessage",
+                         data=payload, headers={"Content-Type": "application/json"})
+        _u.urlopen(req, timeout=15)
+    except Exception as e:  # noqa
+        print(f"  ⚠️ Telegram sendMessage error: {e}")
+    return {"ok": True}
+
+
+@app.get("/telegram")
+async def telegram_verify():
+    activo = bool(os.getenv("TELEGRAM_BOT_TOKEN", "").strip())
+    return {"status": "ok", "telegram": "activo" if activo else "sin token"}
 
 
 # ============================================
