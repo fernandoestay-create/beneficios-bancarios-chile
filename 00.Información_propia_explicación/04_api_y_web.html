@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API y Paginas Web v02 - Beneficios Bancarios Chile + Bencinas</title>
+<style>
+  :root { --primary: #1a56db; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --accent: #059669; --fuel: #d97706; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem; max-width: 1100px; margin: auto; }
+  h1 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; color: var(--primary); margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card.fuel { border-left: 4px solid var(--fuel); }
+  .nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .nav a { background: var(--primary); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; }
+  .nav a:hover { opacity: 0.9; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #f1f5f9; border-radius: 8px; padding: 1rem; font-size: 0.85rem; overflow-x: auto; margin: 0.5rem 0; }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin: 0.3rem 0; }
+  .badge { display: inline-block; background: var(--fuel); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<h1>API REST y Paginas Web v_02</h1>
+<p class="subtitle">Endpoints, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas) y archivos estaticos</p>
+
+<div class="nav">
+  <a href="01_resumen_proyecto.html">Resumen</a>
+  <a href="02_arquitectura_sistema.html">Arquitectura</a>
+  <a href="03_scrapers_detalle.html">Scrapers</a>
+  <a href="04_api_y_web.html">API y Web</a>
+  <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+</div>
+
+<!-- ============ ENDPOINTS ============ -->
+<h2>Endpoints de la API</h2>
+<table>
+  <tr><th>Metodo</th><th>Ruta</th><th>Descripcion</th><th>Estado</th></tr>
+  <tr><td>GET</td><td><code>/</code></td><td>Health check (JSON con estado)</td><td>Sin cambios</td></tr>
+  <tr><td>GET</td><td><code>/beneficios</code></td><td>Lista todos los beneficios restaurantes</td><td>Sin cambios</td></tr>
+  <tr><td>GET</td><td><code>/beneficios/buscar</code></td><td>Buscar con filtros (query params)</td><td>Sin cambios</td></tr>
+  <tr><td>GET</td><td><code>/beneficios/{id}</code></td><td>Beneficio por ID</td><td>Sin cambios</td></tr>
+  <tr><td>GET</td><td><code>/bancos</code></td><td>Lista de bancos con conteo</td><td>Sin cambios</td></tr>
+  <tr><td>GET</td><td><code>/estadisticas</code></td><td>Stats generales</td><td>Sin cambios</td></tr>
+  <tr><td>GET</td><td><code>/restaurantes/top</code></td><td>Top restaurantes por descuento</td><td>Sin cambios</td></tr>
+  <tr><td>POST</td><td><code>/rag</code></td><td>Consulta IA con contexto (RAG)</td><td>Cerrado: exige header <code>X-Admin-Token</code> (fail-closed sin <code>ADMIN_TOKEN</code>)</td></tr>
+  <tr><td>POST</td><td><code>/scrape/ejecutar</code></td><td>Ejecutaba scrapers manualmente</td><td><strong>Eliminado (jul-2026, seguridad)</strong>: era un POST anonimo que borraba bancos completos</td></tr>
+  <tr><td>GET</td><td><code>/ver</code></td><td>Pagina web restaurantes</td><td><strong>Soporta multi-banco URL</strong></td></tr>
+  <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/beneficios</code></td><td>Pagina web Otros beneficios (no-restaurante)</td><td><span class="badge">NUEVO ago-2026</span></td></tr>
+  <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/bencinas</code></td><td>Pagina web bencinas</td><td><span class="badge">NUEVO v_02</span></td></tr>
+  <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/cuotas</code></td><td>Pagina web cuotas sin interes</td><td><span class="badge">NUEVO jul-2026</span></td></tr>
+  <tr><td>POST</td><td><code>/webhook</code></td><td>Webhook WhatsApp (Twilio)</td><td><strong>Flujo v2</strong> (firma Twilio aun pendiente)</td></tr>
+  <tr style="background:#fffbeb;"><td>GET</td><td><code>/static/logos/*</code></td><td>Archivos estaticos (SVG, JPG)</td><td><span class="badge">NUEVO v_02</span></td></tr>
+</table>
+
+<!-- ============ RESUMEN 4 PAGINAS ============ -->
+<h2>Resumen de las 4 Paginas Web</h2>
+<div class="card">
+  <p>Las 4 paginas comparten una <strong>barra de navegacion</strong> (Restaurantes / Otros beneficios / Bencina / Cuotas) para moverse entre ellas sin volver al inicio.</p>
+  <table>
+    <tr><th>Pagina</th><th>Ruta</th><th>Dataset</th><th>Proposito</th></tr>
+    <tr><td>Restaurantes</td><td><code>/ver</code></td><td><code>beneficios.json</code></td><td>Descuentos bancarios en restaurantes (14 bancos)</td></tr>
+    <tr style="background:#fffbeb;"><td>Otros beneficios</td><td><code>/ver/beneficios</code></td><td><code>beneficios_otros.json</code></td><td>Descuentos con tarjeta NO-restaurante (retail, viajes, salud, entretencion)</td></tr>
+    <tr><td>Bencina</td><td><code>/ver/bencinas</code></td><td><code>bencinas.json</code></td><td>Descuentos por litro + estaciones en el mapa</td></tr>
+    <tr style="background:#fffbeb;"><td>Cuotas</td><td><code>/ver/cuotas</code></td><td><code>cuotas_sin_interes.json</code></td><td>Campañas de cuotas sin interes por banco y categoria</td></tr>
+  </table>
+  <p><strong>Render compartido:</strong> <code>/ver</code> y <code>/ver/beneficios</code> corren por la misma funcion <code>_render_deals()</code> en <code>api.py</code> (mismo motor de filtros y busqueda, distinto dataset segun el parametro <code>modo</code>). <code>/ver/bencinas</code> y <code>/ver/cuotas</code> tienen cada una su propio render dedicado, con la misma barra de navegacion y la misma identidad visual.</p>
+</div>
+
+<!-- ============ PAGINA RESTAURANTES ============ -->
+<h2>Pagina Web Restaurantes (/ver)</h2>
+<div class="card">
+  <h3>Estructura</h3>
+  <p>SPA server-rendered. Todo el HTML, CSS y JS embebido en <code>api.py</code> como f-string.</p>
+<pre>
++---------------------------------------------------+
+|  Hero (titulo + stats: total, bancos, max%)        |
++---------------------------------------------------+
+|  Layout: Sidebar Filtros | Contenido               |
+|  +----------------+  +---------------------------+ |
+|  | Limpiar        |  | [Tarjetas] [Mapa]         | |
+|  | Buscar         |  |                           | |
+|  | Banco (MS)     |  | Vista Tarjetas:           | |
+|  | Dia (7+Todos)  |  |  Summary bar (logos)      | |
+|  | Zona (MS)      |  |  Grid de cards            | |
+|  | Comuna (MS)    |  |                           | |
+|  | Dcto minimo    |  | Vista Mapa:               | |
+|  | Modalidad      |  |  Leaflet map              | |
+|  | Ordenar        |  |  Markers por banco        | |
+|  +----------------+  +---------------------------+ |
++---------------------------------------------------+
+</pre>
+
+  <h3>Cambios en v_02</h3>
+  <ul>
+    <li><strong>Multi-banco en URL:</strong> <code>/ver?banco=BCI&amp;banco=Scotiabank&amp;dia=miercoles</code> - permite pre-filtrar por multiples bancos desde el link del bot</li>
+    <li><strong>11 URLs "Ver detalle" corregidas:</strong> los links ahora apuntan a paginas reales de los bancos</li>
+    <li>Los filtros se pre-aplican automaticamente al cargar si hay parametros en la URL</li>
+  </ul>
+
+  <h3>Cambios recientes (ago-2026)</h3>
+  <ul>
+    <li><strong>Falabella con nombre real:</strong> el nombre del local se recupera del slug del link (antes mostraba "Dcto en Restaurante" generico); la tarjeta agrega la restriccion "Revisa los locales del beneficio. Comprueba en la pagina oficial." (95 ofertas Falabella aplican solo en ciertas sucursales)</li>
+    <li><strong>Condiciones visibles en la tarjeta:</strong> cada card muestra sus condiciones/restricciones (icono 📋) y un link "Comprobar en la pagina ↗" hacia la fuente oficial</li>
+    <li><strong>Buscador ampliado:</strong> indexa tambien comuna y tags, no solo nombre/banco/descripcion</li>
+    <li><strong>Filtros dinamicos por dia:</strong> ver la seccion dedicada abajo</li>
+    <li><strong>Seguridad:</strong> <code>/scrape/ejecutar</code> y <code>/scrape/bencinas</code> eliminados (POST anonimos destructivos), CORS restringido al dominio de produccion, <code>/rag</code> cerrado con <code>ADMIN_TOKEN</code></li>
+  </ul>
+
+  <h3>Filtros (panel izquierdo, 280px)</h3>
+  <table>
+    <tr><th>Filtro</th><th>Tipo</th><th>Detalle</th></tr>
+    <tr><td>Buscar</td><td>Texto libre</td><td>Busca en restaurante, banco, descripcion, direccion</td></tr>
+    <tr><td>Banco</td><td>Multi-select (MS class)</td><td>Dropdown con checkboxes, tags, busqueda interna</td></tr>
+    <tr><td>Dia</td><td>7 circulos + "Todos"</td><td>L M X J V S D, multi-seleccion visual</td></tr>
+    <tr><td>Zona</td><td>Multi-select (MS class)</td><td>Regiones; Metropolitana aparece primera</td></tr>
+    <tr><td>Comuna</td><td>Multi-select (MS class)</td><td>Solo visible si Zona = Metropolitana</td></tr>
+    <tr><td>Descuento minimo</td><td>Range slider</td><td>0-50%</td></tr>
+    <tr><td>Modalidad</td><td>Chips</td><td>Todas / Presencial / Online</td></tr>
+    <tr><td>Ordenar</td><td>Select</td><td>Mayor dcto / Menor dcto / Nombre / Banco</td></tr>
+  </table>
+  <p><strong>Un solo panel de filtros</strong> controla ambas vistas (Tarjetas y Mapa).</p>
+</div>
+
+<!-- ============ PAGINA OTROS BENEFICIOS ============ -->
+<h2><span class="badge">NUEVO ago-2026</span> Pagina Web Otros Beneficios (/ver/beneficios)</h2>
+<div class="card">
+  <h3>Que muestra</h3>
+  <p>Descuentos con tarjeta que <strong>no son de restaurante</strong>: retail, viajes, salud, entretencion. Antes estos beneficios se scrapeaban igual pero se descartaban (<code>return None</code>) al filtrar solo restaurantes; ahora se capturan con un campo <code>seccion="otro"</code> y se guardan en un dataset separado.</p>
+
+  <h3>Criterio de calidad: solo lo verificable</h3>
+  <p>De <strong>228 candidatos</strong> capturados (Santander + Consorcio), la pagina muestra <strong>24 beneficios verificables</strong> con porcentaje de descuento real, no inventado. Los otros ~204 (financiamiento, servicios, menciones de CAE) no se muestran: "si no esta chequeado, mejor no mostrar".</p>
+
+  <h3>Mismo motor que /ver</h3>
+  <p>Reusa los mismos filtros de la pagina de Restaurantes (Buscar, Banco, Dia, Zona, Comuna, Descuento minimo, Modalidad, Ordenar) via <code>_render_deals()</code>: misma logica de filtrado y de tarjetas, dataset distinto. <code>/ver</code> (restaurantes) no se toco: los datasets estan completamente aislados.</p>
+</div>
+
+<!-- ============ FILTROS DINAMICOS ============ -->
+<h2><span class="badge">NUEVO ago-2026</span> Filtros Dinamicos por Dia</h2>
+<div class="card">
+  <h3>Restaurantes (/ver) y Otros beneficios (/ver/beneficios)</h3>
+  <ul>
+    <li>Al aplicar un filtro (banco, zona, comuna, etc.), los circulos de dia <strong>sin resultados</strong> se atenuan y quedan bloqueados (no seleccionables) en vez de mostrarse como una opcion valida que despues da 0 resultados</li>
+    <li>Cuando una seccion queda sin ningun dato, en vez de una lista vacia se muestra <strong>"⏳ Estamos confirmando los descuentos de esta seccion"</strong></li>
+  </ul>
+  <p><strong>Pendiente:</strong> extender el mismo criterio dinamico a los filtros de Zona/Comuna, y a las paginas de Bencina y Cuotas (hoy solo cubre Restaurantes y Otros beneficios).</p>
+</div>
+
+<!-- ============ PAGINA BENCINAS ============ -->
+<h2><span class="badge">NUEVO v_02</span> Pagina Web Bencinas (/ver/bencinas)</h2>
+<div class="card fuel">
+  <h3>Diseno</h3>
+  <ul>
+    <li><strong>Hero cards por cadena:</strong> tarjetas grandes con foto de estacion de fondo y logo SVG de la cadena</li>
+    <li><strong>Fotos de estaciones:</strong> <code>copec_station.jpg</code>, <code>shell_station.jpg</code>, <code>aramco_station.jpg</code></li>
+    <li><strong>Logos SVG locales:</strong> servidos desde <code>/static/logos/</code></li>
+    <li><strong>Descuentos agrupados por cadena:</strong> cada cadena muestra sus descuentos con banco, monto/litro, dias, condiciones</li>
+    <li><strong>Mapa con estaciones reales:</strong> 367 markers con coordenadas reales de OpenStreetMap (no aproximadas)</li>
+    <li><strong>Filtro por dia:</strong> pre-aplicable desde URL (<code>?dia=lunes</code>)</li>
+  </ul>
+
+  <h3>Datos mostrados por descuento</h3>
+  <ul>
+    <li>Cadena (Copec/Shell/Aramco) con logo</li>
+    <li>Banco o medio de pago asociado</li>
+    <li>Descuento por litro (ej: "$100/litro")</li>
+    <li>Dias validos</li>
+    <li>Condiciones y topes</li>
+    <li>Vigencia</li>
+  </ul>
+</div>
+
+<!-- ============ PAGINA CUOTAS ============ -->
+<h2><span class="badge">NUEVO jul-2026</span> Pagina Web Cuotas sin Interes (/ver/cuotas)</h2>
+<div class="card">
+  <h3>Diseno</h3>
+  <ul>
+    <li>Campañas de cuotas sin interes por <strong>banco y categoria</strong> (todos los comercios, automotriz, educacion, supermercados, salud, contribuciones)</li>
+    <li><strong>Curado desde las paginas oficiales de cada banco</strong> (leidas desde Chile con User-Agent tipo curl donde el WAF lo permite), no un scraper automatico: las campañas cambian cada mes y un dato mal leido es peor que no tener el dato</li>
+    <li>Cada campaña trae condiciones de uso, vigencia y <strong>link oficial</strong>; distingue 0% real de tasa preferencial</li>
+    <li>Selector de <strong>mes</strong> con logos de bancos filtrados por mes, todo generado desde <code>cuotas_sin_interes.json</code> (nada hardcodeado en el HTML)</li>
+  </ul>
+  <p>Fuente unica de datos: <code>cuotas_sin_interes.json</code>. Se re-cura manualmente cuando un banco publica el mes nuevo; el correo diario del sistema avisa cuando el dataset queda desfasado de mes.</p>
+</div>
+
+<!-- ============ STATIC FILES ============ -->
+<h2><span class="badge">NUEVO v_02</span> Archivos Estaticos</h2>
+<div class="card">
+  <p>FastAPI monta la carpeta <code>static/</code> para servir archivos estaticos:</p>
+<pre>
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="static"), name="static")
+</pre>
+  <p>Esto permite acceder a los logos y fotos en:</p>
+  <ul>
+    <li><code>/static/logos/copec.svg</code></li>
+    <li><code>/static/logos/shell_station.jpg</code></li>
+    <li>etc.</li>
+  </ul>
+  <p>En v_01, los logos de bancos eran URLs externas de Wikipedia Commons con fallback. En v_02, los logos de bencina son SVG locales para mayor confiabilidad.</p>
+</div>
+
+<!-- ============ MAPA ============ -->
+<h2>Mapa Leaflet</h2>
+<div class="card">
+  <h3>Restaurantes (/ver)</h3>
+  <ul>
+    <li>Leaflet 1.9.4 con tiles CARTO (light)</li>
+    <li>Markers circulares coloreados por banco con % de descuento</li>
+    <li>Coordenadas <strong>aproximadas</strong> por region (REGION_COORDS + jitter random)</li>
+    <li>Popups con detalle del restaurante</li>
+  </ul>
+  <h3>Bencinas (/ver/bencinas)</h3>
+  <ul>
+    <li>Misma tecnologia Leaflet</li>
+    <li>367 markers con coordenadas <strong>reales</strong> de OpenStreetMap</li>
+    <li>Markers diferenciados por cadena (Copec, Shell, Aramco)</li>
+    <li>Popups con nombre estacion, direccion, cadena</li>
+  </ul>
+</div>
+
+<!-- ============ SISTEMA ACCESO ============ -->
+<h2>Sistema de Acceso Temporal</h2>
+<div class="card">
+  <p>Se mantiene el sistema de tokens con expiracion de v_01:</p>
+<pre>
+ACCESO_PUBLICO = True   # True = sin clave, False = pide clave
+TOKENS_ACCESO = {
+    "prueba": datetime(2026, 3, 20, 23, 59, 59),
+    "demo":   datetime(2026, 4, 1, 23, 59, 59),
+}
+</pre>
+  <p>Actualmente <strong>desactivado</strong> (publico).</p>
+</div>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 + actualizaciones jul-ago 2026 | <strong>Ultima actualizacion:</strong> 2026-08-03</p>
+
+</body>
+</html>

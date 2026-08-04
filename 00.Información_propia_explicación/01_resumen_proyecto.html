@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumen del Proyecto v03 - Beneficios Bancarios Chile + Descuentos Bencina</title>
+<style>
+  :root { --primary: #1a56db; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --accent: #059669; --fuel: #d97706; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem; max-width: 1100px; margin: auto; }
+  h1 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; color: var(--primary); margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .stat { background: var(--primary); color: #fff; border-radius: 10px; padding: 1.2rem; text-align: center; }
+  .stat.fuel { background: var(--fuel); }
+  .stat .num { font-size: 2rem; font-weight: 700; }
+  .stat .label { font-size: 0.85rem; opacity: 0.9; }
+  .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  .tech-item { background: #f1f5f9; border-radius: 8px; padding: 1rem; }
+  .tech-item strong { color: var(--primary); }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  a { color: var(--primary); }
+  .badge { display: inline-block; background: var(--accent); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
+  .badge.new { background: var(--fuel); }
+  .url-box { background: #f1f5f9; padding: 0.8rem 1rem; border-radius: 8px; font-family: monospace; margin: 0.5rem 0; word-break: break-all; }
+  .nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .nav a { background: var(--primary); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; }
+  .nav a:hover { opacity: 0.9; }
+  .changelog { background: #fffbeb; border: 1px solid #fbbf24; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; }
+  .changelog h3 { color: var(--fuel); }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin: 0.3rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Beneficios Bancarios Chile + Descuentos Bencina</h1>
+<p class="subtitle">v_03 - Agosto 2026 | Sistema de scraping, API REST, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas) y bot WhatsApp para descuentos bancarios en Chile, con trazabilidad de fuente oficial</p>
+
+<div class="nav">
+  <a href="01_resumen_proyecto.html">Resumen</a>
+  <a href="02_arquitectura_sistema.html">Arquitectura</a>
+  <a href="03_scrapers_detalle.html">Scrapers</a>
+  <a href="04_api_y_web.html">API y Web</a>
+  <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+</div>
+
+<!-- ============ STATS ============ -->
+<h2>Numeros Clave</h2>
+<div class="stats">
+  <div class="stat"><div class="num">885</div><div class="label">Beneficios Restaurantes</div></div>
+  <div class="stat"><div class="num">24</div><div class="label">Otros Beneficios (verificables)</div></div>
+  <div class="stat fuel"><div class="num">31</div><div class="label">Descuentos Bencina</div></div>
+  <div class="stat fuel"><div class="num">367</div><div class="label">Estaciones (OpenStreetMap)</div></div>
+  <div class="stat"><div class="num">15</div><div class="label">Bancos Scrapeados</div></div>
+  <div class="stat"><div class="num">3</div><div class="label">Cadenas Bencina</div></div>
+  <div class="stat"><div class="num">$0</div><div class="label">Costo OpenAI (WhatsApp)</div></div>
+</div>
+
+<!-- ============ CHANGELOG v03 ============ -->
+<h2>Cambios en v_03 (respecto a v_02)</h2>
+<div class="changelog">
+  <h3>Novedades v_03 - Agosto 2026</h3>
+  <ul>
+    <li><span class="badge new">NUEVO</span> <strong>Pagina "Otros beneficios"</strong> (<code>/ver/beneficios</code>) - retail, viajes, salud y entretencion; 24 ofertas con % verificable (de 228 capturadas en total)</li>
+    <li><span class="badge new">NUEVO</span> <strong>Pagina de cuotas sin interes</strong> (<code>/ver/cuotas</code>) - campanas por banco y categoria, curadas desde fuentes oficiales</li>
+    <li><span class="badge new">NUEVO</span> <strong>Trazabilidad de datos</strong> - cada dato de cara al usuario lleva un campo <code>confianza</code> + <code>url_fuente</code>; un agregador de terceros es solo control de calidad, nunca la fuente. Los descuentos de bencina se re-curaron completos desde las paginas oficiales de cada cadena</li>
+    <li><span class="badge">CAMBIO</span> <strong>Criterio "si no esta chequeado, no se muestra"</strong> - cuando falta un dato verificado, la pagina muestra "Estamos confirmando descuentos" en vez de un dato dudoso</li>
+    <li><span class="badge">CAMBIO</span> <strong>Filtros dinamicos por dia</strong> - al elegir un banco, los dias sin resultados para ese banco se atenuan/bloquean en vez de mostrar una lista vacia</li>
+    <li><span class="badge new">NUEVO</span> <strong>Guardia de madrugada</strong> - revision automatica diaria (~03:00 Chile) que re-chequea cada bug conocido (paginas, seguridad, trazabilidad) contra produccion y los datos; avisa por correo solo si algo reaparece</li>
+  </ul>
+</div>
+
+<!-- ============ CHANGELOG v02 ============ -->
+<h2>Cambios en v_02 (respecto a v_01)</h2>
+<div class="changelog">
+  <h3>Novedades v_02 - Marzo 2026</h3>
+  <ul>
+    <li><span class="badge new">NUEVO</span> <strong>Modulo de descuentos en bencina</strong> (<code>/ver/bencinas</code>) - 28 descuentos de Copec, Shell, Aramco + 367 estaciones reales de OpenStreetMap</li>
+    <li><span class="badge new">NUEVO</span> <strong>Diseno hero card</strong> para bencinas con fotos de estaciones de fondo + logos de cadenas</li>
+    <li><span class="badge new">NUEVO</span> <strong>13 logos SVG locales</strong> servidos desde <code>/static/logos/</code> (Copec, Shell, Aramco, BICE, Consorcio, Coopeuch, Mercado Pago, Micopiloto, Copec Pay, Cencosud Scotiabank, ABC Visa, Jumbo Prime + fotos estaciones)</li>
+    <li><span class="badge new">NUEVO</span> <strong>FastAPI StaticFiles</strong> mount en <code>/static/logos/</code></li>
+    <li><span class="badge">CAMBIO</span> <strong>Bot WhatsApp v2</strong> - flujo completamente rediseñado:
+      <ul>
+        <li>Cualquier mensaje inicia flujo con "Restaurantes o Bencinas?"</li>
+        <li>Bencinas: dia --> resultado (2 pasos)</li>
+        <li>Restaurantes: dia --> banco(s) con numeros --> resultado (3 pasos)</li>
+        <li>Soporte multiples bancos via coma: "1,2,4"</li>
+        <li>$0 costo OpenAI (se elimino RAG del WhatsApp, toda la logica es Python)</li>
+        <li>Link de resultado abre pagina con filtros pre-aplicados</li>
+      </ul>
+    </li>
+    <li><span class="badge">CAMBIO</span> <strong>Pagina soporta multiples bancos</strong> en URL params: <code>?banco=BCI&amp;banco=Scotiabank&amp;dia=miercoles</code></li>
+    <li><span class="badge">FIX</span> <strong>11 URLs "Ver detalle" corregidas</strong> a paginas reales de los bancos</li>
+  </ul>
+</div>
+
+<!-- ============ DESCRIPCION ============ -->
+<h2>Descripcion General</h2>
+<div class="card">
+  <p>Sistema completo de <strong>web scraping y analytics</strong> que extrae ofertas de descuento de <strong>15 bancos chilenos</strong> (restaurantes y otros rubros) y <strong>3 cadenas de bencina</strong> (Copec, Shell, Aramco), exponiendo los datos - todos trazables a su fuente oficial - a traves de:</p>
+  <ul>
+    <li><strong>Pagina web de restaurantes</strong> (<code>/ver</code>) - filtros interactivos, tarjetas, mapa Leaflet</li>
+    <li><strong>Pagina de otros beneficios</strong> (<code>/ver/beneficios</code>) - retail, viajes, salud y entretencion, solo ofertas verificables</li>
+    <li><strong>Pagina web de bencinas</strong> (<code>/ver/bencinas</code>) - hero cards con fotos, logos SVG, estaciones reales</li>
+    <li><strong>Pagina de cuotas sin interes</strong> (<code>/ver/cuotas</code>) - campanas por banco y categoria</li>
+    <li><strong>Bot de WhatsApp v2</strong> - flujo bifurcado Restaurantes/Bencinas, $0 costo IA</li>
+    <li><strong>API REST</strong> - endpoints JSON para consultar beneficios programaticamente</li>
+  </ul>
+</div>
+
+<!-- ============ TRAZABILIDAD ============ -->
+<h2>Trazabilidad de Datos <span class="badge new">NUEVO</span></h2>
+<div class="card">
+  <p>Principio agregado en agosto 2026: toda la data de cara al usuario debe venir de una <strong>fuente oficial marcada</strong>, nunca de un agregador sin verificar. Cada dato lleva un campo <code>confianza</code> (oficial / secundaria) y su <code>url_fuente</code> - un agregador de terceros sirve solo como <strong>control de calidad</strong>, no como fuente de verdad. Los descuentos de bencina se re-curaron completos desde las paginas oficiales de cada cadena.</p>
+  <p>Criterio aplicado en toda la web: <strong>"si no esta chequeado, mejor no mostrar"</strong>. Cuando falta un dato verificado, la pagina muestra "Estamos confirmando descuentos" en vez de un dato dudoso. Una <strong>guardia de madrugada</strong> (revision automatica diaria, ~03:00 Chile) re-chequea paginas, seguridad y trazabilidad contra produccion, y avisa por correo solo si algo reaparece.</p>
+</div>
+
+<!-- ============ TECNOLOGIAS ============ -->
+<h2>Stack Tecnologico</h2>
+<div class="tech-grid">
+  <div class="tech-item"><strong>Backend:</strong> Python 3.9+ / FastAPI / Uvicorn</div>
+  <div class="tech-item"><strong>Scraping:</strong> requests / BeautifulSoup / lxml</div>
+  <div class="tech-item"><strong>Frontend:</strong> HTML/CSS/JS embebido en f-string Python</div>
+  <div class="tech-item"><strong>Mapas:</strong> Leaflet + CARTO tiles</div>
+  <div class="tech-item"><strong>Estaciones:</strong> OpenStreetMap Overpass API (367 estaciones)</div>
+  <div class="tech-item"><strong>Bot:</strong> Twilio WhatsApp API</div>
+  <div class="tech-item"><strong>Logos:</strong> 13 SVG locales + 3 fotos JPG (<code>/static/logos/</code>)</div>
+  <div class="tech-item"><strong>Deploy:</strong> Render.com (auto-deploy desde GitHub)</div>
+</div>
+
+<!-- ============ ARCHIVOS ============ -->
+<h2>Archivos del Proyecto</h2>
+<table>
+  <tr><th>Archivo</th><th>Lineas</th><th>Descripcion</th></tr>
+  <tr><td><code>api.py</code></td><td>~2360</td><td>FastAPI: API REST + pagina <code>/ver</code> + pagina <code>/ver/bencinas</code> + webhook WhatsApp v2</td></tr>
+  <tr><td><code>scrapers.py</code></td><td>~3600</td><td>15 scrapers restaurantes + scraper bencinas + modelo Beneficio + OrquestadorScrapers</td></tr>
+  <tr><td><code>whatsapp_bot.py</code></td><td>239</td><td>Bot WhatsApp alternativo (Flask, simple, sin IA)</td></tr>
+  <tr><td><code>upload_pinecone.py</code></td><td>106</td><td>Sube vectores a Pinecone para RAG (mantenido pero ya no usado en WhatsApp)</td></tr>
+  <tr><td><code>beneficios.json</code></td><td>~1.2MB</td><td>985 beneficios de restaurantes scrapeados</td></tr>
+  <tr><td><code>bencinas.json</code></td><td>~128KB</td><td>28 descuentos bencina + 367 estaciones reales de OpenStreetMap</td></tr>
+  <tr><td><code>beneficios.csv</code></td><td>~618KB</td><td>Mismo data restaurantes en CSV</td></tr>
+  <tr><td><code>static/logos/</code></td><td>16 archivos</td><td>13 SVG logos + 3 fotos estaciones JPG</td></tr>
+  <tr><td><code>render.yaml</code></td><td>~30</td><td>Configuracion deploy Render</td></tr>
+  <tr><td><code>requirements.txt</code></td><td>~25</td><td>Dependencias Python</td></tr>
+</table>
+
+<!-- ============ URLs ============ -->
+<h2>URLs de Produccion</h2>
+<div class="card">
+  <div class="url-box">https://api-beneficios-chile.onrender.com/ver &larr; Pagina restaurantes</div>
+  <div class="url-box">https://api-beneficios-chile.onrender.com/ver/beneficios &larr; Pagina otros beneficios</div>
+  <div class="url-box">https://api-beneficios-chile.onrender.com/ver/bencinas &larr; Pagina bencinas</div>
+  <div class="url-box">https://api-beneficios-chile.onrender.com/ver/cuotas &larr; Pagina cuotas sin interes</div>
+  <div class="url-box">https://api-beneficios-chile.onrender.com/webhook &larr; Bot WhatsApp (Twilio)</div>
+  <div class="url-box">https://api-beneficios-chile.onrender.com/docs &larr; Swagger API</div>
+</div>
+
+<!-- ============ VERSIONAMIENTO ============ -->
+<h2>Versionamiento</h2>
+<table>
+  <tr><th>Tag</th><th>Fecha</th><th>Descripcion</th></tr>
+  <tr><td><code>v_01</code></td><td>14-Mar-2026</td><td>Version inicial. 15 scrapers, 985 beneficios restaurantes, web con filtros + mapa, bot WhatsApp 3 pasos + RAG.</td></tr>
+  <tr><td><code>v_02</code></td><td>25-Mar-2026</td><td>Modulo bencinas (28 dctos + 367 estaciones), hero cards, 13 logos SVG, bot WhatsApp v2 sin IA ($0), multiples bancos URL, 11 URLs corregidas.</td></tr>
+  <tr><td><code>v_03</code></td><td>03-Ago-2026</td><td>Trazabilidad de datos (confianza + fuente oficial, bencina re-curada), paginas nuevas /ver/beneficios (otros beneficios) y /ver/cuotas, filtros dinamicos por dia, guardia de madrugada automatica.</td></tr>
+</table>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_03 | <strong>Ultima actualizacion:</strong> 2026-08-03 | <strong>Autor:</strong> Fernando Estay Perez</p>
+
+</body>
+</html>

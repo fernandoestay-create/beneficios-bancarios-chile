@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot WhatsApp v2 - Beneficios Bancarios Chile + Bencinas</title>
+<style>
+  :root { --primary: #1a56db; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --accent: #059669; --fuel: #d97706; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem; max-width: 1100px; margin: auto; }
+  h1 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; color: var(--primary); margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card.fuel { border-left: 4px solid var(--fuel); }
+  .nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .nav a { background: var(--primary); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; }
+  .nav a:hover { opacity: 0.9; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #f1f5f9; border-radius: 8px; padding: 1rem; font-size: 0.85rem; overflow-x: auto; margin: 0.5rem 0; }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin: 0.3rem 0; }
+  .badge { display: inline-block; background: var(--fuel); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
+  .chat { max-width: 520px; margin: 1rem 0; }
+  .msg { padding: 0.8rem 1rem; border-radius: 12px; margin: 0.5rem 0; max-width: 85%; font-size: 0.9rem; }
+  .msg.user { background: #dcfce7; margin-left: auto; text-align: right; }
+  .msg.bot { background: #e2e8f0; }
+  .msg .who { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1rem 0; }
+  .compare > div { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; }
+  .compare h4 { color: var(--primary); margin-bottom: 0.5rem; }
+  .compare .old { opacity: 0.7; }
+  .highlight { background: #fef3c7; padding: 0.8rem 1rem; border-radius: 8px; border-left: 4px solid var(--fuel); margin: 1rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Bot WhatsApp v2</h1>
+<p class="subtitle">Flujo completamente rediseñado: bifurcacion Restaurantes/Bencinas, $0 costo OpenAI</p>
+
+<div class="nav">
+  <a href="01_resumen_proyecto.html">Resumen</a>
+  <a href="02_arquitectura_sistema.html">Arquitectura</a>
+  <a href="03_scrapers_detalle.html">Scrapers</a>
+  <a href="04_api_y_web.html">API y Web</a>
+  <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+</div>
+
+<!-- ============ COMPARACION v1 vs v2 ============ -->
+<h2>Comparacion v_01 vs v_02</h2>
+<div class="compare">
+  <div class="old">
+    <h4>v_01 (anterior)</h4>
+    <ul>
+      <li>Flujo: Banco -> Dia -> Comida (3 pasos)</li>
+      <li>Solo restaurantes</li>
+      <li>Consulta libre con RAG (OpenAI + Pinecone)</li>
+      <li>Costo OpenAI: ~$0.50/mes</li>
+      <li>Comandos: /top, /stats, texto libre</li>
+    </ul>
+  </div>
+  <div>
+    <h4>v_02 (actual)</h4>
+    <ul>
+      <li>Flujo: "Restaurantes o Bencinas?" -> bifurcacion</li>
+      <li>Restaurantes + Bencinas</li>
+      <li><strong>Sin RAG, toda logica Python</strong></li>
+      <li><strong>$0 costo OpenAI</strong></li>
+      <li>Multiples bancos: "1,2,4"</li>
+      <li>Link con filtros pre-aplicados</li>
+    </ul>
+  </div>
+</div>
+
+<div class="highlight">
+  <strong>Cambio clave:</strong> Se elimino completamente el RAG (OpenAI + Pinecone) del flujo de WhatsApp. Toda la logica de busqueda y filtrado se hace en Python puro. El endpoint <code>/rag</code> se mantiene en la API pero ya no se usa desde el bot. Costo mensual de OpenAI para WhatsApp: <strong>$0</strong>.
+</div>
+
+<!-- ============ FLUJO GENERAL ============ -->
+<h2>Flujo General del Bot v2</h2>
+<div class="card">
+<pre>
+Usuario envia CUALQUIER mensaje
+  |
+  v
+Bot: "Restaurantes o Bencinas?"
+  |
+  +-- "1" o "restaurantes" --> FLUJO RESTAURANTES (3 pasos)
+  |
+  +-- "2" o "bencinas"     --> FLUJO BENCINAS (2 pasos)
+</pre>
+</div>
+
+<!-- ============ FLUJO BENCINAS ============ -->
+<h2>Flujo Bencinas (2 pasos)</h2>
+<div class="chat">
+  <div class="msg user"><div class="who">Usuario</div>hola</div>
+  <div class="msg bot"><div class="who">Bot</div>Restaurantes o Bencinas?<br>1. Restaurantes<br>2. Bencinas</div>
+  <div class="msg user"><div class="who">Usuario</div>2</div>
+  <div class="msg bot"><div class="who">Bot</div>Que dia te interesa?<br>Ej: lunes, martes, hoy, todos</div>
+  <div class="msg user"><div class="who">Usuario</div>lunes</div>
+  <div class="msg bot"><div class="who">Bot</div>
+    Descuentos bencina para Lunes:<br><br>
+    Copec (3 dctos)<br>
+    - BICE: $100/litro<br>
+    - Copec Pay: $80/litro<br>
+    - Mercado Pago: $60/litro<br><br>
+    Shell (2 dctos)<br>
+    - Consorcio: $90/litro<br>
+    - Micopiloto: $70/litro<br><br>
+    Ver todos: https://api-beneficios-chile.onrender.com/ver/bencinas?dia=lunes
+  </div>
+</div>
+
+<!-- ============ TRAZABILIDAD BENCINAS ============ -->
+<h2>Calidad y Trazabilidad de los Descuentos de Bencina (2026-08-03)</h2>
+
+<div class="highlight">
+  <strong>Regla:</strong> un agregador (sitio de terceros) es control de calidad, NUNCA fuente de verdad. Los 31 descuentos de bencina se re-curaron desde la fuente oficial de cada cadena; el agregador solo sirve para detectar inconsistencias.
+</div>
+
+<div class="compare">
+  <div class="old">
+    <h4>Antes (agregador)</h4>
+    <ul>
+      <li>100% desde descuentosrata.com</li>
+      <li>Sin campo de confianza ni fuente</li>
+      <li>5 errores reales sin detectar</li>
+    </ul>
+  </div>
+  <div>
+    <h4>Ahora (re-curado)</h4>
+    <ul>
+      <li>Copec (15 dctos): fuente oficial <code>ww2.copec.cl/personas/promociones</code></li>
+      <li>Aramco/Shell (16 dctos): medios verificados <span class="badge">pendiente oficial</span></li>
+      <li>Campo <code>confianza</code> + <code>url_fuente</code> por dato</li>
+      <li>La web marca la procedencia: "verifica en tu banco"</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <h3>5 errores del agregador, corregidos</h3>
+  <table>
+    <tr><th>Descuento</th><th>Agregador decia</th><th>Fuente oficial dice</th></tr>
+    <tr><td>Shell / Scotiabank</td><td>Sabado</td><td><strong>Jueves</strong></td></tr>
+    <tr><td>Itau / Copec</td><td>Viernes</td><td><strong>Martes</strong></td></tr>
+    <tr><td>BancoEstado / Copec</td><td>Viernes, $100</td><td><strong>Martes, $50</strong></td></tr>
+    <tr><td>BCI / Copec</td><td>$100/litro</td><td><strong>7% cashback (tope $7.000)</strong></td></tr>
+    <tr><td>Santander Consumer</td><td>Lunes a viernes</td><td><strong>Viernes a domingo</strong></td></tr>
+  </table>
+</div>
+
+<div class="card fuel">
+  <h3>Pendiente (honesto)</h3>
+  <p>Shell y Aramco todavia se curan desde medios verificados, no desde su app/web oficial. Falta re-curar esos 16 descuentos directo de la fuente oficial: hoy solo Copec (15) es 100% oficial.</p>
+</div>
+
+<div class="card">
+  <h3>Guardia de madrugada vigila la trazabilidad</h3>
+  <p>La revision automatica de cada madrugada (~03:00 Chile, <code>revision_madrugada.py</code>) ahora tambien chequea bencinas: si un descuento pierde su campo <code>confianza</code> o vuelve a depender solo del agregador, manda alerta por correo. La trazabilidad se vigila en cada corrida, no se verifica una sola vez.</p>
+</div>
+
+<!-- ============ FLUJO RESTAURANTES ============ -->
+<h2>Flujo Restaurantes (3 pasos)</h2>
+<div class="chat">
+  <div class="msg user"><div class="who">Usuario</div>hola</div>
+  <div class="msg bot"><div class="who">Bot</div>Restaurantes o Bencinas?<br>1. Restaurantes<br>2. Bencinas</div>
+  <div class="msg user"><div class="who">Usuario</div>1</div>
+  <div class="msg bot"><div class="who">Bot</div>Que dia te interesa?<br>Ej: lunes, martes, hoy, todos</div>
+  <div class="msg user"><div class="who">Usuario</div>miercoles</div>
+  <div class="msg bot"><div class="who">Bot</div>Que banco(s) tienes?<br>
+    1. Banco de Chile<br>
+    2. Banco Falabella<br>
+    3. BCI<br>
+    4. Scotiabank<br>
+    5. Santander<br>
+    ... (15 bancos)<br><br>
+    Escribe los numeros separados por coma: ej "1,3,4"<br>
+    O escribe "todos"
+  </div>
+  <div class="msg user"><div class="who">Usuario</div>1,3,4</div>
+  <div class="msg bot"><div class="who">Bot</div>
+    Descuentos Miercoles para Banco de Chile, BCI, Scotiabank:<br><br>
+    Banco de Chile (12 dctos)<br>
+    - La Mar: 30% dcto.<br>
+    - Happening: 25% dcto.<br>
+    - ...y 10 mas<br><br>
+    BCI (8 dctos)<br>
+    - Sushi Home: 40% dcto.<br>
+    - ...y 7 mas<br><br>
+    Ver todos: https://api-beneficios-chile.onrender.com/ver?dia=miercoles&banco=Banco+de+Chile&banco=BCI&banco=Scotiabank
+  </div>
+</div>
+
+<!-- ============ DETALLES TECNICOS ============ -->
+<h2>Detalles Tecnicos</h2>
+<div class="card">
+  <h3>Estado conversacional</h3>
+<pre>
+user_flow = {}
+# Estructura por usuario:
+# {
+#   "+56912345678": {
+#     "step": "ask_tipo" | "ask_dia" | "ask_banco" | "resultado",
+#     "tipo": "restaurantes" | "bencinas",
+#     "dia": "lunes",
+#     "bancos": ["BCI", "Scotiabank"],
+#   }
+# }
+</pre>
+  <p>Se mantiene en memoria (se pierde si el servidor reinicia). Cada usuario tiene su propio estado.</p>
+
+  <h3>Seleccion de multiples bancos</h3>
+  <ul>
+    <li>El bot muestra una lista numerada de bancos</li>
+    <li>El usuario puede seleccionar multiples bancos separando numeros con coma: <code>"1,2,4"</code></li>
+    <li>Tambien acepta <code>"todos"</code> para ver todos los bancos</li>
+    <li>Los bancos seleccionados se pasan como parametros URL multiples: <code>?banco=BCI&amp;banco=Scotiabank</code></li>
+  </ul>
+
+  <h3>Generacion del link</h3>
+  <ul>
+    <li>El link lleva directamente a la pagina con filtros pre-aplicados</li>
+    <li>Restaurantes: <code>/ver?dia=X&amp;banco=Y&amp;banco=Z</code></li>
+    <li>Bencinas: <code>/ver/bencinas?dia=X</code></li>
+    <li>Al abrir el link, la pagina aplica automaticamente los filtros de la URL</li>
+  </ul>
+
+  <h3>Sin dependencias externas de IA</h3>
+  <ul>
+    <li>No se usa OpenAI (ni GPT ni embeddings) en el flujo de WhatsApp</li>
+    <li>No se usa Pinecone en el flujo de WhatsApp</li>
+    <li>Todo el filtrado y formato se hace en Python puro</li>
+    <li>El endpoint <code>/rag</code> sigue disponible en la API para otros usos</li>
+  </ul>
+</div>
+
+<!-- ============ WEBHOOK ============ -->
+<h2>Configuracion del Webhook</h2>
+<div class="card">
+  <table>
+    <tr><th>Parametro</th><th>Valor</th></tr>
+    <tr><td>URL</td><td><code>https://api-beneficios-chile.onrender.com/webhook</code></td></tr>
+    <tr><td>Metodo</td><td>POST</td></tr>
+    <tr><td>Servicio</td><td>Twilio WhatsApp Sandbox</td></tr>
+    <tr><td>Formato</td><td>Form data (<code>From</code>, <code>Body</code>)</td></tr>
+    <tr><td>Respuesta</td><td>TwiML XML</td></tr>
+  </table>
+  <h3>Probar sin WhatsApp</h3>
+<pre>
+curl -X POST https://api-beneficios-chile.onrender.com/webhook \
+  -d "From=whatsapp:+56912345678" \
+  -d "Body=hola"
+</pre>
+</div>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 | <strong>Ultima actualizacion:</strong> 2026-08-03 (bencinas re-curadas desde fuente oficial + guardia de madrugada vigila trazabilidad)</p>
+
+</body>
+</html>

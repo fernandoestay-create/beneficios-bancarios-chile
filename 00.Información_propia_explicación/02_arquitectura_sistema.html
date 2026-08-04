@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arquitectura del Sistema v02 - Beneficios Bancarios Chile + Bencinas</title>
+<style>
+  :root { --primary: #1a56db; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --accent: #059669; --fuel: #d97706; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem; max-width: 1100px; margin: auto; }
+  h1 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; color: var(--primary); margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .nav a { background: var(--primary); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; }
+  .nav a:hover { opacity: 0.9; }
+  pre { background: #1e293b; color: #e2e8f0; border-radius: 10px; padding: 1.2rem; font-size: 0.78rem; overflow-x: auto; margin: 1rem 0; line-height: 1.5; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin: 0.3rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Arquitectura del Sistema v_02</h1>
+<p class="subtitle">Diagrama general, flujos de datos y capas del sistema</p>
+
+<div class="nav">
+  <a href="01_resumen_proyecto.html">Resumen</a>
+  <a href="02_arquitectura_sistema.html">Arquitectura</a>
+  <a href="03_scrapers_detalle.html">Scrapers</a>
+  <a href="04_api_y_web.html">API y Web</a>
+  <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+</div>
+
+<!-- ============ DIAGRAMA GENERAL ============ -->
+<h2>Diagrama General</h2>
+<pre>
++-----------------------------------------------------------------------+
+|                    FUENTES DE DATOS                                     |
++-----------------------------------+-----------------------------------+
+| RESTAURANTES (15 bancos)          | BENCINAS (3 cadenas)              |
+| Banco de Chile (API CMS)          | Copec (web scraping)              |
+| Banco Falabella (API CMS v2)      | Shell (web scraping)              |
+| BCI (HTML scraping)               | Aramco (web scraping)             |
+| Banco Itau (API JSON)             |                                   |
+| Scotiabank (JS embebido)          | ESTACIONES (OpenStreetMap)        |
+| Santander, Consorcio, BancoEstado | Overpass API: 367 estaciones      |
+| Security, Ripley, Entel, Tenpo    | reales con lat/lon                |
+| Lider BCI, BICE, Mach             |                                   |
++-----------------------------------+-----------------------------------+
+                     |                           |
+                     v                           v
++-----------------------------------------------------------------------+
+|                    CAPA DE SCRAPING (scrapers.py ~3600 lineas)         |
+| 15 clases Scraper restaurantes + Scraper bencinas                     |
+| OrquestadorScrapers: normaliza fechas, regiones, comunas, textos      |
+| Output: beneficios.json (985) + bencinas.json (28 dctos + 367 est.)  |
++-----------------------------------------------------------------------+
+                                |
+                                v
++-----------------------------------------------------------------------+
+|              CAPA DE APLICACION (api.py ~2360 lineas / FastAPI)        |
+|                                                                       |
+|  +------------------+  +------------------+  +---------------------+  |
+|  | PAGINA WEB       |  | PAGINA BENCINAS  |  | BOT WHATSAPP v2     |  |
+|  | GET /ver         |  | GET /ver/bencinas|  | POST /webhook       |  |
+|  | Filtros + mapa   |  | Hero cards       |  | "Restaurantes o     |  |
+|  | Tarjetas         |  | Fotos estaciones |  |  Bencinas?"         |  |
+|  | Summary bar      |  | Logos SVG        |  | Sin IA ($0 OpenAI)  |  |
+|  | Multi-banco URL  |  | Estaciones reales|  | Link con filtros    |  |
+|  +------------------+  +------------------+  +---------------------+  |
+|                                                                       |
+|  +------------------+  +------------------+                           |
+|  | API REST         |  | STATIC FILES     |                           |
+|  | GET /beneficios  |  | /static/logos/   |                           |
+|  | GET /bancos      |  | 13 SVG + 3 JPG   |                           |
+|  | GET /estadisticas|  | FastAPI mount    |                           |
+|  | POST /rag        |  +------------------+                           |
+|  +------------------+                                                 |
++-----------------------------------------------------------------------+
+            |                    |                    |
+            v                    v                    v
+    +-------------+     +--------------+      +--------------+
+    | Navegador   |     | WhatsApp     |      | Integraciones|
+    | Desktop/Mob |     | via Twilio   |      | curl / apps  |
+    +-------------+     +--------------+      +--------------+
+</pre>
+
+<!-- ============ FLUJO RESTAURANTES ============ -->
+<h2>Flujo 1: Scraping Restaurantes</h2>
+<div class="card">
+<pre style="background:#f1f5f9; color:var(--text);">
+python scrapers.py
+  |-- ScraperBancoChile()     -> API CMS          -> ~200 Beneficio
+  |-- ScraperBancoFalabella() -> API CMS v2       -> ~150 Beneficio
+  |-- ScraperBCI()            -> HTML + regex      -> ~100 Beneficio
+  |-- ScraperItau()           -> API JSON          -> ~50 Beneficio
+  |-- ScraperScotiabank()     -> JS embebido       -> ~61 Beneficio
+  |-- ScraperSantander()      -> HTML              -> ~80 Beneficio
+  |-- (9 scrapers mas...)
+  |
+  v
+OrquestadorScrapers._normalizar_todos()
+  |-- Fechas:     "31 de marzo 2026" -> "31-Mar-2026"
+  |-- Regiones:   "santiago", "rm"   -> "Metropolitana"
+  |-- Comunas:    extraer de direccion para RM
+  |-- Descuentos: "50% de descuento" -> "50% dcto."
+  |
+  v
+beneficios.json (985 beneficios) + beneficios.csv
+</pre>
+</div>
+
+<!-- ============ FLUJO BENCINAS ============ -->
+<h2>Flujo 2: Scraping Bencinas (NUEVO v_02)</h2>
+<div class="card">
+<pre style="background:#fffbeb; color:var(--text);">
+scrapers.py -> ScraperBencinas
+  |
+  |-- Scraping web: Copec, Shell, Aramco
+  |   Extrae: descuento por litro, dias, condiciones, tope
+  |   Output: 28 descuentos
+  |
+  |-- OpenStreetMap Overpass API
+  |   Query: amenity=fuel en Chile
+  |   Filtra: cadenas Copec, Shell, Aramco
+  |   Output: 367 estaciones con lat/lon reales
+  |
+  v
+bencinas.json
+  {
+    "descuentos": [28 items],
+    "estaciones": [367 items con coordenadas],
+    "meta": { vigencia, fecha_scrape, totales }
+  }
+</pre>
+</div>
+
+<!-- ============ FLUJO BOT ============ -->
+<h2>Flujo 3: Bot WhatsApp v2</h2>
+<div class="card">
+<pre style="background:#f1f5f9; color:var(--text);">
+Usuario envia mensaje (cualquiera)
+  |
+  v
+Twilio -> POST /webhook (api.py)
+  |
+  v
+"Restaurantes o Bencinas?"
+  |
+  +-- BENCINAS (2 pasos):
+  |     Paso 1: "Que dia?" -> lunes/martes/.../hoy/todos
+  |     Paso 2: RESULTADO
+  |       - Filtra descuentos por dia
+  |       - Genera link: /ver/bencinas?dia=lunes
+  |
+  +-- RESTAURANTES (3 pasos):
+        Paso 1: "Que dia?" -> lunes/martes/.../hoy/todos
+        Paso 2: "Que banco(s)?" -> lista numerada, seleccion: "1,2,4"
+        Paso 3: RESULTADO
+          - Filtra por dia + banco(s)
+          - Genera link: /ver?dia=lunes&banco=BCI&banco=Scotiabank
+  |
+  v
+Twilio envia respuesta + link al usuario
+(Sin OpenAI, sin Pinecone, $0 costo IA)
+</pre>
+</div>
+
+<!-- ============ FLUJO WEB ============ -->
+<h2>Flujo 4: Pagina Web Restaurantes (/ver)</h2>
+<div class="card">
+<pre style="background:#f1f5f9; color:var(--text);">
+GET /ver?banco=BCI&banco=Scotiabank&dia=miercoles
+  |
+  v
+api.py genera HTML completo (f-string)
+  |-- Python: serializa beneficios -> JSON embebido en script
+  |-- Python: lee URL params (banco, dia) para pre-filtrar
+  |-- HTML: hero + sidebar filtros + main contenido
+  |-- CSS: estilos embebidos (variables CSS, responsive)
+  |-- JS: logica de filtros, rendering, mapa, Multi-Select (MS)
+  |
+  v
+Navegador recibe HTML completo
+  |-- JS: pre-aplica filtros de URL params (multi-banco)
+  |-- JS: render() filtra deals y genera cards
+  |-- JS: Leaflet inicializa mapa con markers
+  |-- JS: summary bar con logos clickeables
+</pre>
+</div>
+
+<!-- ============ FLUJO BENCINAS WEB ============ -->
+<h2>Flujo 5: Pagina Web Bencinas (/ver/bencinas) - NUEVO v_02</h2>
+<div class="card">
+<pre style="background:#fffbeb; color:var(--text);">
+GET /ver/bencinas?dia=lunes
+  |
+  v
+api.py genera HTML con:
+  |-- Hero cards: foto estacion de fondo + logo cadena SVG
+  |-- Descuentos agrupados por cadena (Copec, Shell, Aramco)
+  |-- Filtro por dia (pre-aplicable desde URL)
+  |-- Estaciones reales en mapa Leaflet (367 markers con lat/lon)
+  |-- Logos servidos desde /static/logos/ (SVG locales)
+</pre>
+</div>
+
+<!-- ============ ALMACENAMIENTO ============ -->
+<h2>Almacenamiento de Datos</h2>
+<table>
+  <tr><th>Archivo</th><th>Contenido</th><th>Tamano</th><th>Uso</th></tr>
+  <tr><td><code>beneficios.json</code></td><td>985 beneficios restaurantes</td><td>~1.2 MB</td><td>Carga en memoria al iniciar API</td></tr>
+  <tr><td><code>bencinas.json</code></td><td>28 descuentos + 367 estaciones</td><td>~128 KB</td><td>Carga en memoria al iniciar API</td></tr>
+  <tr><td><code>beneficios.csv</code></td><td>985 beneficios (formato tabular)</td><td>~618 KB</td><td>Backup / Excel / BI</td></tr>
+  <tr><td><code>static/logos/</code></td><td>13 SVG + 3 JPG estaciones</td><td>~330 KB</td><td>FastAPI StaticFiles mount</td></tr>
+  <tr><td>Pinecone (nube)</td><td>985 vectores embeddings</td><td>-</td><td>RAG API (mantenido, ya no usado en WhatsApp)</td></tr>
+</table>
+
+<!-- ============ DEPLOY ============ -->
+<h2>Deploy en Produccion</h2>
+<div class="card">
+  <h3>Render.com</h3>
+  <ul>
+    <li><strong>Servicio principal:</strong> <code>api-beneficios-chile</code> - FastAPI + Uvicorn</li>
+    <li><strong>Build:</strong> <code>pip install -r requirements.txt</code></li>
+    <li><strong>Start:</strong> <code>uvicorn api:app --host 0.0.0.0 --port $PORT</code></li>
+    <li><strong>Auto-deploy:</strong> push a <code>main</code> en GitHub</li>
+    <li><strong>Servicio secundario:</strong> <code>whatsapp-bot-beneficios</code> (Flask alternativo)</li>
+  </ul>
+  <h3>Variables de entorno</h3>
+  <ul>
+    <li><code>OPENAI_API_KEY</code> - solo para endpoint <code>/rag</code> (ya no usado en WhatsApp)</li>
+    <li><code>PINECONE_API_KEY</code>, <code>PINECONE_HOST</code>, etc. - para RAG API</li>
+  </ul>
+</div>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 | <strong>Ultima actualizacion:</strong> Marzo 2026</p>
+
+</body>
+</html>

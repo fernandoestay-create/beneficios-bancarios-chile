@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v_03 - Comparador Precios Combustible (PU Bencina)</title>
+<style>
+  :root { --primary: #ea580c; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --green: #16a34a; --red: #dc2626; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem; max-width: 1100px; margin: auto; }
+  h1 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; color: var(--primary); margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card.green { border-left: 4px solid var(--green); }
+  .card.orange { border-left: 4px solid var(--primary); }
+  .nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .nav a { background: var(--primary); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #f1f5f9; border-radius: 8px; padding: 1rem; font-size: 0.85rem; overflow-x: auto; margin: 0.5rem 0; }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin: 0.3rem 0; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; color: #fff; }
+  .badge.green { background: var(--green); }
+  .badge.orange { background: var(--primary); }
+  .badge.red { background: var(--red); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1rem 0; }
+  .stat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; text-align: center; }
+  .stat .val { font-size: 1.8rem; font-weight: 800; }
+  .stat .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<h1>v_03 - Comparador de Precios Combustible</h1>
+<p class="subtitle">PU Bencina: precios reales de 1,750+ estaciones de todo Chile via CNE | 01 Abril 2026</p>
+
+<div class="nav">
+  <a href="01_resumen_proyecto.html">Resumen</a>
+  <a href="02_arquitectura_sistema.html">Arquitectura</a>
+  <a href="03_scrapers_detalle.html">Scrapers</a>
+  <a href="04_api_y_web.html">API y Web</a>
+  <a href="05_bot_whatsapp_y_bencinas.html">Bot + Bencinas</a>
+  <a href="06_precios_combustible.html" style="background:#dc2626">Precios v_03</a>
+</div>
+
+<h2>1. Problema resuelto</h2>
+<div class="card orange">
+  <h3>Antes (v_02): OpenStreetMap Overpass API</h3>
+  <ul>
+    <li>Fuente: OpenStreetMap (datos voluntarios, sin precios)</li>
+    <li>Resultado: <strong>0 estaciones</strong> en GitHub Actions (API inestable, timeouts)</li>
+    <li>Solo ubicaciones, sin precios de combustible</li>
+    <li>Solo Copec/Shell/Aramco (367 max cuando funcionaba)</li>
+  </ul>
+</div>
+<div class="card green">
+  <h3>Ahora (v_03): bencinaenlinea.cl (CNE)</h3>
+  <ul>
+    <li>Fuente: API publica de la Comision Nacional de Energia</li>
+    <li>Resultado: <strong>1,815 estaciones</strong> de todo Chile</li>
+    <li>Precios reales: 93, 95, 97, Diesel, Kerosene</li>
+    <li>120+ marcas (no solo las 3 principales)</li>
+    <li>Endpoint: <code>GET https://api.bencinaenlinea.cl/api/busqueda_estacion_filtro</code></li>
+    <li>Sin autenticacion, sin limite de requests</li>
+  </ul>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="val" style="color:var(--primary)">1,815</div><div class="label">Estaciones totales</div></div>
+  <div class="stat"><div class="val" style="color:var(--green)">1,750</div><div class="label">Con precios</div></div>
+  <div class="stat"><div class="val" style="color:#6366f1">1,462</div><div class="label">Con descuentos</div></div>
+  <div class="stat"><div class="val" style="color:var(--red)">120+</div><div class="label">Marcas</div></div>
+</div>
+
+<h2>2. Scraper: ScraperBencinaEnLinea</h2>
+<div class="card">
+  <h3>Clase en scrapers.py</h3>
+  <p>Reemplaza <code>ScraperEstacionesCNE</code> (Overpass API). Obtiene todas las estaciones de Chile con precios.</p>
+  <pre>
+ScraperBencinaEnLinea
+  ├── _cargar_marcas()     → GET /api/marca_ciudadano (120 marcas)
+  ├── _scrapear_estaciones() → GET /api/busqueda_estacion_filtro (1,817 raw)
+  ├── _extraer_precios()   → Mapea combustibles: 93, 95, 97, Diesel, Kerosene
+  └── _normalizar_cadena() → Copec, Shell, Aramco, Petrobras, etc.
+  </pre>
+  <h3>Modelo EstacionBencina (ampliado)</h3>
+  <pre>
+@dataclass
+class EstacionBencina:
+    id, nombre, cadena, direccion, comuna, region
+    latitud, longitud, servicios
+    # NUEVOS en v_03:
+    precio_93: int      # CLP por litro
+    precio_95: int
+    precio_97: int
+    precio_diesel: int
+    precio_kerosene: int
+    precio_fecha: str   # Fecha ultima actualizacion
+  </pre>
+</div>
+
+<h2>3. Estructura bencinas.json (v_03)</h2>
+<div class="card">
+<pre>
+{
+  "descuentos": [...],          // 28 descuentos bancarios (Copec/Shell/Aramco)
+  "estaciones": [...],          // 1,462 estaciones Copec/Shell/Aramco con precios
+  "precios_todas": [...],       // 1,815 estaciones de TODO Chile con precios
+  "meta": {
+    "fecha_scrape": "...",
+    "fecha_precios": "...",
+    "vigencia_mes": "2026-04",
+    "total_descuentos": 28,
+    "total_estaciones": 1462,
+    "total_con_precios": 1815,
+    "fuente_precios": "Bencinas en Linea - Comision Nacional de Energia",
+    "disclaimer": "Los precios son de exclusiva responsabilidad de las estaciones informantes"
+  }
+}
+</pre>
+</div>
+
+<h2>4. Endpoints API nuevos</h2>
+<div class="card">
+<table>
+  <tr><th>Endpoint</th><th>Parametros</th><th>Descripcion</th></tr>
+  <tr><td><code>GET /bencinas/precios</code></td><td>combustible, comuna, region, cadena, orden, limite</td><td>Buscar estaciones por precio</td></tr>
+  <tr><td><code>GET /bencinas/precios/mejores</code></td><td>combustible, region, limite</td><td>Top N mas baratas</td></tr>
+  <tr><td><code>GET /bencinas/precios/resumen</code></td><td>-</td><td>Promedio/min/max por cadena</td></tr>
+</table>
+<h3>Ejemplo: Top 5 bencina 93 mas barata en RM</h3>
+<pre>GET /bencinas/precios?combustible=93&region=Metropolitana&limite=5</pre>
+</div>
+
+<h2>5. Pagina /ver/bencinas — 3 vistas</h2>
+<div class="card">
+<table>
+  <tr><th>Vista</th><th>Contenido</th></tr>
+  <tr><td><span class="badge orange">Tarjetas</span></td><td>Cards de descuentos bancarios con fotos, logos, dias, detalles</td></tr>
+  <tr><td><span class="badge green">Mapa</span></td><td>1,462 estaciones con logos de cadena + precios en popups + boton "Ir"</td></tr>
+  <tr><td><span class="badge red">PU Bencina</span></td><td>Comparador de precios: mapa con marcadores logo+precio, ranking sincronizado con viewport</td></tr>
+</table>
+</div>
+
+<div class="card green">
+<h3>Funcionalidades PU Bencina</h3>
+<ul>
+  <li>Mapa con marcadores: logo cadena + precio (verde=barato, rojo=caro)</li>
+  <li>Ranking de las 50 mas baratas <strong>en la zona visible del mapa</strong></li>
+  <li>Al mover/zoom el mapa, el ranking se actualiza automaticamente</li>
+  <li>Stats en tiempo real: mas barato, mas caro, promedio, total en vista</li>
+  <li>Filtros combustible: 93 / 95 / 97 / Diesel / Kerosene</li>
+  <li>Boton "Ir" en cada estacion (abre Google Maps con direccion)</li>
+  <li>Geolocalizacion "Mi ubicacion" (centra mapa en tu posicion)</li>
+  <li>Cadenas sin logo muestran badge con nombre de color</li>
+</ul>
+</div>
+
+<h2>6. Filtros compartidos (sidebar)</h2>
+<div class="card">
+<p>El sidebar izquierdo aplica a las 3 vistas por igual:</p>
+<ul>
+  <li><strong>Buscar:</strong> texto libre</li>
+  <li><strong>Banco/App:</strong> multi-select</li>
+  <li><strong>Dia:</strong> chips L M X J V S D</li>
+  <li><strong>Cadena:</strong> Todas / Copec / Shell / Aramco / <strong>Otras</strong> (nuevo v_03)</li>
+  <li><strong>Region:</strong> dropdown (Metropolitana siempre primero). Al seleccionar, ambos mapas se centran</li>
+  <li><strong>Comuna:</strong> dinamico segun region seleccionada</li>
+  <li><strong>Limpiar filtros:</strong> resetea todo incluyendo filtros de PU Bencina</li>
+</ul>
+</div>
+
+<h2>7. GitHub Actions — Schedule actualizado</h2>
+<div class="card">
+<table>
+  <tr><th>Cron</th><th>Descripcion</th><th>Frecuencia</th></tr>
+  <tr><td><code>0 5 1-4 * *</code></td><td>Scraping completo (beneficios + bencinas + precios)</td><td>Dias 1-4 del mes, 2AM Chile</td></tr>
+  <tr><td><code>0 5 10,20,30 * *</code></td><td>Actualizacion quincenal</td><td>3 veces/mes</td></tr>
+  <tr><td><code>0 13 * * 1,4</code></td><td><strong>Precios combustible (NUEVO)</strong></td><td>Lunes y jueves, 10AM Chile</td></tr>
+</table>
+</div>
+
+<h2>8. Email report actualizado</h2>
+<div class="card">
+<p>El email de reporte ahora incluye una linea adicional:</p>
+<ul>
+  <li>Beneficios restaurantes: 914</li>
+  <li>Bancos: 13</li>
+  <li>Descuentos bencina: 28</li>
+  <li>Estaciones con descuentos: 1,462</li>
+  <li><strong>Estaciones con precios: 1,815</strong> (nuevo)</li>
+</ul>
+</div>
+
+<h2>9. Disclaimer legal</h2>
+<div class="card" style="border-left:4px solid var(--red)">
+<p><em>"Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes. Fuente: Bencinas en Linea - Comision Nacional de Energia."</em></p>
+<p style="margin-top:0.5rem;color:var(--muted);font-size:0.85rem">Este disclaimer aparece en: footer de /ver/bencinas, cada respuesta de API de precios, y al final de la seccion PU Bencina.</p>
+</div>
+
+<div style="margin-top:3rem;padding:1.5rem;background:#fff7ed;border-radius:12px;border:1px solid #fed7aa">
+<h3 style="color:var(--primary)">Resumen v_03</h3>
+<p>El proyecto paso de <strong>0 estaciones</strong> (Overpass API fallaba) a <strong>1,815 estaciones con precios reales</strong> de todo Chile. Los usuarios ahora pueden comparar precios de combustible por zona, cadena y tipo, con ranking sincronizado al viewport del mapa y navegacion directa via Google Maps.</p>
+</div>
+
+</body>
+</html>

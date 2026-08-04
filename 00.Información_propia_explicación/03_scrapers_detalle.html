@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrapers Detalle v02 - Beneficios Bancarios Chile + Bencinas</title>
+<style>
+  :root { --primary: #1a56db; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --accent: #059669; --fuel: #d97706; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem; max-width: 1100px; margin: auto; }
+  h1 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; color: var(--primary); margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card.fuel { border-left: 4px solid var(--fuel); }
+  .nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1.5rem 0; }
+  .nav a { background: var(--primary); color: #fff; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; }
+  .nav a:hover { opacity: 0.9; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border); text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #f1f5f9; border-radius: 8px; padding: 1rem; font-size: 0.85rem; overflow-x: auto; margin: 0.5rem 0; }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin: 0.3rem 0; }
+  .badge { display: inline-block; background: var(--fuel); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<h1>Scrapers - Detalle Tecnico v_02</h1>
+<p class="subtitle">15 scrapers de restaurantes + scraper de bencinas con estaciones OpenStreetMap</p>
+
+<div class="nav">
+  <a href="01_resumen_proyecto.html">Resumen</a>
+  <a href="02_arquitectura_sistema.html">Arquitectura</a>
+  <a href="03_scrapers_detalle.html">Scrapers</a>
+  <a href="04_api_y_web.html">API y Web</a>
+  <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+</div>
+
+<!-- ============ MODELO BENEFICIO ============ -->
+<h2>Modelo de Datos: Beneficio (Restaurantes)</h2>
+<div class="card">
+<pre>
+@dataclass
+class Beneficio:
+    id: str                    # "banco_chile_123"
+    banco: str                 # "Banco de Chile"
+    tarjeta: str               # "Tarjetas Banco de Chile"
+    restaurante: str           # "La Mar"
+    descuento_valor: float     # 30.0
+    descuento_tipo: str        # "porcentaje"
+    descuento_texto: str       # "30% dcto."
+    dias_validos: List[str]    # ["lunes", "martes"]
+    ubicacion: str             # "Metropolitana"
+    comuna: str                # "Providencia"
+    direccion: str             # "Av. Nueva Costanera 123"
+    presencial: bool           # True
+    online: bool               # False
+    url_fuente: str            # link real al banco (corregido en v_02)
+    imagen_url: str            # imagen del restaurante
+    valido_hasta: str          # "31-Mar-2026"
+    restricciones_texto: str   # "Tope $30.000"
+    descripcion: str           # texto descriptivo
+    logo_url: str              # logo del banco
+    activo: bool               # True
+    fecha_scrape: str          # ISO timestamp
+    tags: List[str]            # etiquetas
+</pre>
+</div>
+
+<!-- ============ 15 SCRAPERS ============ -->
+<h2>Los 15 Scrapers de Restaurantes</h2>
+<table>
+  <tr><th>#</th><th>Clase</th><th>Banco</th><th>Metodo de Scraping</th><th>~Beneficios</th></tr>
+  <tr><td>1</td><td><code>ScraperBancoChile</code></td><td>Banco de Chile</td><td>API CMS interna (<code>/api/beneficios</code>)</td><td>~200</td></tr>
+  <tr><td>2</td><td><code>ScraperBancoFalabella</code></td><td>Banco Falabella</td><td>API CMS (<code>/api/v2/benefits</code>)</td><td>~150</td></tr>
+  <tr><td>3</td><td><code>ScraperBCI</code></td><td>BCI</td><td>HTML scraping + regex</td><td>~100</td></tr>
+  <tr><td>4</td><td><code>ScraperItau</code></td><td>Banco Itau</td><td>API JSON interna</td><td>~50</td></tr>
+  <tr><td>5</td><td><code>ScraperScotiabank</code></td><td>Scotiabank</td><td>JS embebido (arrays <code>sitiosSantiago</code>)</td><td>~61</td></tr>
+  <tr><td>6</td><td><code>ScraperSantander</code></td><td>Santander</td><td>HTML scraping</td><td>~80</td></tr>
+  <tr><td>7</td><td><code>ScraperConsorcio</code></td><td>Banco Consorcio</td><td>HTML scraping</td><td>~40</td></tr>
+  <tr><td>8</td><td><code>ScraperBancoEstado</code></td><td>BancoEstado</td><td>API/HTML</td><td>~60</td></tr>
+  <tr><td>9</td><td><code>ScraperBancoSecurity</code></td><td>Banco Security</td><td>HTML scraping</td><td>~50</td></tr>
+  <tr><td>10</td><td><code>ScraperBancoRipley</code></td><td>Banco Ripley</td><td>HTML scraping</td><td>~40</td></tr>
+  <tr><td>11</td><td><code>ScraperEntel</code></td><td>Entel</td><td>HTML scraping</td><td>~30</td></tr>
+  <tr><td>12</td><td><code>ScraperTenpo</code></td><td>Tenpo</td><td>API/HTML</td><td>~20</td></tr>
+  <tr><td>13</td><td><code>ScraperLiderBCI</code></td><td>Lider BCI</td><td>HTML scraping</td><td>~25</td></tr>
+  <tr><td>14</td><td><code>ScraperBICE</code></td><td>Banco BICE</td><td>HTML scraping</td><td>~30</td></tr>
+  <tr><td>15</td><td><code>ScraperMach</code></td><td>Mach</td><td>HTML scraping</td><td>~20</td></tr>
+</table>
+
+<!-- ============ SCRAPER BENCINAS ============ -->
+<h2><span class="badge">NUEVO v_02</span> Scraper de Bencinas</h2>
+<div class="card fuel">
+  <h3>ScraperBencinas</h3>
+  <p><strong>Archivo:</strong> <code>scrapers.py</code></p>
+  <p><strong>Cadenas scrapeadas:</strong> Copec, Shell, Aramco</p>
+  <p><strong>Datos extraidos por descuento:</strong></p>
+  <ul>
+    <li><code>id</code> - identificador unico</li>
+    <li><code>cadena</code> - "Copec", "Shell", "Aramco"</li>
+    <li><code>banco</code> - banco o medio de pago asociado</li>
+    <li><code>tarjeta</code> - tarjeta o app especifica</li>
+    <li><code>descuento_por_litro</code> - monto en $ por litro</li>
+    <li><code>descuento_texto</code> - texto legible del descuento</li>
+    <li><code>dias_validos</code> - dias de la semana</li>
+    <li><code>condicion</code> - condiciones especiales</li>
+    <li><code>tope_litros</code> - limite de litros</li>
+    <li><code>tope_monto</code> - limite de monto</li>
+    <li><code>combustible</code> - tipo de combustible</li>
+    <li><code>vigencia_mes</code> - mes de vigencia ("2026-03")</li>
+    <li><code>url_fuente</code> - link a la pagina del descuento</li>
+  </ul>
+
+  <h3>Estaciones de OpenStreetMap</h3>
+  <p>Se consulta la <strong>Overpass API</strong> de OpenStreetMap para obtener <strong>367 estaciones de bencina reales</strong> en Chile de las cadenas Copec, Shell y Aramco. Cada estacion incluye:</p>
+  <ul>
+    <li>Nombre de la estacion</li>
+    <li>Cadena (brand)</li>
+    <li>Latitud y longitud reales</li>
+    <li>Direccion (si esta disponible)</li>
+  </ul>
+  <p>Esto permite mostrar markers reales en el mapa Leaflet, a diferencia de las coordenadas aproximadas por region usadas en restaurantes.</p>
+</div>
+
+<!-- ============ ORQUESTADOR ============ -->
+<h2>OrquestadorScrapers</h2>
+<div class="card">
+  <p>Coordina todos los scrapers y normaliza datos:</p>
+  <table>
+    <tr><th>Normalizacion</th><th>Ejemplo</th></tr>
+    <tr><td>Fechas -> DD-MMM-AAAA</td><td>"31 de marzo de 2026" -> "31-Mar-2026"</td></tr>
+    <tr><td>Regiones unificadas</td><td>"santiago", "rm", "R.M." -> "Metropolitana"</td></tr>
+    <tr><td>Comunas RM extraidas</td><td>Detecta "Providencia" de la direccion</td></tr>
+    <tr><td>Textos limpios</td><td>Elimina HTML, "dto" -> "dcto", trunca</td></tr>
+    <tr><td>URLs corregidas (v_02)</td><td>11 URLs "Ver detalle" apuntan a paginas reales</td></tr>
+  </table>
+</div>
+
+<!-- ============ EJECUCION ============ -->
+<h2>Ejecucion</h2>
+<div class="card">
+<pre>
+python scrapers.py
+
+# Output:
+# INICIANDO SCRAPING DE BENEFICIOS BANCARIOS
+# Scrapeando Banco de Chile (API CMS)...
+# Banco de Chile: 229 beneficios extraidos
+# ... (15 bancos)
+# TOTAL BENEFICIOS RESTAURANTES: 985
+#
+# INICIANDO SCRAPING DE BENCINAS
+# Scrapeando descuentos Copec, Shell, Aramco...
+# 28 descuentos bencina extraidos
+# Consultando estaciones OpenStreetMap...
+# 367 estaciones encontradas
+#
+# Datos guardados en: beneficios.json (985)
+# Datos guardados en: bencinas.json (28 dctos + 367 estaciones)
+</pre>
+</div>
+
+<!-- ============ LOGOS ============ -->
+<h2><span class="badge">NUEVO v_02</span> Logos Locales (/static/logos/)</h2>
+<div class="card">
+  <p>13 logos SVG + 3 fotos JPG servidos localmente via FastAPI StaticFiles:</p>
+  <table>
+    <tr><th>Archivo</th><th>Tipo</th><th>Descripcion</th></tr>
+    <tr><td><code>copec.svg</code></td><td>SVG</td><td>Logo Copec</td></tr>
+    <tr><td><code>shell.svg</code></td><td>SVG</td><td>Logo Shell</td></tr>
+    <tr><td><code>aramco.svg</code></td><td>SVG</td><td>Logo Aramco</td></tr>
+    <tr><td><code>bice.svg</code></td><td>SVG</td><td>Logo BICE</td></tr>
+    <tr><td><code>consorcio.svg</code></td><td>SVG</td><td>Logo Consorcio</td></tr>
+    <tr><td><code>coopeuch.svg</code></td><td>SVG</td><td>Logo Coopeuch</td></tr>
+    <tr><td><code>mercadopago.svg</code></td><td>SVG</td><td>Logo Mercado Pago</td></tr>
+    <tr><td><code>micopiloto.svg</code></td><td>SVG</td><td>Logo Micopiloto</td></tr>
+    <tr><td><code>copecpay.svg</code></td><td>SVG</td><td>Logo Copec Pay</td></tr>
+    <tr><td><code>cencosud_scotiabank.svg</code></td><td>SVG</td><td>Logo Cencosud Scotiabank</td></tr>
+    <tr><td><code>abcvisa.svg</code></td><td>SVG</td><td>Logo ABC Visa</td></tr>
+    <tr><td><code>jumboprime.svg</code></td><td>SVG</td><td>Logo Jumbo Prime</td></tr>
+    <tr><td><code>aramco_logo.png</code></td><td>PNG</td><td>Logo Aramco alternativo</td></tr>
+    <tr><td><code>copec_station.jpg</code></td><td>JPG</td><td>Foto estacion Copec (hero card)</td></tr>
+    <tr><td><code>shell_station.jpg</code></td><td>JPG</td><td>Foto estacion Shell (hero card)</td></tr>
+    <tr><td><code>aramco_station.jpg</code></td><td>JPG</td><td>Foto estacion Aramco (hero card)</td></tr>
+  </table>
+</div>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 | <strong>Ultima actualizacion:</strong> Marzo 2026</p>
+
+</body>
+</html>
