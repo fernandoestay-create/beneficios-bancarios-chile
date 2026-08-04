@@ -1773,7 +1773,7 @@ def _generar_resultado_otros(banco_key: str) -> str:
 
 
 async def procesar_comando_whatsapp(texto: str, usuario: str = "") -> str:
-    """Procesa mensajes de WhatsApp con IA (RAG) o comandos rápidos"""
+    """Procesa mensajes del bot (WhatsApp + Telegram): menú guiado + datos locales, SIN IA."""
     texto_original = texto.strip()
     texto = texto_original.lower()
 
@@ -1891,6 +1891,7 @@ _Ej: 1 o varios: 1,2,4,5_"""
             bancos = sorted(set(b.banco for b in beneficios_db))
             # Intentar por número(s) separados por coma
             selected = []
+            explicit_todos = False
             parts = [p.strip() for p in texto.replace(' ', ',').split(',') if p.strip()]
             for p in parts:
                 try:
@@ -1898,11 +1899,20 @@ _Ej: 1 o varios: 1,2,4,5_"""
                     if 1 <= num <= len(bancos):
                         selected.append(bancos[num - 1])
                     elif num == len(bancos) + 1:
-                        selected = []  # todos
+                        explicit_todos = True  # opción "Todos"
+                        selected = []
                         break
+                    # número fuera de rango: no matchea (se avisa abajo)
                 except ValueError:
-                    parsed = _parse_bancos(p)
-                    selected.extend(parsed)
+                    if p in ('todos', 'todas', 'all'):
+                        explicit_todos = True
+                        selected = []
+                        break
+                    selected.extend(_parse_bancos(p))
+            # Si escribió algo pero NADA matchó y no pidió "Todos" → avisar (consistente con ask_banco_generico)
+            if not selected and not explicit_todos:
+                del user_flow[usuario]
+                return "No reconocí ese banco 🤔. Escribe *hola* para volver al menú."
             state["bancos"] = selected
             resultado = _generar_resultado_flow(state["bancos"], state["dia"], "")
             del user_flow[usuario]
