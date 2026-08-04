@@ -130,6 +130,7 @@ bencinas_descuentos: List[DescuentoBencina] = []
 bencinas_estaciones: List[EstacionBencina] = []
 bencinas_precios_todas: List[EstacionBencina] = []
 bencinas_meta: dict = {}
+cuotas_data: dict = {}
 timestamp_ultimo_scrape = None
 
 # ============================================
@@ -137,7 +138,7 @@ timestamp_ultimo_scrape = None
 # ============================================
 
 def inicializar_datos():
-    global beneficios_db, otros_db, bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta, timestamp_ultimo_scrape
+    global beneficios_db, otros_db, bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta, cuotas_data, timestamp_ultimo_scrape
 
     # Resolver ruta relativa al directorio del script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -181,6 +182,17 @@ def inicializar_datos():
             print(f"✅ Bencinas: {len(bencinas_descuentos)} descuentos, {len(bencinas_estaciones)} estaciones, {len(bencinas_precios_todas)} precios")
     else:
         print("⚠️ bencinas.json no encontrado. Ejecuta scraping de bencinas.")
+
+    # Cargar cuotas sin interés (curado mensual)
+    cuotas_path = os.path.join(script_dir, "cuotas_sin_interes.json")
+    if os.path.exists(cuotas_path):
+        try:
+            with open(cuotas_path, 'r', encoding='utf-8') as f:
+                cuotas_data = json.load(f)
+            _nc = sum(len(b.get("campanas", [])) for b in cuotas_data.get("bancos", {}).values())
+            print(f"💳 Cuotas: {_nc} campañas en {len(cuotas_data.get('bancos', {}))} bancos")
+        except Exception as e:
+            print(f"⚠️ No se pudo cargar cuotas_sin_interes.json: {e}")
 
 
 def buscar_beneficios(
@@ -1711,6 +1723,55 @@ def _generar_resultado_bencinas(dia: str) -> str:
     return texto[:1500]
 
 
+def _generar_resultado_cuotas(banco_key: str) -> str:
+    """Cuotas sin interés de un banco (o de todos). Sin día: son campañas del mes."""
+    bancos = cuotas_data.get("bancos", {})
+    mes = cuotas_data.get("mes_referencia", "")
+    if banco_key == "__todos__":
+        items = [(k, v) for k, v in bancos.items() if v.get("campanas")]
+    else:
+        items = [(banco_key, bancos.get(banco_key, {}))]
+    lineas = [f"💳 *Cuotas sin interés*  (ref: {mes})", ""]
+    hay = False
+    for bk, info in items:
+        camps = info.get("campanas", [])
+        if not camps:
+            continue
+        hay = True
+        lineas.append(f"*{bk}*")
+        for c in camps[:6]:
+            lineas.append(f"  • {c.get('categoria','')}: *{c.get('cuotas','')}* — {c.get('tasa','')}")
+            if c.get("vigencia"):
+                lineas.append(f"    _Vigencia: {c.get('vigencia')}_")
+        lineas.append("")
+    if not hay:
+        return f"💳 {banco_key}: sin campaña de cuotas sin interés este mes.\n\nEscribe *hola* para volver al menú."
+    lineas.append("📋 *Ver todo:* https://api-beneficios-chile.onrender.com/ver/cuotas")
+    lineas.append("_Verifica siempre en el link oficial del banco._")
+    return "\n".join(lineas)[:1500]
+
+
+def _generar_resultado_otros(banco_key: str) -> str:
+    """Otros beneficios (NO restaurante) de un banco (o de todos). Sin día."""
+    if banco_key == "__todos__":
+        items = list(otros_db)
+    else:
+        items = [b for b in otros_db if b.banco == banco_key]
+    if not items:
+        return f"🎁 {banco_key}: sin otros beneficios registrados.\n\nEscribe *hola* para volver al menú."
+    items.sort(key=lambda b: b.descuento_valor, reverse=True)
+    titulo = "Todos" if banco_key == "__todos__" else banco_key
+    lineas = [f"🎁 *Otros beneficios — {titulo}*  ({len(items)})", ""]
+    for b in items[:15]:
+        dsc = b.descuento_texto or (f"{b.descuento_valor}% dcto." if b.descuento_valor else "Beneficio")
+        lineas.append(f"  • {b.restaurante or 'Beneficio'} — *{dsc}* ({b.banco})")
+    if len(items) > 15:
+        lineas.append(f"  _...y {len(items)-15} más_")
+    lineas.append("")
+    lineas.append("📋 *Ver todo:* https://api-beneficios-chile.onrender.com/ver/beneficios")
+    return "\n".join(lineas)[:1500]
+
+
 async def procesar_comando_whatsapp(texto: str, usuario: str = "") -> str:
     """Procesa mensajes de WhatsApp con IA (RAG) o comandos rápidos"""
     texto_original = texto.strip()
@@ -1738,6 +1799,28 @@ _6._ Viernes
 _7._ Sábado
 _8._ Domingo
 _9._ Todos"""
+            elif texto in ['3', 'cuota', 'cuotas', 'cuotas sin interes', 'sin interes']:
+                state["mode"] = "cuotas"
+                state["step"] = "ask_banco_generico"
+                bancos_c = [k for k in cuotas_data.get("bancos", {}) if cuotas_data["bancos"][k].get("campanas")]
+                state["bancos_lista"] = bancos_c
+                lista = "\n".join(f"_{i+1}._ {b}" for i, b in enumerate(bancos_c))
+                return f"""💳 *Cuotas sin interés*
+
+💳 *¿Qué banco?*
+{lista}
+_{len(bancos_c)+1}._ Todos"""
+            elif texto in ['4', 'otro', 'otros', 'otros beneficios']:
+                state["mode"] = "otros"
+                state["step"] = "ask_banco_generico"
+                bancos_o = sorted(set(b.banco for b in otros_db))
+                state["bancos_lista"] = bancos_o
+                lista = "\n".join(f"_{i+1}._ {b}" for i, b in enumerate(bancos_o))
+                return f"""🎁 *Otros beneficios*
+
+💳 *¿Qué banco?*
+{lista}
+_{len(bancos_o)+1}._ Todos"""
             else:
                 # 1, restaurantes, o cualquier otra cosa -> restaurantes
                 state["mode"] = "restaurantes"
@@ -1764,6 +1847,28 @@ _9._ Todos"""
             resultado = _generar_resultado_bencinas(dia)
             del user_flow[usuario]
             return resultado
+
+        # ── CUOTAS / OTROS: banco → resultado (SIN día) ──
+        if state["step"] == "ask_banco_generico":
+            bancos_l = state.get("bancos_lista", [])
+            sel = None
+            t = texto.strip()
+            try:
+                num = int(t)
+                if 1 <= num <= len(bancos_l):
+                    sel = bancos_l[num - 1]
+                elif num == len(bancos_l) + 1:
+                    sel = "__todos__"
+            except ValueError:
+                for b in bancos_l:
+                    if t and t in b.lower():
+                        sel = b
+                        break
+            modo = state.get("mode")
+            del user_flow[usuario]
+            if not sel:
+                return "No reconocí ese banco 🤔. Escribe *hola* para volver al menú."
+            return _generar_resultado_cuotas(sel) if modo == "cuotas" else _generar_resultado_otros(sel)
 
         # ── RESTAURANTES: día → banco(s) → resultado ──
         if state["step"] == "ask_dia_rest":
@@ -1806,11 +1911,14 @@ _Ej: 1 o varios: 1,2,4,5_"""
     # ── Cualquier mensaje sin flujo activo → iniciar flujo ──
     if usuario:
         user_flow[usuario] = {"step": "ask_mode", "mode": "", "bancos": [], "dia": "", "comida": ""}
+    _nc = sum(len(b.get("campanas", [])) for b in cuotas_data.get("bancos", {}).values())
     return f"""👋 *¡Hola! ¿Cómo estás?*
 En qué quieres ahorrar hoy? 💰
 
 *1.* 🍽️ Restaurantes ({len(beneficios_db)} descuentos)
-*2.* ⛽ Bencinas ({len(bencinas_descuentos)} descuentos)"""
+*2.* ⛽ Bencinas ({len(bencinas_descuentos)} descuentos)
+*3.* 💳 Cuotas sin interés ({_nc} campañas)
+*4.* 🎁 Otros beneficios ({len(otros_db)} beneficios)"""
 
 
 def _formatear_wa(beneficios, max_items=3):
