@@ -927,6 +927,7 @@ font-size:9px;font-weight:700;border:1.5px solid var(--line);color:var(--muted);
 cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
 .day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
 .day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.day-off{{opacity:.28;pointer-events:none;filter:grayscale(1)}}
 .day-sel-all{{width:auto;padding:0 8px;border-radius:999px;font-size:9px;letter-spacing:.3px;flex-shrink:0}}
 .range-row{{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}}
 input[type=range]{{accent-color:var(--primary)}}
@@ -1269,6 +1270,19 @@ const mD=d.descuento_valor>=min;
 const mDay=!selDays||d.dias_validos.includes('todos')||selDays.some(sd=>d.dias_validos.includes(sd));
 const mMode=mode==='all'||(mode==='presencial'&&(d.presencial||!d.online))||(mode==='online'&&d.online);
 return mS&&mB&&mR&&mC&&mD&&mDay&&mMode}});
+// Filtros DINÁMICOS: atenuar (bloquear) los días sin resultados según los OTROS filtros activos
+const _base=deals.filter(d=>{{
+const txt=norm([d.restaurante,d.banco,d.descripcion||'',d.ubicacion||'',d.direccion||'',d.comuna||'',(d.tags||[]).join(' ')].join(' '));
+const mS=!qWords.length||qWords.every(w=>txt.includes(w));
+const mB=!banks||banks.includes(d.banco);
+const mR=!regions||!d.ubicacion||regions.includes(d.ubicacion);
+const mC=!comunas||comunas.includes(d.comuna);
+const mD=d.descuento_valor>=min;
+const mMode=mode==='all'||(mode==='presencial'&&(d.presencial||!d.online))||(mode==='online'&&d.online);
+return mS&&mB&&mR&&mC&&mD&&mMode}});
+const _diasOK=new Set();
+_base.forEach(d=>{{(d.dias_validos.includes('todos')?['lunes','martes','miercoles','jueves','viernes','sabado','domingo']:d.dias_validos).forEach(x=>_diasOK.add(x))}});
+daySels.forEach(s=>{{s.classList.toggle('day-off',_diasOK.size>0&&!_diasOK.has(s.dataset.day))}});
 f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
 case'name':return a.restaurante.localeCompare(b.restaurante);
 case'bank':return a.banco.localeCompare(b.banco);
@@ -1292,7 +1306,7 @@ if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.s
 }})}});
 }}else{{summaryBar.style.display='none';summaryBar.innerHTML=''}}
 grid.innerHTML='';
-if(!f.length){{empty.style.display='block';countEl.textContent='0 encontrados';return}}
+if(!f.length){{empty.innerHTML=deals.length?'No hay descuentos con esos filtros 🤷':'⏳ Estamos confirmando los descuentos de esta sección';empty.style.display='block';countEl.textContent='0 encontrados';return}}
 empty.style.display='none';countEl.textContent=f.length+' encontrados';
 f.forEach(d=>{{const el=document.createElement('article');el.className='deal';el.innerHTML=dealCardHTML(d);grid.appendChild(el)}})}}
 function dealCardHTML(d){{
@@ -1879,6 +1893,7 @@ font-size:9px;font-weight:700;border:1.5px solid var(--line);color:var(--muted);
 cursor:pointer;transition:all .15s;user-select:none;flex-shrink:0}}
 .day-sel:hover{{border-color:var(--primary);color:var(--primary)}}
 .day-sel.active{{background:linear-gradient(135deg,var(--primary),var(--primary2));border-color:transparent;color:#fff}}
+.day-off{{opacity:.28;pointer-events:none;filter:grayscale(1)}}
 .day-sel-all{{width:auto;padding:0 8px;border-radius:999px;font-size:9px;letter-spacing:.3px;flex-shrink:0}}
 button{{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:13px}}
 .btn-primary{{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;flex:1}}
