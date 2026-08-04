@@ -8,7 +8,14 @@
 - **Doc accesible HTML actualizada** (`00.Información_propia_explicación/`): `04_api_y_web`, `05_bencinas`, `01_resumen` con apartado `/ver/beneficios`, trazabilidad y filtros dinámicos; **nav rotos (`_v02`) arreglados en los 6**; los 6 validados (tags balanceadas).
 - **Respaldo total en GitHub:** docs de gestión (ESTADO/ROADMAP/LECCIONES/HISTORIAL/CLAUDE), HTML accesibles y código, todo en el repo privado (antes las de gestión vivían solo en Drive).
 - Lección **L-37**. Commits: `60f4e7e` (fix bencina) · `37a88f3` (HTML) · `82c9007` (respaldo gestión) · `0164051`/`ed4b26f` (docs) · tag `v2.0-otros-trazabilidad-filtros`.
-- **Pendiente próxima sesión:** decidir criterio del filtro "otros" (`descuento_valor>0` vs incluir beneficios sin % reales) y llevarlo a CÓDIGO (hoy `beneficios_otros.json` con 24 es curación manual, a salvo pero frágil); re-curar Shell/Aramco desde apps oficiales; extender filtros dinámicos a región/comuna y a bencinas/cuotas.
+
+**Sesión 2026-08-04 (ronda "hazlo todo") — pendientes cerrados:**
+- **#1 Filtro "Otros beneficios" ahora en CÓDIGO** (`0dfb1f9`): `_render_deals` muestra solo `descuento_valor>0` cuando `es_otros` → los 24 verificables sobreviven a un re-scrape que regenere `beneficios_otros.json` (ya no depende de curar el JSON a mano; L-37). Verificado: `/ver/beneficios`=24, `/ver`=887 intacto.
+- **#3 Filtros dinámicos EXTENDIDOS** (`0dfb1f9`): `/ver` y `/ver/beneficios` ahora atenúan/bloquean **región y comuna** sin resultados (antes solo día); **bencinas** con día dinámico; **cuotas** con categorías dinámicas (atenúa las sin campañas del mes+banco). `node --check` de las 4 vistas: 0 rotos.
+- **#4a Firma Twilio** (`9ad0e7f`): validación **opt-in** de `X-Twilio-Signature` en `/webhook` — se activa seteando `TWILIO_AUTH_TOKEN` (y `TWILIO_WEBHOOK_URL` si la URL pública difiere tras el proxy); sin el token, procesa como hoy. Verificado (sin token→200, firma mala→403, firma correcta→200). **Activar + probar el bot en vivo.**
+- **#2 Shell/Aramco (NO se cambió, a propósito):** la búsqueda solo devuelve **agregadores** (Chócale/medios), no fuente oficial → por L-24/L-35 no se reescribe en base a agregadores. El upgrade a `confianza=oficial` necesita las apps de Aramco/Shell (desde el teléfono). Data actual (medios, `secundaria`) intacta.
+- **#4b RAG revectorización — PENDIENTE (requiere tu OK de costo + keys):** `upload_pinecone.py` re-vectoriza 887 restaurantes (OpenAI `text-embedding-3-small` + Pinecone, borra+sube). Costo estimado **~US$0.002** (negligible). No se ejecutó: (a) regla de costos, (b) sin `.env`/keys en este equipo. Correr con las keys cuando decidas.
+- **Pendiente próxima sesión:** re-curar Shell/Aramco desde apps oficiales (#2); RAG (#4b, tu OK); activar+probar firma Twilio en vivo (#4a); (opcional) faceteado dinámico del filtro de banco en bencinas.
 
 **Sesión 2026-08-03 (parte final) — Calidad, trazabilidad y filtros dinámicos:**
 - **"Otros beneficios" filtrado a 24 verificables** (de 228): solo los con descuento % real; los 204 de financiamiento/servicios/CAE no se muestran ("si no está chequeado, no mostrar"). Bug del % del CAE corregido (Bip Solar). (L-34)
