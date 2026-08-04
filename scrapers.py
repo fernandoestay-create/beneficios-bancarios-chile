@@ -2941,13 +2941,20 @@ class ScraperMach:
             entries = json.loads(match.group(1))
             print(f"   Total entries embebidas: {len(entries)}")
 
-            # Filter restaurants
+            # Clasifica: comida -> restaurante (idéntico -> gate); resto -> "otro" (L-32).
+            # apiBnf ya trae TODAS las categorías (el ?catg de la URL es cosmético).
+            SELF_PROMOS = ('mach', 'machbank', 'mach premium', 'cashback en apps')
             for entry in entries:
                 cat = entry.get('meta', {}).get('category_name') or entry.get('meta', {}).get('category') or ''
-                if cat and cat.lower() in ['restaurantes', 'restaurante', 'comida']:
-                    beneficio = self._parsear_entry(entry)
-                    if beneficio:
-                        self.beneficios.append(beneficio)
+                es_rest = bool(cat) and cat.lower() in ['restaurantes', 'restaurante', 'comida']
+                beneficio = self._parsear_entry(entry, seccion='restaurante' if es_rest else 'otro')
+                if not beneficio:
+                    continue
+                # "otros": descartar auto-promos del banco (el "comercio" es el propio Mach,
+                # no un comercio real) — L-40: no mostrar campos semánticamente mal.
+                if beneficio.seccion == 'otro' and beneficio.restaurante.strip().lower() in SELF_PROMOS:
+                    continue
+                self.beneficios.append(beneficio)
 
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
             return self.beneficios
@@ -2956,8 +2963,8 @@ class ScraperMach:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
             return self.beneficios
 
-    def _parsear_entry(self, entry: dict) -> Optional[Beneficio]:
-        """Parsea una entry de Mach a Beneficio"""
+    def _parsear_entry(self, entry: dict, seccion: str = 'restaurante') -> Optional[Beneficio]:
+        """Parsea una entry de Mach a Beneficio. seccion='restaurante'|'otro' (L-32)."""
         try:
             meta = entry.get('meta', {})
             fields = entry.get('fields', {})
@@ -3047,6 +3054,7 @@ class ScraperMach:
                 logo_url=logo_url,
                 descripcion=descripcion,
                 activo=True,
+                seccion=seccion,
             )
         except Exception:
             return None
