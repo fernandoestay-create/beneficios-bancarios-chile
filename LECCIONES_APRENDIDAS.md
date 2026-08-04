@@ -47,6 +47,7 @@
 | L-34 | Un regex laxo `(\d+)\s*%` sobre descripción cruda captura el CAE del financiamiento como descuento (Bip Solar 54% = CAE 1,54%) → excluir la frase del CAE + solo % de 1-2 dígitos no decimal | Scraping / Datos | 2026-08-03 |
 | L-35 | Curar desde la fuente OFICIAL + campo `confianza` por dato + guardia que verifica trazabilidad SIEMPRE; si no hay dato chequeado, mostrar "estamos confirmando" en vez de un dato dudoso (agregador ≠ fuente, L-24) | Datos y calidad / Meta | 2026-08-03 |
 | L-36 | Filtros DINÁMICOS/faceteados: al elegir un eje (banco), recalcular los otros ejes (día, comuna, %) y ATENUAR/bloquear las opciones sin resultados, en vez de dejarlas seleccionables y devolver vacío; un guard vigila que siga así; sin data → "estamos confirmando" | UX / Frontend | 2026-08-03 |
+| L-37 | Curación manual protegida SOLO por un guard, PERO el generador (scraper) sigue produciendo la data mala desde el agregador → el output del scraper falla el guard y BLOQUEA todo el pipeline (deadlock) → la curación debe PRESERVARSE en el generador (el `guardar` conserva el dato curado), no solo defenderse con un guard | Datos y calidad / Deploy | 2026-08-04 |
 
 ---
 
@@ -825,6 +826,27 @@ Un filtro debe reflejar el estado de los DEMÁS filtros: al fijar un eje, los ot
 
 ---
 
+### L-37 · Curación protegida por un guard, pero el generador sigue produciendo la data mala → deadlock del pipeline (2026-08-04) · Datos y calidad / Deploy
+
+**Problema**
+Tras re-curar los descuentos de bencina desde fuente oficial (L-35, edición manual de `bencinas.json`: Shell=jueves, campo `confianza`) y agregar un guard en `verificar_salud.py` que EXIGE Shell=jueves, el **refresco local y el cron dejaron de pushear**: corrían `scrapers.py`, cuyo `ScraperBencina` **regenera `bencinas.json` desde el agregador** (`descuentosrata.com`) → volvía a Shell=sábado sin `confianza` → el guard fallaba → el health check (gate del refresco) abortaba el push. Efecto: producción quedó "congelada" (la curación se salvó porque el push nunca ocurría) pero **NADA se actualizaba** (restaurantes, precios) y llegaba un mail de error diario. Se detectó porque el refresco corrió durante una sesión y `origin` no avanzó pese a haber cambios en el working tree.
+
+**Causa raíz**
+La curación vivía en DOS lugares desalineados: el DATO curado (en el JSON, manual) y un GUARD que lo exige (en el health check), pero el GENERADOR (el scraper) seguía produciendo la data vieja del agregador. Un guard NO arregla al generador: solo detecta la discrepancia. Cuando el generador y el guard se contradicen, el guard —bien puesto— bloquea el pipeline entero. Es primo de L-30/L-31/L-32: una curación/decisión que el pipeline automático revierte, pero acá el síntoma es un DEADLOCK (el guard, correctamente, no deja pasar la data mala).
+
+**Fix**
+`guardar_bencinas_json` ahora **PRESERVA los descuentos ya curados** del `bencinas.json` existente (lee el archivo y conserva su `descuentos`), en vez de escribir los del scrape del agregador; solo `estaciones`/`precios` se actualizan desde la CNE (fuente oficial). Así el generador produce data consistente con el guard: el health check pasa y el pipeline se desbloquea, con la curación intacta. (+ se agregó el `import os` que faltaba). Verificado: preserva 31 descuentos (Shell=jueves, `confianza` intactos), `verificar_salud.py` exit 0.
+
+**Lección**
+Cuando curas un dato a mano y lo proteges con un guard, TIENES que arreglar también el **generador** que lo produce (que preserve o produzca el dato curado), o el generador y el guard entrarán en deadlock y bloquearán el pipeline. La curación debe vivir en el CÓDIGO que genera el artefacto (chokepoint), no solo en el dato + un guard que lo defiende. Un dato "curado" que un scraper regenera cada corrida no está curado: está a un `git add` de perderse (o, con guard, de trabar todo).
+
+**Evitar a futuro**
+- Al curar a mano un artefacto que un cron regenera: preguntar SIEMPRE "¿qué proceso reescribe este archivo?" y hacer que ese proceso preserve/produzca lo curado (L-31/L-32). Un guard es la red, no la solución.
+- Un cron que "no pushea" pese a tener cambios en el working tree = health check fallando → revisar el gate, no asumir "no había cambios" (L-W20: ¿corrió? ≠ ¿insertó/pusheó?).
+- `import` faltante que solo revienta en runtime: `py_compile` NO lo atrapa (solo sintaxis); probar la función en vivo (L-13).
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -877,8 +899,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 36 lecciones formalizadas (L-01 a L-36; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-36 (2026-08-03)
-**Última actualización:** 2026-08-03
+**Contador:** 37 lecciones formalizadas (L-01 a L-37; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-37 (2026-08-04)
+**Última actualización:** 2026-08-04
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.

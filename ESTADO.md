@@ -3,6 +3,13 @@
 **Última actualización:** 2026-08-03
 **Estado general:** 🟢 producción
 
+**Sesión 2026-08-04 — Fix pipeline bencina (desbloqueo) + doc accesible HTML + respaldo total:**
+- **⚠️ Pipeline estaba BLOQUEADO y se desbloqueó (L-37):** el refresco/cron fallaban el health check porque `ScraperBencina` regeneraba `bencinas.json` desde el agregador (Shell→sábado, sin `confianza`) contra el guard `Shell=jueves` → abortaban el push → NADA se actualizaba. **Fix (`60f4e7e`):** `guardar_bencinas_json` **preserva los descuentos curados** del archivo; solo estaciones/precios CNE se actualizan; + `import os` que faltaba. Verificado: preserva 31 descuentos (Shell=jueves, `confianza` intactos), `verificar_salud.py` exit 0.
+- **Doc accesible HTML actualizada** (`00.Información_propia_explicación/`): `04_api_y_web`, `05_bencinas`, `01_resumen` con apartado `/ver/beneficios`, trazabilidad y filtros dinámicos; **nav rotos (`_v02`) arreglados en los 6**; los 6 validados (tags balanceadas).
+- **Respaldo total en GitHub:** docs de gestión (ESTADO/ROADMAP/LECCIONES/HISTORIAL/CLAUDE), HTML accesibles y código, todo en el repo privado (antes las de gestión vivían solo en Drive).
+- Lección **L-37**. Commits: `60f4e7e` (fix bencina) · `37a88f3` (HTML) · `82c9007` (respaldo gestión) · `0164051`/`ed4b26f` (docs) · tag `v2.0-otros-trazabilidad-filtros`.
+- **Pendiente próxima sesión:** decidir criterio del filtro "otros" (`descuento_valor>0` vs incluir beneficios sin % reales) y llevarlo a CÓDIGO (hoy `beneficios_otros.json` con 24 es curación manual, a salvo pero frágil); re-curar Shell/Aramco desde apps oficiales; extender filtros dinámicos a región/comuna y a bencinas/cuotas.
+
 **Sesión 2026-08-03 (parte final) — Calidad, trazabilidad y filtros dinámicos:**
 - **"Otros beneficios" filtrado a 24 verificables** (de 228): solo los con descuento % real; los 204 de financiamiento/servicios/CAE no se muestran ("si no está chequeado, no mostrar"). Bug del % del CAE corregido (Bip Solar). (L-34)
 - **Auditoría de TRAZABILIDAD (4 datasets):** restaurantes (887), otros (24), cuotas (28) → 100% oficial; bencina-descuentos (31) era 100% agregador (descuentosrata). (L-33)
