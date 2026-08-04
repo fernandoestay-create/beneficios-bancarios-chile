@@ -125,6 +125,26 @@ if d and sum(1 for b in d if b.get("presencial") or not b.get("online")) == 0:
 if n < 700:
     fallos.append(f"[L-16] solo {n} beneficios (esperado ~800+); ¿colapsó algún banco?")
 
+# L-33: TRAZABILIDAD — la data debe venir de fuente oficial/marcada, nunca de un agregador
+# sin avisar (la bencina se re-curó desde Copec oficial + medios, con campo 'confianza').
+try:
+    benc = json.load(open(os.path.join(ROOT, "bencinas.json"), encoding="utf-8")).get("descuentos", [])
+    sin_conf = [x for x in benc if not (x.get("confianza") or "").strip()]
+    agg = [x for x in benc if "descuentosrata" in (x.get("url_fuente") or "").lower()]
+    if sin_conf:
+        fallos.append(f"[L-33] {len(sin_conf)} descuentos de bencina SIN 'confianza' (trazabilidad) — marcar la fuente")
+    if agg:
+        fallos.append(f"[L-33] {len(agg)} descuentos de bencina de agregador (descuentosrata) sin curar a fuente oficial")
+except Exception as e:
+    fallos.append(f"[L-33] no se pudo auditar la trazabilidad de bencina: {e}")
+try:
+    otros = json.load(open(os.path.join(ROOT, "beneficios_otros.json"), encoding="utf-8"))
+    otros_agg = [b for b in otros if "descuentosrata" in (b.get("url_fuente") or "").lower()]
+    if otros_agg:
+        fallos.append(f"[L-33] {len(otros_agg)} 'otros beneficios' de fuente agregador (deben ser oficiales)")
+except Exception:
+    pass
+
 # ───────────────────── Resultado ─────────────────────
 print(f"Revisión de madrugada · {URL}")
 print(f"{n} beneficios servidos · {sum(1 for h in htmls.values() if h)} páginas alcanzadas\n")
