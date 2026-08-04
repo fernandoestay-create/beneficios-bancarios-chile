@@ -2156,6 +2156,26 @@ class ScraperEntel:
                 if beneficio:
                     self.beneficios.append(beneficio)
 
+            # OTROS (L-32): los demás rubros ya vienen en el MISMO HTML descargado
+            # (tabs por categoría). Se capturan como seccion="otro" (dataset separado).
+            # NO se toca el tab Comida -> restaurantes idénticos (gate).
+            OTROS_TABS = [
+                'tab-deportes-3', 'tab-mascotas-4', 'tab-bienestar-5', 'tab-tiendas-6',
+                'tab-entretencion-7', 'tab-sostenibilidad-8', 'tab-viajes-9', 'tab-eventos-10',
+            ]
+            n_otros = 0
+            for tid in OTROS_TABS:
+                tab = soup.find(id=tid)
+                if not tab:
+                    continue
+                for card in tab.select('andino-card-general[eds-card]'):
+                    beneficio = self._parsear_card(card, seccion='otro')
+                    if beneficio:
+                        self.beneficios.append(beneficio)
+                        n_otros += 1
+            if n_otros:
+                print(f"   + {n_otros} beneficios 'otros' (deportes/tiendas/bienestar/...)")
+
             self.beneficios = _asegurar_ids_unicos(self.beneficios)
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
             return self.beneficios
@@ -2164,8 +2184,9 @@ class ScraperEntel:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
             return self.beneficios
 
-    def _parsear_card(self, card) -> Optional[Beneficio]:
-        """Parsea una card con eds-card JSON a Beneficio (ya filtrada por sección Comida)"""
+    def _parsear_card(self, card, seccion: str = 'restaurante') -> Optional[Beneficio]:
+        """Parsea una card con eds-card JSON a Beneficio.
+        seccion='restaurante' (tab Comida) | 'otro' (tabs deportes/tiendas/bienestar/etc., L-32)."""
         try:
             eds_card_raw = card.get('eds-card', '[]')
             try:
@@ -2244,6 +2265,7 @@ class ScraperEntel:
                 imagen_url=imagen_url,
                 descripcion=descripcion[:200],
                 activo=True,
+                seccion=seccion,
             )
         except Exception:
             return None
@@ -2392,8 +2414,9 @@ class ScraperTenpo:
             es_comida = category in ['foodie', 'comida', 'food', 'gastronomía', 'gastronomia', 'restaurante']
             if not es_comida:
                 es_comida = any(kw in texto_buscar for kw in self.FOOD_KEYWORDS)
-            if not es_comida:
-                return None
+            # L-32: lo no-comida NO se descarta; se captura como "otro" (dataset separado).
+            # La clasificación de comida NO cambia -> restaurantes idénticos (gate).
+            seccion = 'restaurante' if es_comida else 'otro'
 
             # Discount
             descuento_valor = 0
@@ -2459,6 +2482,7 @@ class ScraperTenpo:
                 logo_url=logo_url,
                 descripcion=descripcion[:200],
                 activo=True,
+                seccion=seccion,
             )
         except Exception:
             return None
