@@ -2153,7 +2153,7 @@ Fuente: Bencinas en Linea - Comision Nacional de Energia. Los precios publicados
 </section>
 <div class="footer">
 Vigencia: {mes_texto} · Beneficios Bancarios Chile
-<br><span style="font-size:10px;color:#aaa">Precios: Bencinas en Línea - Comisión Nacional de Energía. Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes.</span>
+<br><span style="font-size:10px;color:#aaa">Precios: Bencinas en Línea - Comisión Nacional de Energía. Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes.<br>⚠️ Descuentos: recopilados de descuentosrata.com (agregador, no oficial) — verifica siempre el día vigente y las condiciones en tu banco antes de cargar.</span>
 </div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
