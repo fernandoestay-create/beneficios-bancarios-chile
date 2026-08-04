@@ -9,7 +9,7 @@
 
 ## 🎯 Contexto del proyecto
 
-Sistema que scrapea descuentos bancarios en restaurantes de Chile (15 bancos) y los expone vía página web interactiva, bot WhatsApp con IA (RAG) y API REST. Es el producto **MiCartera** del workspace de Fernando.
+Sistema que scrapea descuentos bancarios en restaurantes de Chile (15 bancos) y los expone vía página web interactiva, un **bot de menú por WhatsApp + Telegram** y API REST. Es el producto **MiCartera** del workspace de Fernando.
 
 **Producto/Cliente:** MiCartera (producto propio)
 **Estado:** 🟢 producción (según INDEX del workspace)
@@ -24,8 +24,8 @@ Stack canónico del workspace con variaciones:
 - **Backend:** Python 3.9+ con FastAPI + Uvicorn (también un `whatsapp_bot.py` legacy en Flask)
 - **Scraping:** `requests` + `beautifulsoup4` + `lxml` (Playwright disponible pero no usado)
 - **Embeddings + RAG:** OpenAI `text-embedding-3-small` + **Pinecone** (excepción legacy al estándar workspace que usa pgvector — heredado de versión inicial)
-- **LLM:** GPT-4o-mini (OpenAI) para respuestas conversacionales del bot
-- **Bot:** Twilio + WhatsApp
+- **LLM:** GPT-4o-mini (OpenAI) SOLO para el buscador IA de la web (`/rag`). ⚠️ **El bot de mensajería NO usa IA** — es **menú guiado** (gratis, sin OpenAI). Decisión de Fernando (2026-08-04): sin LLM por ahora. Opción futura: híbrido menú + RAG para preguntas abiertas.
+- **Bot:** Twilio + **WhatsApp + Telegram** — el MISMO bot de menú en ambos canales (endpoints `/webhook` y `/telegram`); **4 opciones**: 1 restaurantes (día→banco), 2 bencinas (día), 3 cuotas sin interés (banco), 4 otros beneficios (banco). Bot Telegram: `@Mi_cartera_descuentos_Bot`. Firma Twilio opt-in por `TWILIO_AUTH_TOKEN`; Telegram opt-in por `TELEGRAM_BOT_TOKEN`.
 - **Deploy:** Render (`render.yaml` con 2 servicios)
 - **Storage:** archivos planos — `beneficios.json` (~885 beneficios de restaurantes, la fuente de verdad de `/ver`) + `beneficios.csv` + `beneficios_otros.json` (beneficios de tarjeta NO-restaurante, dataset SEPARADO; ~24 verificables mostrados en `/ver/beneficios`, filtrados de 228 candidatos) + `bencinas.json` (con `confianza` + `url_fuente` por dato, re-curado desde fuente oficial) + `cuotas_sin_interes.json`
 
@@ -153,4 +153,4 @@ Antes de empezar a trabajar:
 - No se creó `00.Información_propia_explicación/index.md` ni `build_html.py` porque la docs natural ya está en HTML estático. Convertir a flujo `.md → .html` queda como tarea futura si Fernando quiere editar la docs natural en `.md`.
 - El código real vive en `beneficios-bancarios-chile/`. La docs técnica ahí (`README.md`, `ARCHITECTURE.md`, etc.) NO se modificó.
 
-**Última actualización:** 2026-08-03 (apartado "Otros beneficios" `/ver/beneficios` **DESPLEGADO** + `beneficios_otros.json` 24 verificables + campo `seccion`; bencina re-curada con `confianza`/`url_fuente` (trazabilidad); filtros dinámicos de día; guardia de madrugada ampliada a trazabilidad; lecciones L-31→L-36)
+**Última actualización:** 2026-08-04 (v2.1: **bot multicanal WhatsApp + Telegram** de 4 opciones —menú, sin IA, gratis—; firma Twilio activada; pipeline de bencina desbloqueado (L-37); apartado "Otros beneficios" `/ver/beneficios` desplegado (23 verificables tras quitar un financiamiento CAE colado); filtros dinámicos día+región+comuna+categoría; RAG revectorizado; lecciones L-31→L-40)

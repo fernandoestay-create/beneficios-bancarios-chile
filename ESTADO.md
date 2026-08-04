@@ -1,7 +1,20 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-08-03
+**Última actualización:** 2026-08-04
 **Estado general:** 🟢 producción
+
+**Sesión 2026-08-04 (parte 2) — Bot WhatsApp+Telegram + firma Twilio activada + bot de 4 opciones:**
+- **Firma Twilio ACTIVADA y verificada EN VIVO:** `TWILIO_AUTH_TOKEN` + `TWILIO_WEBHOOK_URL` seteados en Render (`api-beneficios-chile`). Verificado: POST de Twilio → `200`, falso sin firma → `403`.
+- **⚠️ Hallazgo (L-38):** el Sandbox de Twilio apuntaba a OTRO servicio (`micartera-ttaa.onrender.com/api/webhooks/whatsapp`), no a `api-beneficios-chile/webhook` → por eso el bot "no respondía". Se re-apuntó al servicio correcto (decisión de Fernando: opción A).
+- **CANAL TELEGRAM nuevo:** endpoint `/telegram` (`bdf8646`) reusa el MISMO bot (menú, datos locales, **sin OpenAI → gratis**); usuario prefijado `tg_` para no mezclar con WhatsApp; **auto-registra el webhook** en el arranque (usa `RENDER_EXTERNAL_URL`/`TELEGRAM_WEBHOOK_URL`); opt-in por `TELEGRAM_BOT_TOKEN`. Bot `@Mi_cartera_descuentos_Bot`. Verificado en vivo (logs: `Telegram de ...: hola → 200`).
+- **BOT AMPLIADO A 4 OPCIONES** (`637b7bf`): 1 Restaurantes, 2 Bencinas, **3 Cuotas sin interés**, **4 Otros beneficios**. Cuotas y Otros van **solo hasta banco (sin día)**. Handler unificado `ask_banco_generico`; helpers `_generar_resultado_cuotas` / `_generar_resultado_otros`; carga de `cuotas_data` en el arranque.
+- **Fixes (`79fc554`):** Scotiabank cuotas "3, 6 y 12" → **"3 y 6 cuotas"** (verificado en la web oficial, agosto 2026, CAE 1,36%; L-35); **Telegram**: se strippean `*`/`_` del formato WhatsApp (salían literales).
+- **Decisión de Fernando:** **NO** agregar LLM/preguntas abiertas por ahora → el bot queda **menú-guiado, gratis**. (Opción futura: híbrido menú + RAG para preguntas abiertas de las 4 secciones.)
+- **Revisión (2 agentes independientes, punto por punto):**
+  - *Código:* los 4 flujos OK. Fix aplicado: `ask_banco` (restaurantes) ahora **avisa** ante un banco inválido (ej. "999") en vez de mostrar todos en silencio — consistente con `ask_banco_generico`; + docstring corregido.
+  - *Datos:* se **quitó "Proyecta Energía"** (financiamiento con CAE colado como "90% dcto." en los otros — mismo patrón L-34; **otros 24→23**) y se limpió el nombre del masaje de Consorcio.
+  - *Pendientes → ROADMAP:* **cuotas desactualizadas** (mes_referencia junio, ~20/28 vencidas → re-curar a agosto); **Ripley con región mal** en ≥7/72 (afecta filtro/mapa); menores (5 ids de bencina con día viejo en el nombre —cosmético—, 1 duplicado Security).
+- Lecciones **L-38, L-39, L-40**. Commits: `9ad0e7f` firma Twilio · `d7603a3`/`680db29` vars Render · `bdf8646` Telegram · `637b7bf` bot 4 opciones · `79fc554` Scotiabank+Telegram · (+ fixes del audit en este cierre).
 
 **Sesión 2026-08-04 — Fix pipeline bencina (desbloqueo) + doc accesible HTML + respaldo total:**
 - **⚠️ Pipeline estaba BLOQUEADO y se desbloqueó (L-37):** el refresco/cron fallaban el health check porque `ScraperBencina` regeneraba `bencinas.json` desde el agregador (Shell→sábado, sin `confianza`) contra el guard `Shell=jueves` → abortaban el push → NADA se actualizaba. **Fix (`60f4e7e`):** `guardar_bencinas_json` **preserva los descuentos curados** del archivo; solo estaciones/precios CNE se actualizan; + `import os` que faltaba. Verificado: preserva 31 descuentos (Shell=jueves, `confianza` intactos), `verificar_salud.py` exit 0.

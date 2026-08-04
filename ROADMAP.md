@@ -3,6 +3,20 @@
 > Estado real del proyecto. Se actualiza después de cada sesión de trabajo.
 > Última actualización: 2026-08-04
 
+## ✅ Hecho (sesión 2026-08-04 — pipeline desbloqueado + bot multicanal (WhatsApp+Telegram) + 4 opciones + firma Twilio)
+
+Sesión grande de infra + bot:
+- **Pipeline de datos DESBLOQUEADO (L-37):** el cron/refresco fallaban el health check porque `ScraperBencina` regeneraba `bencinas.json` desde el agregador (Shell→sábado) contra el guard `Shell=jueves`. Fix: `guardar_bencinas_json` **preserva los descuentos curados**; solo los precios CNE se actualizan. El cron volvió a pushear (verificado end-to-end, curación intacta).
+- **Firma Twilio ACTIVADA + verificada en vivo:** `TWILIO_AUTH_TOKEN` en Render; POST de Twilio → 200, falso → 403. **Hallazgo L-38:** el Sandbox apuntaba a OTRO servicio (`micartera-ttaa`); se re-apuntó a `api-beneficios-chile/webhook`.
+- **CANAL TELEGRAM nuevo** (`@Mi_cartera_descuentos_Bot`): endpoint `/telegram` reusa el MISMO bot (menú, **gratis, sin OpenAI**); auto-registra el webhook; opt-in por token. Verificado en vivo (200). (L-39)
+- **Bot ampliado a 4 opciones:** 1 Restaurantes · 2 Bencinas · **3 Cuotas sin interés** · **4 Otros beneficios** (cuotas y otros van solo hasta banco, sin día).
+- **Filtro "Otros" en código** (`descuento_valor>0`, sobrevive re-scrapes) + **filtros dinámicos extendidos** a región/comuna (`/ver`, `/ver/beneficios`), día (bencinas), categorías (cuotas).
+- **RAG revectorizado** (887 vectores en Pinecone, para el buscador de la web).
+- **Doc accesible HTML** actualizada + nav rotos arreglados; **respaldo total en GitHub** (docs de gestión que vivían solo en Drive).
+- **Fixes:** Scotiabank cuotas "3,6,12"→**"3 y 6"** (verificado en la web oficial, L-35); Telegram sin markdown literal (L-39).
+- **Decisión:** el bot **NO lleva LLM por ahora** (menú-guiado, gratis).
+- Lecciones **L-37, L-38, L-39**. Tag: **`v2.1-bot-multicanal`**.
+
 ## ✅ Hecho (sesión 2026-08-03 — parte final: trazabilidad, filtros dinámicos y apartado completado)
 
 Cierre real de la sesión que arrancó el 29-jul: el apartado "Otros beneficios" pasó de "pantalla en curso" a **desplegado**, se auditó la trazabilidad de los 4 datasets de cara al usuario y se re-curó la bencina desde la fuente oficial.
@@ -114,7 +128,12 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 2. ~~Extender los filtros dinámicos a región/comuna y a bencinas/cuotas~~ ✅ **HECHO (2026-08-04)**: `/ver` y `/ver/beneficios` atenúan región+comuna; `/ver/bencinas` día; `/ver/cuotas` categorías. (Opcional restante: faceteado del filtro de banco en bencinas.)
 3. **Apartado "Otros beneficios" — cubrir más bancos:** hoy solo Santander/Consorcio (24 beneficios verificables mostrados, de 228 capturados). Faltan ~12 bancos: scrapear sus páginas de beneficios generales, mismo enfoque (dataset separado, `seccion="otro"`, filtro de verificabilidad L-33/L-35).
 4. **Cuotas — re-curar los bancos que aún muestran meses viejos** (~6 bancos publican en imágenes/SPA no legibles): leer las oficiales desde Chile + cruce con Chócale (L-24) cuando publiquen el mes en curso. La detección de desfase ya avisa sola en el correo. Barrer SIEMPRE los 14.
-5. **Webhook Twilio — ACTIVAR la firma** (ya IMPLEMENTADA opt-in el 2026-08-04, `9ad0e7f`): setear `TWILIO_AUTH_TOKEN` (+ `TWILIO_WEBHOOK_URL` con la URL pública si difiere tras el proxy) en Render y **probar el bot en vivo**. Sin el token procesa como hoy; con el token rechaza (403) lo no firmado.
+5. ~~Webhook Twilio — activar la firma~~ ✅ **HECHO (2026-08-04)**: `TWILIO_AUTH_TOKEN` seteado en Render, verificado en vivo (POST Twilio→200, falso→403).
+
+### 🔎 Hallazgos del audit de datos (2026-08-04) — pendientes
+6. **Cuotas DESACTUALIZADAS a agosto:** `mes_referencia`="junio 2026"; ~20/28 campañas ya vencieron (vigencia hasta 30-jun). Solo Scotiabank/BCI están re-curadas a jul/ago. **Re-curar los 14 bancos a agosto** (barrer las webs oficiales desde Chile) — el bot y `/ver/cuotas` muestran junio.
+7. **Ripley — región mal asignada** en ≥7/72 restaurantes (ej. Cervecería Kunstmann tagueada "Valparaíso" siendo Los Ríos; Antofagasta/La Serena/Arica→"Valparaíso"; Calama/Curicó→"Tarapacá"). Afecta el filtro de región/mapa → revisar la lógica de `ubicacion` en el scraper de Ripley.
+8. **Menores:** 5 ids de bencina con el día viejo en el nombre (cosmético, el filtro usa `dias_validos`); Santander/Contribuciones sin nº de cuotas; 1 duplicado real en Security (mismo Rappi 30%, 2 ids).
 6. ~~Revectorización RAG~~ ✅ **HECHA (2026-08-04)**: 887 restaurantes re-vectorizados a Pinecone (verificado: 887 vectores en el namespace), costo ~US$0.002. Queda en backlog la **migración Pinecone → pgvector** (estándar del workspace).
 7. **Falabella — filtrar ofertas que no son restaurantes:** excluir `app-copec`, `pronto-copec`, `novedades-cmr-puntos` (no son gastronomía).
 8. **Itaú:** confirmar si el bajón a ~23 es transición o nivel nuevo; ajustar el piso si es permanente.

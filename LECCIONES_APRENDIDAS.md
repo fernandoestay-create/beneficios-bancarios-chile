@@ -49,6 +49,8 @@
 | L-36 | Filtros DINÁMICOS/faceteados: al elegir un eje (banco), recalcular los otros ejes (día, comuna, %) y ATENUAR/bloquear las opciones sin resultados, en vez de dejarlas seleccionables y devolver vacío; un guard vigila que siga así; sin data → "estamos confirmando" | UX / Frontend | 2026-08-03 |
 | L-37 | Curación manual protegida SOLO por un guard, PERO el generador (scraper) sigue produciendo la data mala desde el agregador → el output del scraper falla el guard y BLOQUEA todo el pipeline (deadlock) → la curación debe PRESERVARSE en el generador (el `guardar` conserva el dato curado), no solo defenderse con un guard | Datos y calidad / Deploy | 2026-08-04 |
 | L-38 | Al configurar/activar algo en un webhook (firma, seguridad), VERIFICAR en la consola del proveedor a qué URL/servicio apunta REALMENTE — no asumir. El Sandbox de Twilio apuntaba a OTRO servicio y OTRA ruta (`micartera-ttaa/api/webhooks/whatsapp`), no al que yo modificaba → el bot "no respondía" y la firma quedó en el servicio equivocado; se confirma con los logs del destino (¿llega el POST? ¿200/403?) | Integraciones / Deploy | 2026-08-04 |
+| L-39 | Un bot de lógica ÚNICA sirve varios canales con un adaptador delgado (Twilio/WhatsApp + Telegram): solo cambian el TRANSPORTE (recibir update + enviar respuesta) y el FORMATO por canal (WhatsApp renderiza `*_`; Telegram en texto plano los muestra LITERALES → strippear). Prefijar el usuario por canal (`tg_<id>`) para no mezclar el estado del flujo. Cada canal = endpoint opt-in por su token | Integraciones / Bot | 2026-08-04 |
+| L-40 | Un audit de datos con agente INDEPENDIENTE pilla lo que el filtro de código no: un financiamiento (CAE) colado como "% dcto." en la data CURADA (Proyecta Energía 90%), pese a que el fix del scraper (L-34) existía; y campos semánticamente mal (nombre=descripción). Auditar la DATA curada, no solo el código; el que construye NO revisa | Datos y calidad / Meta | 2026-08-04 |
 
 ---
 
@@ -848,6 +850,48 @@ Cuando curas un dato a mano y lo proteges con un guard, TIENES que arreglar tamb
 
 ---
 
+### L-39 · Un bot de lógica única sirve varios canales con un adaptador delgado (2026-08-04) · Integraciones / Bot
+
+**Problema**
+El bot de descuentos (menú guiado) vivía solo en WhatsApp (Twilio). Se quiso agregar Telegram para probarlo, sin duplicar la lógica ni mantener dos bots.
+
+**Fix**
+Endpoint `/telegram` que reusa el MISMO `procesar_comando_whatsapp` (menú + datos locales, sin OpenAI). Solo cambia:
+- **Transporte:** Telegram entrega un `update` JSON (`message.chat.id` + `text`) y se responde vía `api.telegram.org/bot<token>/sendMessage`; WhatsApp usa TwiML de Twilio.
+- **Formato por canal:** WhatsApp RENDERIZA `*negrita*` y `_itálica_`; Telegram, en texto plano, los muestra LITERALES → se strippean (`replace('*','').replace('_','')`) antes de enviar. (Alternativa `parse_mode`, pero un `*`/`_` desbalanceado en los datos da error 400 → strippear es más robusto.)
+- **Estado por usuario:** `user_flow[usuario]` con prefijo `tg_<chat_id>` para no mezclar el flujo de Telegram con el de WhatsApp (misma persona, canales distintos).
+- **Opt-in + auto-registro:** el endpoint es inerte sin `TELEGRAM_BOT_TOKEN`; al setearlo, el arranque auto-registra el webhook (`setWebhook` a `RENDER_EXTERNAL_URL`/`TELEGRAM_WEBHOOK_URL`).
+
+**Lección**
+Para llevar un bot a un 2º/3º canal, NO dupliques la lógica: extrae el "cerebro" (función que recibe texto+usuario y devuelve texto) y escribe un adaptador delgado por canal (transporte + formato). El resto es el mismo. Prefija el estado por (canal, usuario).
+
+**Evitar a futuro**
+- El markdown de un canal NO sirve en otro: WhatsApp `*_` ≠ Telegram (texto plano los muestra literales; MarkdownV2 exige escapar). Strippear o adaptar por canal.
+- Estado conversacional keyed por (canal, usuario), no solo usuario.
+- Endpoint de cada canal opt-in por su token → desplegar sin romper aunque no esté configurado.
+
+---
+
+### L-40 · Auditar la DATA curada con un agente independiente (2026-08-04) · Datos y calidad / Meta
+
+**Problema**
+Tras agregar cuotas + otros al bot, Fernando pidió "pon un agente que vea todo y compruebe punto a punto, coherente y consistente". Un agente auditor independiente (el que construye NO es el que revisa) encontró errores que ni el código ni yo veíamos.
+
+**Hallazgos que el código no atrapaba**
+- `Proyecta Energía` (otros, Santander) mostraba **"90% dcto."** siendo **financiamiento** de paneles solares (CAE 1,53%) — el MISMO patrón del CAE (L-34), pero colado en la data CURADA (`beneficios_otros.json`), no en el scraper. El fix de L-34 vive en el scraper; este registro venía de la curación → el guard del scraper no lo tocó.
+- Un beneficio de Consorcio con `restaurante` = la descripción ("40% dcto. en masajes…") en vez de un nombre.
+- Ripley con la región (`ubicacion`) mal asignada en ≥7/72 (afecta filtro/mapa).
+
+**Lección**
+El fix de un patrón en el CÓDIGO (scraper) NO limpia los datos ya CURADOS a mano: hay que auditar la data en reposo también. Un agente independiente que revisa "punto por punto" pilla financiamientos disfrazados de descuento, campos semánticamente mal y regiones equivocadas que un `py_compile` o un filtro nunca ven. Es L-19/L-34 aplicado a la data curada + el patrón "el que construye no revisa".
+
+**Evitar a futuro**
+- Cuando arregles un patrón en el scraper (ej. CAE, L-34), **barrer también los datasets curados** por el mismo patrón.
+- Antes de dar por bueno un dataset de cara al usuario, pasarle un audit independiente (agente) que mida consistencia interna + errores evidentes.
+- Los hallazgos que no se arreglan en el momento (Ripley región, cuotas vencidas) van al ROADMAP como pendientes explícitos, no se pierden.
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -900,8 +944,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 38 lecciones formalizadas (L-01 a L-38; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-38 (2026-08-04)
+**Contador:** 40 lecciones formalizadas (L-01 a L-40; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-40 (2026-08-04)
 **Última actualización:** 2026-08-04
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.

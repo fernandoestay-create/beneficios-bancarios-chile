@@ -21,6 +21,7 @@
 | 9 | 2026-07-29 | **Auditoría ácida de filtros/búsqueda + seguridad**: 5 bugs "el dato existe pero no se muestra" (277 nacionales sin pin), buscador comuna+tags, endpoints destructivos eliminados, Falabella nombres reales (L-28) |
 | 10 | 2026-08-03 | **Guardia de madrugada + apartado "Otros beneficios"**: check determinista 03:00 (cada bug conocido = un check), Falabella local+trazable, dataset separado `beneficios_otros.json` (228 no-restaurante) sin tocar `/ver` |
 | 11 | 2026-08-03 | **Trazabilidad total + filtros dinámicos (v2.0)**: "Otros beneficios" filtrado 228→24 verificables, auditoría de trazabilidad de los 4 datasets, bencina re-curada desde fuente oficial (5 errores corregidos), guardia ampliada a trazabilidad, filtros de día dinámicos |
+| 12 | 2026-08-04 | **Pipeline desbloqueado + bot multicanal + 4 opciones (v2.1)**: fix bencina que trababa el cron (curación preservada, L-37), firma Twilio activada y verificada (L-38), **canal Telegram** (mismo bot, gratis, L-39), bot ampliado a **Cuotas + Otros beneficios**, filtros dinámicos a región/comuna, RAG revectorizado, audit de datos con 2 agentes (quitado financiamiento CAE colado, L-40) |
 
 > Nota: las sesiones 1 y 2 son inferidas de fechas de archivos y metadata. No hubo cronología explícita previa a la migración.
 
@@ -297,6 +298,36 @@ Fernando reportó: "No me aparece los descuentos de banco falabella, revisar que
 - Webhook Twilio (validación de firma, requiere prueba en vivo) y RAG Pinecone (revectorización, requiere OK de costo) — abiertos desde la sesión 9.
 
 **Resultado:** el apartado "Otros beneficios" pasó de 228 candidatos sin filtrar a 24 confiables; los 4 datasets de cara al usuario quedaron con su procedencia medida y marcada (3 ya eran oficiales, bencina se re-curó y corrigió 5 errores heredados del agregador); la guardia de madrugada vigila trazabilidad además de bugs de página; y los filtros de día dejan de mostrar casillas vacías sin explicación. Cierra el arco 29-jul→3-ago con el sistema en `v2.0-otros-trazabilidad-filtros`.
+
+---
+
+### Sesión 12 — 2026-08-04 — Pipeline desbloqueado + bot multicanal (WhatsApp+Telegram) + 4 opciones (v2.1)
+
+**Contexto:** al abrir el proyecto, el cron/refresco llevaba días "corriendo pero sin actualizar". De ahí salió el fix del pipeline; y sobre esa base, Fernando pidió activar la firma de Twilio, sumar **Telegram** como segundo canal y ampliar el bot para que responda las 4 secciones de la web (no solo restaurantes y bencinas).
+
+**Decisiones (con su porqué):**
+- **La curación se preserva en el GENERADOR, no solo en un guard (L-37).** El cron regeneraba `bencinas.json` desde el agregador y chocaba con el guard `Shell=jueves` → deadlock → nada se pusheaba. Fix: `guardar_bencinas_json` preserva los descuentos curados; solo los precios CNE se actualizan.
+- **Verificar a qué URL apunta REALMENTE el webhook (L-38).** El Sandbox de Twilio apuntaba a OTRO servicio (`micartera-ttaa`), no a `api-beneficios-chile` → el bot "no respondía". Se re-apuntó (decisión de Fernando: opción A).
+- **Un bot, varios canales, un adaptador delgado (L-39).** Telegram reusa el MISMO `procesar_comando_whatsapp`; solo cambian transporte y formato (strip de `*`/`_`). Sin OpenAI → **gratis** (decisión: sin LLM por ahora).
+- **El bot refleja la web.** Se sumaron **Cuotas (3)** y **Otros beneficios (4)**; ambos van solo hasta banco (sin día, no aplica).
+- **Auditar la data CURADA, no solo el código (L-40).** 2 agentes independientes "punto por punto" pillaron un financiamiento (CAE) disfrazado de "90% dcto." en los otros, que el fix del scraper (L-34) no tocaba por estar en la data curada.
+
+**Lo que se construyó:**
+1. Fix del pipeline de bencina (curación preservada) → el cron volvió a pushear (verificado end-to-end).
+2. Firma Twilio activada + verificada en vivo (POST Twilio 200 / falso 403); webhook re-apuntado.
+3. **Canal Telegram** (`@Mi_cartera_descuentos_Bot`): endpoint `/telegram`, mismo bot, auto-registro del webhook, opt-in por token.
+4. Bot ampliado a **4 opciones** (Restaurantes, Bencinas, Cuotas, Otros).
+5. Filtro "Otros" en código (`descuento_valor>0`) + filtros dinámicos a región/comuna (`/ver`) y categorías (cuotas).
+6. RAG revectorizado (887 vectores en Pinecone); doc accesible HTML actualizada; **respaldo total en GitHub** (docs de gestión que vivían solo en Drive).
+7. Fixes del audit: Scotiabank cuotas "3,6,12"→"3 y 6" (web oficial), Telegram sin markdown literal, quitado "Proyecta Energía" (financiamiento CAE; otros 24→23), `ask_banco` avisa banco inválido.
+
+**Verificado:** Telegram responde 200 (logs `Telegram de ...: hola → 200`), 4 opciones operando; firma Twilio 200/403; cuotas Scotiabank corregida; `verificar_salud.py` exit 0; deploy en vivo.
+
+**Lecciones nuevas:** L-37 a L-40 — contador del proyecto llega a **40 lecciones**. Tag: **`v2.1-bot-multicanal`**.
+
+**Pendiente:** cuotas a agosto (mes_referencia junio, ~20/28 vencidas); región de Ripley mal en ≥7/72; Shell/Aramco desde apps oficiales; los otros ~12 bancos de "Otros beneficios"; opción futura: bot híbrido con LLM/RAG para preguntas abiertas.
+
+**Resultado:** pipeline de datos andando otra vez + bot **multicanal (WhatsApp + Telegram)** de 4 secciones, gratis, con la data curada auditada por 2 agentes independientes. Sistema en `v2.1-bot-multicanal`.
 
 ---
 
