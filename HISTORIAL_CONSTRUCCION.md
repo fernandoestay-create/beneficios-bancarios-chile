@@ -22,6 +22,7 @@
 | 10 | 2026-08-03 | **Guardia de madrugada + apartado "Otros beneficios"**: check determinista 03:00 (cada bug conocido = un check), Falabella local+trazable, dataset separado `beneficios_otros.json` (228 no-restaurante) sin tocar `/ver` |
 | 11 | 2026-08-03 | **Trazabilidad total + filtros dinámicos (v2.0)**: "Otros beneficios" filtrado 228→24 verificables, auditoría de trazabilidad de los 4 datasets, bencina re-curada desde fuente oficial (5 errores corregidos), guardia ampliada a trazabilidad, filtros de día dinámicos |
 | 12 | 2026-08-04 | **Pipeline desbloqueado + bot multicanal + 4 opciones (v2.1)**: fix bencina que trababa el cron (curación preservada, L-37), firma Twilio activada y verificada (L-38), **canal Telegram** (mismo bot, gratis, L-39), bot ampliado a **Cuotas + Otros beneficios**, filtros dinámicos a región/comuna, RAG revectorizado, audit de datos con 2 agentes (quitado financiamiento CAE colado, L-40) |
+| 13 | 2026-08-04 | **Cuotas a agosto + "Otros" ampliado a 212 + audit (v2.2/v2.3)**: cuotas re-curadas a agosto (11/14 bancos, 9 oficial-verificada), **"Otros beneficios" 24→212** vía flips **L-32** de BCI (+172) y **Lider BCI** (+17) manejando trampas L-34 ($monto≠%, cuotas excluidas), **filtro de calidad DURABLE en el render** (L-40/L-41), Ripley región corregida. Banco de Chile identificado como próximo candidato (requiere fetch multi-categoría, no es flip) |
 
 > Nota: las sesiones 1 y 2 son inferidas de fechas de archivos y metadata. No hubo cronología explícita previa a la migración.
 
