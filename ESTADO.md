@@ -9,7 +9,7 @@
 - **Bencina RE-CURADA:** Copec (15) desde la oficial (`ww2.copec.cl`); Aramco/Shell (16) desde medios verificados; campo `confianza` + `url_fuente` oficial por dato; 5 errores del agregador corregidos (Shell→jueves, Itaú→martes, BancoEstado→martes $50, BCI→7% cashback, Santander Consumer→vie-dom); fuente marcada en la web. (L-35)
 - **Guardia de madrugada ampliada a TRAZABILIDAD** (el "agente que revisa siempre"): alerta si la data pierde `confianza` o vuelve al agregador.
 - **Filtros DINÁMICOS de día** en /ver y /ver/beneficios: los días sin resultados según el banco se atenúan/bloquean. + **"Estamos confirmando"** cuando una sección no tiene data.
-- Lecciones **L-33/L-34/L-35**. **Pendiente:** re-curar Shell/Aramco desde apps oficiales (hoy medios); extender filtros dinámicos a región/comuna y a bencinas/cuotas; los otros 12 bancos del apartado.
+- Lecciones **L-33/L-34/L-35/L-36** (L-36 = filtros dinámicos). **Pendiente:** re-curar Shell/Aramco desde apps oficiales (hoy medios); extender filtros dinámicos a región/comuna y a bencinas/cuotas; los otros 12 bancos del apartado.
 
 **Sesión 2026-08-03 — Cierre (abarcó 29-jul a 3-ago): Falabella con local + condiciones en las tarjetas + apartado "Otros beneficios" (todo verificado con py_compile + `node --check` + health check, en producción salvo donde se indica):**
 Continuación del arco que arrancó el 29-jul. Lo nuevo de este cierre:

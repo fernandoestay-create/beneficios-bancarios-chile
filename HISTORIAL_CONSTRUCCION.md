@@ -288,7 +288,7 @@ Fernando reportó: "No me aparece los descuentos de banco falabella, revisar que
 
 **Verificado en producción:** las 4 vistas (`/ver`, `/ver/bencinas`, `/ver/cuotas`, `/ver/beneficios`) responden HTTP 200; JS validado con `node --check`; filtros dinámicos y el apartado "Otros beneficios" (24 verificables) operando en vivo.
 
-**Lecciones nuevas:** L-28 a L-35 — contador del proyecto llega a **35 lecciones formalizadas**. Tags de este arco: **`v1.9-otros-beneficios`** (apertura del apartado, sesión 10) y **`v2.0-otros-trazabilidad-filtros`** (cierre de esta sesión: 24 verificables + trazabilidad total + filtros dinámicos).
+**Lecciones nuevas:** L-28 a L-36 — contador del proyecto llega a **36 lecciones formalizadas** (L-36 = filtros dinámicos/faceteados, agregada en el cierre). Tags de este arco: **`v1.9-otros-beneficios`** (apertura del apartado, sesión 10) y **`v2.0-otros-trazabilidad-filtros`** (cierre de esta sesión: 24 verificables + trazabilidad total + filtros dinámicos).
 
 **Lo que quedó pendiente:**
 - Re-curar Shell/Aramco desde sus apps oficiales (hoy la fuente es "medios verificados", no la fuente primaria del banco).
