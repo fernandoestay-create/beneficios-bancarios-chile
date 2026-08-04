@@ -15,7 +15,8 @@
   - *Datos:* se **quitó "Proyecta Energía"** (financiamiento con CAE colado como "90% dcto." en los otros — mismo patrón L-34; **otros 24→23**) y se limpió el nombre del masaje de Consorcio.
   - *Cerrados tras el audit (`849b708`):* **Ripley región** — raíz arreglada (nuevo `_region_desde_direccion()` deriva la región de la ciudad real; 8 registros corregidos, Kunstmann→Los Ríos); **5 ids de bencina** renombrados al día real; el "duplicado" de Security ya no existe.
   - *Cuotas re-curadas a AGOSTO (`c78a860`/`8524895`, 2026-08-04):* vía webs oficiales desde Chile (Chrome); **11/14 bancos vigentes/cubriendo agosto** (9 oficial-verificada; Santander preciso 1-31 ago); Tenpo marcado honesto (junio vencida). `mes_referencia`→agosto, verificado en `/ver/cuotas`.
-  - *Pendientes reales (necesitan tu teléfono / scraping grande):* **Shell/Aramco** desde apps oficiales; **~12 bancos más** en "Otros beneficios".
+  - *"Otros beneficios" ampliado (`ca07c4b`):* **BCI agregado 23→195 verificables** (su API traía todo y se botaba → volteado con `seccion="otro"`, L-32) + filtro durable anti-financiamiento en el render. Los demás bancos son incrementales (extender su scraper, BCI = template).
+  - *Pendiente real (tu teléfono):* **Shell/Aramco** → oficial desde sus apps (Copec ya es oficial).
 - Lecciones **L-38, L-39, L-40**. Commits: `9ad0e7f` firma Twilio · `d7603a3`/`680db29` vars Render · `bdf8646` Telegram · `637b7bf` bot 4 opciones · `79fc554` Scotiabank+Telegram · (+ fixes del audit en este cierre).
 
 **Sesión 2026-08-04 — Fix pipeline bencina (desbloqueo) + doc accesible HTML + respaldo total:**
