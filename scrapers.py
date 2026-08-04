@@ -200,7 +200,8 @@ class ScraperBancoChile:
                 params = {
                     'per_page': per_page,
                     'page': page,
-                    'meta.category': self.CATEGORY,
+                    # Sin filtro de categoría (L-32): traemos TODAS y clasificamos en _parsear_entry.
+                    # restaurantes-y-bares -> restaurante (idéntico a antes); resto no-gastronómico -> "otro".
                 }
                 response = self.session.get(self.API_URL, params=params, timeout=15)
                 response.raise_for_status()
@@ -234,6 +235,17 @@ class ScraperBancoChile:
         try:
             meta = entry.get('meta', {})
             fields = entry.get('fields', {})
+
+            # Clasificación por categoría (L-32): restaurantes-y-bares -> restaurante (idéntico a antes,
+            # gate garantiza mismos ids); gourmet/sabores -> se omite (no cambiar /ver ni meter comida en
+            # "otros"); el resto (salud, belleza, deportes, entretención, etc.) -> "otro" (dataset separado).
+            category = meta.get('category', '')
+            if category == self.CATEGORY:
+                seccion = 'restaurante'
+            elif category.startswith('beneficios/sabores'):
+                return None
+            else:
+                seccion = 'otro'
 
             # dict.get(k, default) NO aplica el default si la key existe vacía ('').
             # Cadena `or` para caer al siguiente, y descartar si todo queda vacío (L-10).
@@ -309,6 +321,7 @@ class ScraperBancoChile:
                 direccion=direccion,
                 tags=tags,
                 activo=True,
+                seccion=seccion,
             )
         except Exception as e:
             return None
