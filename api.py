@@ -3392,9 +3392,12 @@ async def telegram_webhook(request: Request):
     print(f"  Telegram de {chat_id}: {texto}")
     # usuario con prefijo tg_ para NO mezclar el flujo con los de WhatsApp
     respuesta = await procesar_comando_whatsapp(texto, usuario=f"tg_{chat_id}")
+    # Telegram no renderiza el markdown de WhatsApp (* _). Como se manda en texto
+    # plano, esos símbolos se verían literales → se quitan para que salga limpio.
+    respuesta_tg = respuesta.replace("*", "").replace("_", "")
     try:
         import urllib.request as _u
-        payload = json.dumps({"chat_id": chat_id, "text": respuesta}).encode("utf-8")
+        payload = json.dumps({"chat_id": chat_id, "text": respuesta_tg}).encode("utf-8")
         req = _u.Request(f"https://api.telegram.org/bot{token}/sendMessage",
                          data=payload, headers={"Content-Type": "application/json"})
         _u.urlopen(req, timeout=15)
