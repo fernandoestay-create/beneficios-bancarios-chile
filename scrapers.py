@@ -405,6 +405,14 @@ class ScraperBancoFalabella:
 
     URL = "https://www.bancofalabella.cl/descuentos/restaurantes"
     BANCO = "Banco Falabella"
+    # Categorías no-restaurante del sitio (misma estructura RSC) -> seccion="otro" (L-32).
+    # Se excluyen: antojos (comida), cmr-puntos/cuotas-sin-interes/elite (no son % de comercio).
+    OTROS_CATS = [
+        ('salud', 'Salud'), ('belleza', 'Belleza'), ('hogar', 'Hogar'),
+        ('mascotas', 'Mascotas'), ('viajes', 'Viajes'), ('transporte', 'Transporte'),
+        ('entretencion', 'Entretención'), ('educacion', 'Educación'),
+        ('servicios', 'Servicios'), ('mercado', 'Mercado'),
+    ]
 
     def __init__(self):
         self.session = requests.Session()
@@ -428,10 +436,34 @@ class ScraperBancoFalabella:
             cards = self._extraer_cards(resp.text)
             print(f"   Cards de restaurantes encontradas: {len(cards)}")
 
+            rest_links = set()
             for card in cards:
                 beneficio = self._parsear_card(card)
                 if beneficio:
                     self.beneficios.append(beneficio)
+                    rest_links.add(card.get('linkUrl') or '')
+
+            # OTROS (L-32): las demás categorías del sitio (misma estructura RSC).
+            # Se saltan las que ya son restaurante (por linkUrl) -> restaurantes idénticos (gate).
+            n_otros = 0
+            seen_otros = set()
+            for slug, label in self.OTROS_CATS:
+                try:
+                    r = self.session.get(f"https://www.bancofalabella.cl/descuentos/{slug}", timeout=30)
+                    r.raise_for_status()
+                except Exception:
+                    continue
+                for card in self._extraer_cards(r.text):
+                    link = card.get('linkUrl') or ''
+                    if link in rest_links or link in seen_otros:
+                        continue
+                    seen_otros.add(link)
+                    beneficio = self._parsear_card(card, seccion='otro', categoria=label)
+                    if beneficio:
+                        self.beneficios.append(beneficio)
+                        n_otros += 1
+            if n_otros:
+                print(f"   + {n_otros} 'otros' (salud/belleza/hogar/viajes/...)")
 
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios extraídos")
             return self.beneficios
@@ -538,8 +570,9 @@ class ScraperBancoFalabella:
         partes.append("Revisa los locales del beneficio. Comprueba en la página oficial.")
         return ' '.join(partes)
 
-    def _parsear_card(self, card: dict) -> Optional[Beneficio]:
-        """Convierte un benefitCard del SSR en un objeto Beneficio."""
+    def _parsear_card(self, card: dict, seccion: str = 'restaurante', categoria: str = 'Restaurantes') -> Optional[Beneficio]:
+        """Convierte un benefitCard del SSR en un objeto Beneficio.
+        seccion='restaurante' (pág. restaurantes) | 'otro' (categorías salud/belleza/etc., L-32)."""
         try:
             title = (card.get('title') or '').strip()
             restaurante = re.sub(
@@ -616,8 +649,9 @@ class ScraperBancoFalabella:
                 imagen_url=imagen_url,
                 logo_url=logo_url,
                 activo=True,
-                tags=["Restaurantes"],
+                tags=[categoria],
                 descripcion=descripcion,
+                seccion=seccion,
             )
         except Exception:
             return None
