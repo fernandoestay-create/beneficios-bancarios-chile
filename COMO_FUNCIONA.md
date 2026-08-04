@@ -3,15 +3,16 @@
 > **Para qué es este documento:** explicar, en lenguaje claro, cómo funciona todo el
 > sistema tal como funciona hoy. Si abres esto dentro de 6 meses y no te acuerdas de
 > nada, acá está todo.
-> **Última actualización:** 2026-08-03
+> **Última actualización:** 2026-08-04
 
 ---
 
 ## 1. Qué es MiCartera
 
 Un sistema que **scrapea descuentos bancarios de restaurantes en Chile** (15 bancos),
-los limpia, y los muestra en una web pública + un bot de WhatsApp con IA. También
-trae **precios y descuentos de bencina**.
+los limpia, y los muestra en una web pública + un **bot de menú guiado en WhatsApp y
+Telegram** (sin IA, gratis de operar — no confundir con el buscador con IA de la web,
+sección 11). También trae **precios y descuentos de bencina**.
 
 - **Web pública:** https://api-beneficios-chile.onrender.com/ver (restaurantes), `/ver/bencinas`, `/ver/cuotas` y `/ver/beneficios` (otros beneficios de tarjeta).
 - **Datos:** ~887 beneficios de restaurantes (14 bancos) + 31 descuentos de bencina (re-curados desde fuente oficial, sección 16) + campañas de cuotas sin interés. Además hay un apartado de **"otros beneficios"** de tarjeta (Santander/Consorcio) en `/ver/beneficios`: **24 verificados** con descuento real, filtrados de 228 candidatos (sección 13).
@@ -27,7 +28,7 @@ trae **precios y descuentos de bencina**.
 | **`chequeo_bancos.py`** | — | Define el piso de cada banco, clasifica el estado (OK/degradado/caído/preservado), arma el mail |
 | **`aprendizaje.py`** | — | Memoria del sistema: guarda el histórico y calibra los pisos solo |
 | **`verificar_salud.py`** | — | Chequeo de calidad: si algo está mal, NO se publica |
-| **`api.py`** | Render (nube) | La web + la API + el bot de WhatsApp (todo junto) |
+| **`api.py`** | Render (nube) | La web + la API + el bot de menú (WhatsApp `/webhook` + Telegram `/telegram`), todo junto |
 | **Cron** (`.github/workflows/scraper.yml`) | GitHub Actions (nube, USA) | Corre diario: scrapea, chequea, **manda el mail**, publica |
 | **Refresco local** (`refrescar_local.ps1`) | Tu PC (Chile) | Corre diario: trae los bancos geo-fenceados frescos (ej. Falabella) |
 | **Guardia de madrugada** (`revision_madrugada.py`) | GitHub Actions (nube) | Corre ~03:00: revisa que ningún bug conocido reapareció + que los datos sigan siendo trazables; avisa por mail **solo si algo falla** (sección 14) |
@@ -41,7 +42,7 @@ El sistema tiene **dos procesos** que actualizan los datos, y se complementan:
 ### A. El cron en la nube (GitHub Actions) — corre diario 09:00 Chile
 1. Scrapea los 15 bancos **desde un servidor en USA**.
 2. Corre el chequeo experto por banco.
-3. Sube los datos al buscador con IA (Pinecone) para el bot.
+3. Sube los datos al buscador con IA de la **web** (Pinecone, `/rag`) — el bot de menú no usa esto.
 4. Publica (`git push` → Render actualiza la web).
 5. **Te manda el mail diario** con el estado de cada banco.
 
@@ -178,7 +179,7 @@ schtasks /Delete /TN "MiCartera-Refresco" /F # quitar
 
 ```
 beneficios-bancarios-chile/
-├── api.py                 # web + API + bot WhatsApp (monolito intencional)
+├── api.py                 # web + API + bot de menú (WhatsApp /webhook + Telegram /telegram) — monolito intencional
 ├── scrapers.py            # 15 scrapers + orquestador + red de seguridad
 ├── chequeo_bancos.py      # pisos, estados por banco, generador del mail
 ├── aprendizaje.py         # memoria + pisos adaptativos + tendencias
@@ -206,9 +207,10 @@ beneficios-bancarios-chile/
 |----------|----------|------|
 | **GitHub Actions** | El cron diario | Gratis (repo público) |
 | **Render** | Hosting de la web/API | Gratis |
-| **Pinecone** | Buscador con IA del bot (RAG) | Legacy del proyecto |
-| **OpenAI** | Embeddings + GPT-4o-mini del bot | Pago por uso (centavos) |
-| **Twilio** | WhatsApp del bot | Pago por uso |
+| **Pinecone** | Buscador con IA de la **web** (`/rag`) — legacy, el bot NO lo usa | Legacy del proyecto |
+| **OpenAI** | Embeddings + GPT-4o-mini del buscador con IA de la **web** (`/rag`) — el bot NO lo usa | Pago por uso (centavos) |
+| **Twilio** | Canal **WhatsApp** del bot de menú (sin IA, gratis de operar) | Pago por uso |
+| **Telegram** | Canal **Telegram** del bot de menú (`@Mi_cartera_descuentos_Bot`, sin IA, gratis de operar) | Gratis |
 | **Gmail** | El mail diario (vía SMTP, secret en GitHub) | Gratis |
 | **Keep-alive** | Ping cada 10 min para que la web no duerma (`keepalive.yml`) | Gratis |
 
@@ -409,7 +411,37 @@ sección 18.
 
 ---
 
-## 19. Una línea para recordar
+## 19. El bot de menú (WhatsApp + Telegram)
+
+**El bot NO usa IA/LLM.** Es un **bot de menú guiado**: escribes, te muestra opciones
+numeradas, eliges, te responde con los datos locales de siempre (los mismos JSON del
+resto del sistema). Nada de OpenAI ni Pinecone acá — por eso operar el bot es
+**gratis** (aparte del costo de Twilio por mensaje de WhatsApp). El buscador con IA
+(`/rag`, Pinecone + GPT-4o-mini, sección 11) es un feature **aparte, de la web**, no
+del bot.
+
+- **Dos canales, un solo bot:** `api.py` sirve el mismo menú en **WhatsApp** (vía
+  Twilio, endpoint `/webhook`) y en **Telegram** (endpoint `/telegram`, bot
+  `@Mi_cartera_descuentos_Bot`). La lógica del menú es una sola; cada canal solo adapta
+  el formato de salida — en Telegram se le quita el markdown de WhatsApp (los
+  `*negrita*` y `_cursiva_`), porque Telegram lo interpreta distinto.
+- **4 opciones del menú:**
+  1. 🍽️ **Restaurantes** — pregunta día → banco.
+  2. ⛽ **Bencinas** — pregunta día.
+  3. 💳 **Cuotas sin interés** — pregunta banco (sin día, no aplica).
+  4. 🎁 **Otros beneficios** — pregunta banco (sin día, no aplica).
+- **Verificación de firma, opt-in por variable de entorno:** la firma de Twilio se
+  valida solo si está seteado `TWILIO_AUTH_TOKEN`; la de Telegram solo si está seteado
+  `TELEGRAM_BOT_TOKEN`. Sin esas variables, el endpoint sigue funcionando pero sin
+  verificar la firma (típico en pruebas locales).
+- **Por qué sin LLM (decisión, no limitación):** un menú guiado responde exacto, gratis
+  y sin riesgo de alucinar. Si algún día se justifica lenguaje libre, el candidato
+  natural es reusar el mismo `/rag` de la web — hoy el bot es deliberadamente
+  independiente de eso.
+
+---
+
+## 20. Una línea para recordar
 
 > **El cron te manda el mail diario y publica; tu PC mantiene Falabella fresco; la red
 > de seguridad evita que algo desaparezca; el aprendizaje calibra los pisos solo; cada

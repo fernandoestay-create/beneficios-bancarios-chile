@@ -41,7 +41,7 @@
 <body>
 
 <h1>Beneficios Bancarios Chile + Descuentos Bencina</h1>
-<p class="subtitle">v_03 - Agosto 2026 | Sistema de scraping, API REST, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas) y bot WhatsApp para descuentos bancarios en Chile, con trazabilidad de fuente oficial</p>
+<p class="subtitle">v_03 - Agosto 2026 | Sistema de scraping, API REST, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas) y bot WhatsApp + Telegram para descuentos bancarios en Chile, con trazabilidad de fuente oficial</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -49,6 +49,7 @@
   <a href="03_scrapers_detalle.html">Scrapers</a>
   <a href="04_api_y_web.html">API y Web</a>
   <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+  <a href="06_precios_combustible.html">Precios Combustible</a>
 </div>
 
 <!-- ============ STATS ============ -->
@@ -60,7 +61,7 @@
   <div class="stat fuel"><div class="num">367</div><div class="label">Estaciones (OpenStreetMap)</div></div>
   <div class="stat"><div class="num">15</div><div class="label">Bancos Scrapeados</div></div>
   <div class="stat"><div class="num">3</div><div class="label">Cadenas Bencina</div></div>
-  <div class="stat"><div class="num">$0</div><div class="label">Costo OpenAI (WhatsApp)</div></div>
+  <div class="stat"><div class="num">$0</div><div class="label">Costo OpenAI (Bot)</div></div>
 </div>
 
 <!-- ============ CHANGELOG v03 ============ -->
@@ -74,6 +75,7 @@
     <li><span class="badge">CAMBIO</span> <strong>Criterio "si no esta chequeado, no se muestra"</strong> - cuando falta un dato verificado, la pagina muestra "Estamos confirmando descuentos" en vez de un dato dudoso</li>
     <li><span class="badge">CAMBIO</span> <strong>Filtros dinamicos por dia</strong> - al elegir un banco, los dias sin resultados para ese banco se atenuan/bloquean en vez de mostrar una lista vacia</li>
     <li><span class="badge new">NUEVO</span> <strong>Guardia de madrugada</strong> - revision automatica diaria (~03:00 Chile) que re-chequea cada bug conocido (paginas, seguridad, trazabilidad) contra produccion y los datos; avisa por correo solo si algo reaparece</li>
+    <li><span class="badge new">NUEVO</span> <strong>Bot multicanal (WhatsApp + Telegram)</strong> - mismo bot de menu guiado, sin IA (gratis), responde por ambos canales: 4 opciones (restaurantes, bencinas, cuotas sin interes, otros beneficios)</li>
   </ul>
 </div>
 
@@ -110,7 +112,7 @@
     <li><strong>Pagina de otros beneficios</strong> (<code>/ver/beneficios</code>) - retail, viajes, salud y entretencion, solo ofertas verificables</li>
     <li><strong>Pagina web de bencinas</strong> (<code>/ver/bencinas</code>) - hero cards con fotos, logos SVG, estaciones reales</li>
     <li><strong>Pagina de cuotas sin interes</strong> (<code>/ver/cuotas</code>) - campanas por banco y categoria</li>
-    <li><strong>Bot de WhatsApp v2</strong> - flujo bifurcado Restaurantes/Bencinas, $0 costo IA</li>
+    <li><strong>Bot WhatsApp + Telegram</strong> - menu guiado sin IA (4 opciones: restaurantes, bencinas, cuotas, otros beneficios), $0 costo</li>
     <li><strong>API REST</strong> - endpoints JSON para consultar beneficios programaticamente</li>
   </ul>
 </div>
@@ -130,7 +132,7 @@
   <div class="tech-item"><strong>Frontend:</strong> HTML/CSS/JS embebido en f-string Python</div>
   <div class="tech-item"><strong>Mapas:</strong> Leaflet + CARTO tiles</div>
   <div class="tech-item"><strong>Estaciones:</strong> OpenStreetMap Overpass API (367 estaciones)</div>
-  <div class="tech-item"><strong>Bot:</strong> Twilio WhatsApp API</div>
+  <div class="tech-item"><strong>Bot:</strong> Twilio WhatsApp API + Telegram Bot API</div>
   <div class="tech-item"><strong>Logos:</strong> 13 SVG locales + 3 fotos JPG (<code>/static/logos/</code>)</div>
   <div class="tech-item"><strong>Deploy:</strong> Render.com (auto-deploy desde GitHub)</div>
 </div>
@@ -159,6 +161,7 @@
   <div class="url-box">https://api-beneficios-chile.onrender.com/ver/bencinas &larr; Pagina bencinas</div>
   <div class="url-box">https://api-beneficios-chile.onrender.com/ver/cuotas &larr; Pagina cuotas sin interes</div>
   <div class="url-box">https://api-beneficios-chile.onrender.com/webhook &larr; Bot WhatsApp (Twilio)</div>
+  <div class="url-box">https://api-beneficios-chile.onrender.com/telegram &larr; Bot Telegram (mismo bot, sin costo)</div>
   <div class="url-box">https://api-beneficios-chile.onrender.com/docs &larr; Swagger API</div>
 </div>
 
@@ -171,7 +174,7 @@
   <tr><td><code>v_03</code></td><td>03-Ago-2026</td><td>Trazabilidad de datos (confianza + fuente oficial, bencina re-curada), paginas nuevas /ver/beneficios (otros beneficios) y /ver/cuotas, filtros dinamicos por dia, guardia de madrugada automatica.</td></tr>
 </table>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_03 | <strong>Ultima actualizacion:</strong> 2026-08-03 | <strong>Autor:</strong> Fernando Estay Perez</p>
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_03 | <strong>Ultima actualizacion:</strong> 2026-08-04 | <strong>Autor:</strong> Fernando Estay Perez</p>
 
 </body>
 </html>

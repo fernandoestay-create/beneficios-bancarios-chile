@@ -38,6 +38,7 @@
   <a href="03_scrapers_detalle.html">Scrapers</a>
   <a href="04_api_y_web.html">API y Web</a>
   <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+  <a href="06_precios_combustible.html">Precios Combustible</a>
 </div>
 
 <!-- ============ ENDPOINTS ============ -->
@@ -58,8 +59,16 @@
   <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/bencinas</code></td><td>Pagina web bencinas</td><td><span class="badge">NUEVO v_02</span></td></tr>
   <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/cuotas</code></td><td>Pagina web cuotas sin interes</td><td><span class="badge">NUEVO jul-2026</span></td></tr>
   <tr><td>POST</td><td><code>/webhook</code></td><td>Webhook WhatsApp (Twilio)</td><td><strong>Flujo v2</strong> (firma Twilio aun pendiente)</td></tr>
+  <tr style="background:#fffbeb;"><td>POST</td><td><code>/telegram</code></td><td>Webhook Telegram (mismo bot que WhatsApp)</td><td><span class="badge">NUEVO ago-2026</span></td></tr>
   <tr style="background:#fffbeb;"><td>GET</td><td><code>/static/logos/*</code></td><td>Archivos estaticos (SVG, JPG)</td><td><span class="badge">NUEVO v_02</span></td></tr>
 </table>
+
+<!-- ============ BOT MULTICANAL ============ -->
+<h2><span class="badge">NUEVO ago-2026</span> Bot Multicanal (WhatsApp + Telegram)</h2>
+<div class="card">
+  <p>El mismo bot atiende dos canales: <code>/webhook</code> (WhatsApp via Twilio) y <code>/telegram</code> (Telegram, sin costo por mensaje). Ambos comparten la misma logica de procesamiento del mensaje.</p>
+  <p><strong>Menu guiado, sin IA:</strong> el bot NO usa OpenAI ni RAG - responde con datos locales via 4 opciones: <strong>1)</strong> Restaurantes, <strong>2)</strong> Bencinas, <strong>3)</strong> Cuotas sin interes, <strong>4)</strong> Otros beneficios. El motor RAG/OpenAI (<code>POST /rag</code>) es exclusivo del buscador de la pagina web, no del bot.</p>
+</div>
 
 <!-- ============ RESUMEN 4 PAGINAS ============ -->
 <h2>Resumen de las 4 Paginas Web</h2>
@@ -241,7 +250,7 @@ TOKENS_ACCESO = {
   <p>Actualmente <strong>desactivado</strong> (publico).</p>
 </div>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 + actualizaciones jul-ago 2026 | <strong>Ultima actualizacion:</strong> 2026-08-03</p>
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 + actualizaciones jul-ago 2026 | <strong>Ultima actualizacion:</strong> 2026-08-04</p>
 
 </body>
 </html>

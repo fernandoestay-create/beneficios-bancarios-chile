@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bot WhatsApp v2 - Beneficios Bancarios Chile + Bencinas</title>
+<title>Bot WhatsApp + Telegram v3 - Beneficios Bancarios Chile</title>
 <style>
   :root { --primary: #1a56db; --bg: #f8fafc; --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --accent: #059669; --fuel: #d97706; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -39,8 +39,8 @@
 </head>
 <body>
 
-<h1>Bot WhatsApp v2</h1>
-<p class="subtitle">Flujo completamente rediseñado: bifurcacion Restaurantes/Bencinas, $0 costo OpenAI</p>
+<h1>Bot WhatsApp + Telegram v3</h1>
+<p class="subtitle">Mismo cerebro, dos canales: menu guiado de 4 opciones (Restaurantes, Bencinas, Cuotas sin interes, Otros beneficios), $0 costo OpenAI</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -48,6 +48,7 @@
   <a href="03_scrapers_detalle.html">Scrapers</a>
   <a href="04_api_y_web.html">API y Web</a>
   <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+  <a href="06_precios_combustible.html">Precios Combustible</a>
 </div>
 
 <!-- ============ COMPARACION v1 vs v2 ============ -->
@@ -77,21 +78,67 @@
 </div>
 
 <div class="highlight">
-  <strong>Cambio clave:</strong> Se elimino completamente el RAG (OpenAI + Pinecone) del flujo de WhatsApp. Toda la logica de busqueda y filtrado se hace en Python puro. El endpoint <code>/rag</code> se mantiene en la API pero ya no se usa desde el bot. Costo mensual de OpenAI para WhatsApp: <strong>$0</strong>.
+  <strong>Cambio clave:</strong> Se elimino completamente el RAG (OpenAI + Pinecone) del flujo del bot. Toda la logica de busqueda y filtrado se hace en Python puro. El endpoint <code>/rag</code> se mantiene en la API pero ya no se usa desde el bot (solo lo usa el buscador de la web en <code>/ver</code>). Costo mensual de OpenAI para el bot: <strong>$0</strong>.
 </div>
 
+<!-- ============ ARQUITECTURA MULTICANAL (2026-08-04) ============ -->
+<h2>Arquitectura Multicanal: Un Solo Cerebro, Dos Canales</h2>
+
+<div class="highlight">
+  <strong>Novedad de hoy:</strong> el bot ahora responde por <strong>WhatsApp</strong> (Twilio) y por <strong>Telegram</strong> (<code>@Mi_cartera_descuentos_Bot</code>), con la <strong>misma logica</strong>. El "cerebro" (procesar el mensaje, avanzar el flujo, armar la respuesta) es una sola funcion; cada canal es apenas un adaptador delgado que traduce transporte y formato. Sigue sin IA/LLM en ningun canal.
+</div>
+
+<div class="card">
+  <h3>Como se reparte el trabajo</h3>
+  <table>
+    <tr><th>Capa</th><th>Que hace</th></tr>
+    <tr><td>Cerebro (compartido)</td><td>Procesa el texto del usuario, avanza <code>user_flow</code>, arma la respuesta (menu, resultados, link). Una sola funcion para los dos canales.</td></tr>
+    <tr><td>Adaptador WhatsApp</td><td>Recibe el POST de Twilio en <code>/webhook</code>, valida (opt-in) la firma <code>X-Twilio-Signature</code>, responde en TwiML XML con markdown WhatsApp.</td></tr>
+    <tr><td>Adaptador Telegram</td><td>Recibe el POST de Telegram en <code>/telegram</code>, quita el markdown de WhatsApp (<code>*</code> <code>_</code>) para que no salga literal, responde en JSON via <code>sendMessage</code> de la API de Telegram.</td></tr>
+  </table>
+</div>
+
+<div class="compare">
+  <div>
+    <h4>WhatsApp (Twilio)</h4>
+    <ul>
+      <li>Endpoint: <code>POST /webhook</code></li>
+      <li>Costo: lo cobra Twilio por mensaje</li>
+      <li>Seguridad: valida <code>X-Twilio-Signature</code> si hay <code>TWILIO_AUTH_TOKEN</code> configurado (opt-in)</li>
+      <li>Formato: markdown WhatsApp (<code>*negrita*</code>, <code>_cursiva_</code>) se renderiza normal</li>
+      <li>Se activa solo si esta configurado Twilio</li>
+    </ul>
+  </div>
+  <div>
+    <h4>Telegram (@Mi_cartera_descuentos_Bot)</h4>
+    <ul>
+      <li>Endpoint: <code>POST /telegram</code></li>
+      <li>Costo: <strong>gratis</strong>, Telegram no cobra por mensaje</li>
+      <li>Seguridad: token del bot; el webhook se AUTO-REGISTRA al arrancar el servidor</li>
+      <li>Formato: texto plano — el <code>*</code> y <code>_</code> se quitan (se verian literales)</li>
+      <li>Se activa solo si existe <code>TELEGRAM_BOT_TOKEN</code></li>
+    </ul>
+  </div>
+</div>
+
+<p style="color:var(--muted); font-size:0.85rem;">Cada canal es <strong>opt-in independiente</strong>: si falta el token de uno, ese canal simplemente no se activa (no rompe el otro ni el resto de la API). El estado de conversacion tambien se separa por canal para no mezclar el flujo de un usuario de WhatsApp con uno de Telegram (detalle en "Estado conversacional", mas abajo).</p>
+
 <!-- ============ FLUJO GENERAL ============ -->
-<h2>Flujo General del Bot v2</h2>
+<h2>Flujo General del Bot (4 opciones x 2 canales)</h2>
 <div class="card">
 <pre>
-Usuario envia CUALQUIER mensaje
+Usuario envia CUALQUIER mensaje (por WhatsApp o por Telegram)
   |
   v
-Bot: "Restaurantes o Bencinas?"
+Bot: menu de 4 opciones (misma logica en ambos canales)
   |
-  +-- "1" o "restaurantes" --> FLUJO RESTAURANTES (3 pasos)
+  +-- "1" o "restaurantes"     --> dia --> banco(s) --> resultado  (3 pasos)
   |
-  +-- "2" o "bencinas"     --> FLUJO BENCINAS (2 pasos)
+  +-- "2" o "bencinas"         --> dia               --> resultado  (2 pasos)
+  |
+  +-- "3" o "cuotas"           --> banco              --> resultado  (2 pasos)
+  |
+  +-- "4" o "otros beneficios" --> banco              --> resultado  (2 pasos)
 </pre>
 </div>
 
@@ -99,9 +146,9 @@ Bot: "Restaurantes o Bencinas?"
 <h2>Flujo Bencinas (2 pasos)</h2>
 <div class="chat">
   <div class="msg user"><div class="who">Usuario</div>hola</div>
-  <div class="msg bot"><div class="who">Bot</div>Restaurantes o Bencinas?<br>1. Restaurantes<br>2. Bencinas</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
   <div class="msg user"><div class="who">Usuario</div>2</div>
-  <div class="msg bot"><div class="who">Bot</div>Que dia te interesa?<br>Ej: lunes, martes, hoy, todos</div>
+  <div class="msg bot"><div class="who">Bot</div>⛽ Bencinas<br><br>Que dia?<br>1. Hoy &nbsp;2. Lunes &nbsp;3. Martes ... 9. Todos<br>(o escribe el dia directo: "lunes", "hoy"...)</div>
   <div class="msg user"><div class="who">Usuario</div>lunes</div>
   <div class="msg bot"><div class="who">Bot</div>
     Descuentos bencina para Lunes:<br><br>
@@ -112,7 +159,7 @@ Bot: "Restaurantes o Bencinas?"
     Shell (2 dctos)<br>
     - Consorcio: $90/litro<br>
     - Micopiloto: $70/litro<br><br>
-    Ver todos: https://api-beneficios-chile.onrender.com/ver/bencinas?dia=lunes
+    Ver todos: https://api-beneficios-chile.onrender.com/ver/bencinas
   </div>
 </div>
 
@@ -169,9 +216,9 @@ Bot: "Restaurantes o Bencinas?"
 <h2>Flujo Restaurantes (3 pasos)</h2>
 <div class="chat">
   <div class="msg user"><div class="who">Usuario</div>hola</div>
-  <div class="msg bot"><div class="who">Bot</div>Restaurantes o Bencinas?<br>1. Restaurantes<br>2. Bencinas</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
   <div class="msg user"><div class="who">Usuario</div>1</div>
-  <div class="msg bot"><div class="who">Bot</div>Que dia te interesa?<br>Ej: lunes, martes, hoy, todos</div>
+  <div class="msg bot"><div class="who">Bot</div>🍽️ Restaurantes<br><br>Que dia?<br>1. Hoy &nbsp;2. Lunes &nbsp;3. Martes ... 9. Todos<br>(o escribe el dia directo: "miercoles", "hoy"...)</div>
   <div class="msg user"><div class="who">Usuario</div>miercoles</div>
   <div class="msg bot"><div class="who">Bot</div>Que banco(s) tienes?<br>
     1. Banco de Chile<br>
@@ -197,59 +244,111 @@ Bot: "Restaurantes o Bencinas?"
   </div>
 </div>
 
+<!-- ============ FLUJO CUOTAS SIN INTERES (nuevo, 2026-08-04) ============ -->
+<h2>Flujo Cuotas sin Interes (2 pasos)</h2>
+<div class="chat">
+  <div class="msg user"><div class="who">Usuario</div>hola</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
+  <div class="msg user"><div class="who">Usuario</div>3</div>
+  <div class="msg bot"><div class="who">Bot</div>💳 Cuotas sin interes<br><br>Que banco?<br>
+    1. Banco de Chile<br>
+    2. BCI<br>
+    3. Santander<br>
+    ... (12 bancos con campaña vigente)<br>
+    13. Todos
+  </div>
+  <div class="msg user"><div class="who">Usuario</div>1</div>
+  <div class="msg bot"><div class="who">Bot</div>
+    💳 Cuotas sin interes — Banco de Chile:<br><br>
+    - Todos los comercios: <strong>3 cuotas</strong> — 0% real<br>
+    - Automotriz: <strong>13 a 36 cuotas</strong> — 0,99% mensual (tasa preferencial, no 0%)<br><br>
+    Ver todo: https://api-beneficios-chile.onrender.com/ver/cuotas<br>
+    Verifica siempre en el link oficial del banco.
+  </div>
+</div>
+<p style="color:var(--muted); font-size:0.85rem;">Sin pregunta de dia: las cuotas son campañas del mes, no varian por dia de la semana. La lista de bancos es dinamica: solo entran los que tienen campaña vigente.</p>
+
+<!-- ============ FLUJO OTROS BENEFICIOS (nuevo, 2026-08-04) ============ -->
+<h2>Flujo Otros Beneficios (2 pasos)</h2>
+<div class="chat">
+  <div class="msg user"><div class="who">Usuario</div>hola</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
+  <div class="msg user"><div class="who">Usuario</div>4</div>
+  <div class="msg bot"><div class="who">Bot</div>🎁 Otros beneficios<br><br>Que banco?<br>
+    1. Santander<br>
+    2. Banco Consorcio<br>
+    3. Todos
+  </div>
+  <div class="msg user"><div class="who">Usuario</div>1</div>
+  <div class="msg bot"><div class="who">Bot</div>
+    🎁 Otros beneficios — Santander (21):<br><br>
+    - Corralco - VISA — <strong>25% dcto.</strong><br>
+    - La Parva - Visa — <strong>15% dcto.</strong><br>
+    - Valle Nevado — <strong>25% dcto.</strong><br>
+    ...y 18 mas<br><br>
+    Ver todo: https://api-beneficios-chile.onrender.com/ver/beneficios
+  </div>
+</div>
+<p style="color:var(--muted); font-size:0.85rem;">Son beneficios NO-restaurante (farmacias, ski, transporte, hoteles) que Santander y Banco Consorcio ya traian de sus paginas y antes se descartaban al filtrar solo restaurantes. Viven en un dataset separado (<code>beneficios_otros.json</code>) que no toca el flujo de Restaurantes.</p>
+
 <!-- ============ DETALLES TECNICOS ============ -->
 <h2>Detalles Tecnicos</h2>
 <div class="card">
   <h3>Estado conversacional</h3>
 <pre>
 user_flow = {}
-# Estructura por usuario:
+# Estructura por usuario. La CLAVE se prefija por canal para no mezclar
+# el flujo de un usuario de WhatsApp con uno de Telegram:
 # {
-#   "+56912345678": {
-#     "step": "ask_tipo" | "ask_dia" | "ask_banco" | "resultado",
-#     "tipo": "restaurantes" | "bencinas",
+#   "+56912345678": {              # WhatsApp (numero, sin el prefijo "whatsapp:")
+#     "step": "ask_mode" | "ask_dia_rest" | "ask_banco"
+#           | "ask_dia_bencina" | "ask_banco_generico",
+#     "mode": "restaurantes" | "bencinas" | "cuotas" | "otros",
 #     "dia": "lunes",
 #     "bancos": ["BCI", "Scotiabank"],
-#   }
+#   },
+#   "tg_123456789": { ... },       # Telegram (prefijo "tg_" + chat_id)
 # }
 </pre>
-  <p>Se mantiene en memoria (se pierde si el servidor reinicia). Cada usuario tiene su propio estado.</p>
+  <p>Se mantiene en memoria (se pierde si el servidor reinicia). Cada usuario tiene su propio estado, y ese estado se borra apenas el bot entrega el resultado (la proxima vez que escribe, arranca de nuevo desde el menu). "Cuotas" y "Otros beneficios" comparten el mismo paso <code>ask_banco_generico</code> — solo cambia el <code>mode</code>, asi el codigo no se duplica.</p>
 
-  <h3>Seleccion de multiples bancos</h3>
+  <h3>Seleccion de bancos</h3>
   <ul>
     <li>El bot muestra una lista numerada de bancos</li>
-    <li>El usuario puede seleccionar multiples bancos separando numeros con coma: <code>"1,2,4"</code></li>
-    <li>Tambien acepta <code>"todos"</code> para ver todos los bancos</li>
-    <li>Los bancos seleccionados se pasan como parametros URL multiples: <code>?banco=BCI&amp;banco=Scotiabank</code></li>
+    <li><strong>Restaurantes:</strong> el usuario puede seleccionar multiples bancos separando numeros con coma: <code>"1,2,4"</code>; tambien acepta <code>"todos"</code></li>
+    <li><strong>Cuotas sin interes y Otros beneficios:</strong> seleccion de UN solo banco (o <code>"todos"</code>) — no admiten multi-seleccion</li>
+    <li>Los bancos de Restaurantes seleccionados se pasan como parametros URL multiples: <code>?banco=BCI&amp;banco=Scotiabank</code></li>
   </ul>
 
-  <h3>Generacion del link</h3>
+  <h3>Generacion del link "Ver todo"</h3>
   <ul>
-    <li>El link lleva directamente a la pagina con filtros pre-aplicados</li>
-    <li>Restaurantes: <code>/ver?dia=X&amp;banco=Y&amp;banco=Z</code></li>
-    <li>Bencinas: <code>/ver/bencinas?dia=X</code></li>
-    <li>Al abrir el link, la pagina aplica automaticamente los filtros de la URL</li>
+    <li>Restaurantes es el UNICO flujo que pasa filtros en la URL: <code>/ver?dia=X&amp;banco=Y&amp;banco=Z</code></li>
+    <li>Bencinas, Cuotas y Otros beneficios linkean a la pagina general, sin parametros: <code>/ver/bencinas</code>, <code>/ver/cuotas</code>, <code>/ver/beneficios</code></li>
+    <li>Al abrir un link con filtros (Restaurantes), la pagina los aplica automaticamente desde la URL</li>
   </ul>
 
-  <h3>Sin dependencias externas de IA</h3>
+  <h3>Sin dependencias externas de IA (en ningun canal)</h3>
   <ul>
-    <li>No se usa OpenAI (ni GPT ni embeddings) en el flujo de WhatsApp</li>
-    <li>No se usa Pinecone en el flujo de WhatsApp</li>
-    <li>Todo el filtrado y formato se hace en Python puro</li>
-    <li>El endpoint <code>/rag</code> sigue disponible en la API para otros usos</li>
+    <li>No se usa OpenAI (ni GPT ni embeddings) en el bot, ni por WhatsApp ni por Telegram</li>
+    <li>No se usa Pinecone en el bot</li>
+    <li>Todo el filtrado y formato se hace en Python puro, sobre los 4 datasets locales</li>
+    <li>El endpoint <code>/rag</code> sigue disponible en la API — lo usa el buscador de la web (<code>/ver</code>), no el bot</li>
+    <li>Costo mensual de OpenAI para el bot (WhatsApp + Telegram): <strong>$0</strong></li>
   </ul>
 </div>
 
-<!-- ============ WEBHOOK ============ -->
-<h2>Configuracion del Webhook</h2>
+<!-- ============ WEBHOOKS ============ -->
+<h2>Configuracion de los Webhooks</h2>
 <div class="card">
+  <h3>WhatsApp (Twilio)</h3>
   <table>
     <tr><th>Parametro</th><th>Valor</th></tr>
     <tr><td>URL</td><td><code>https://api-beneficios-chile.onrender.com/webhook</code></td></tr>
     <tr><td>Metodo</td><td>POST</td></tr>
-    <tr><td>Servicio</td><td>Twilio WhatsApp Sandbox</td></tr>
+    <tr><td>Servicio</td><td>Twilio WhatsApp</td></tr>
     <tr><td>Formato</td><td>Form data (<code>From</code>, <code>Body</code>)</td></tr>
     <tr><td>Respuesta</td><td>TwiML XML</td></tr>
+    <tr><td>Seguridad</td><td>Opt-in: si <code>TWILIO_AUTH_TOKEN</code> esta seteado, valida la firma <code>X-Twilio-Signature</code> y responde 403 si no calza. Sin el token, procesa sin validar (comportamiento anterior).</td></tr>
   </table>
   <h3>Probar sin WhatsApp</h3>
 <pre>
@@ -259,7 +358,27 @@ curl -X POST https://api-beneficios-chile.onrender.com/webhook \
 </pre>
 </div>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 | <strong>Ultima actualizacion:</strong> 2026-08-03 (bencinas re-curadas desde fuente oficial + guardia de madrugada vigila trazabilidad)</p>
+<div class="card">
+  <h3>Telegram (@Mi_cartera_descuentos_Bot)</h3>
+  <table>
+    <tr><th>Parametro</th><th>Valor</th></tr>
+    <tr><td>URL</td><td><code>https://api-beneficios-chile.onrender.com/telegram</code></td></tr>
+    <tr><td>Metodo</td><td>POST</td></tr>
+    <tr><td>Servicio</td><td>Telegram Bot API</td></tr>
+    <tr><td>Formato</td><td>JSON (<code>message.chat.id</code>, <code>message.text</code>)</td></tr>
+    <tr><td>Respuesta</td><td>JSON <code>{"ok": true}</code> + <code>sendMessage</code> a la API de Telegram</td></tr>
+    <tr><td>Activacion</td><td>Opt-in por <code>TELEGRAM_BOT_TOKEN</code>. El webhook se AUTO-REGISTRA solo al arrancar el servidor (no hay paso manual en BotFather)</td></tr>
+    <tr><td>Costo</td><td><strong>$0</strong> — Telegram no cobra por mensaje (a diferencia de Twilio)</td></tr>
+  </table>
+  <h3>Probar sin Telegram</h3>
+<pre>
+curl -X POST https://api-beneficios-chile.onrender.com/telegram \
+  -H "Content-Type: application/json" \
+  -d '{"message": {"chat": {"id": 123456789}, "text": "hola"}}'
+</pre>
+</div>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_03 | <strong>Ultima actualizacion:</strong> 2026-08-04 (bot multicanal: WhatsApp + Telegram con el mismo cerebro; menu ampliado de 2 a 4 opciones — se suman Cuotas sin interes y Otros beneficios)</p>
 
 </body>
 </html>
