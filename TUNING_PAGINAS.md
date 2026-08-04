@@ -139,6 +139,26 @@ el apartado nuevo NO toca el pipeline de restaurantes (pisos, red de seguridad, 
 
 ---
 
+## 🤖 Bot (WhatsApp + Telegram) — menú guiado, sin LLM
+
+> El bot (`procesar_comando_whatsapp` en `api.py`) es **menú-guiado, sin OpenAI → gratis**.
+> Sirve DOS canales con la misma lógica: WhatsApp (Twilio, `/webhook`) y Telegram (`/telegram`).
+> 4 opciones: **1** Restaurantes (día→banco) · **2** Bencinas (día) · **3** Cuotas sin interés
+> (banco, sin día) · **4** Otros beneficios (banco, sin día). Handler unificado `ask_banco_generico`.
+
+| Síntoma | Causa | Fix | Lección |
+|---|---|---|---|
+| En Telegram salen `*` y `_` literales | El bot usa markdown de WhatsApp; a Telegram se manda texto plano → se ven los símbolos | Strippear `*`/`_` antes de enviar a Telegram (`replace`); NO usar `parse_mode` (un símbolo desbalanceado en los datos da error 400) | L-39 |
+| El bot "no responde" pese a estar vivo | El webhook del proveedor (Sandbox Twilio) apuntaba a **otro servicio** | Verificar en la consola del proveedor a qué URL apunta REALMENTE + confirmar en los logs del destino (¿llega el POST? ¿200/403?) | L-38 |
+| Un dato dudoso que reporta el usuario (ej. Scotiabank "3,6,12" cuotas, real "3 y 6") | Curación con un valor equivocado | Leer la **página oficial del banco** y corregir; el usuario que conoce el producto es la mejor red de seguridad | L-19/L-35 |
+| ¿Preguntas abiertas? | El bot no tiene LLM (a propósito, para ser gratis) | Decisión: queda menú-guiado. Para abrir: conectar al RAG (OpenAI) — costo por pregunta, requiere OK | L-20 |
+
+**Al agregar un canal nuevo:** extraer el "cerebro" (texto+usuario→texto) y escribir un adaptador
+delgado (transporte + formato por canal); prefijar el estado por canal (`tg_<id>`); endpoint
+opt-in por su token; auto-registrar el webhook en el arranque. (L-39)
+
+---
+
 ## 🌙 Guardia automática — `revision_madrugada.py`
 Cada madrugada (~03:00 Chile, workflow `revision_madrugada.yml`) se convierte CADA bug de
 este doc en un **check automático** contra producción (curl + `node --check`) + la data, y
