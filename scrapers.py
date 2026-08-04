@@ -2512,8 +2512,9 @@ class ScraperLiderBCI:
             # Normalize: "Gastronomía" → "gastronomia" (remove accents + lowercase)
             import unicodedata
             cat_norm = ''.join(c for c in unicodedata.normalize('NFD', categoria.lower()) if unicodedata.category(c) != 'Mn')
-            if cat_norm != 'gastronomia':
-                return None
+            # Flip L-32: gastronomía → restaurante; el resto se captura como "otro"
+            # (dataset separado beneficios_otros.json, NO contamina restaurantes). No se descarta.
+            seccion = "restaurante" if cat_norm == 'gastronomia' else "otro"
 
             nombre = (meta.get('name', '').replace('Descuento - ', '').strip()
                       or fields.get('descripcion_card') or '').strip()
@@ -2525,14 +2526,25 @@ class ScraperLiderBCI:
             dias_texto = fields.get('texto_dias', '')
             filtrado_dias = fields.get('filtrado_dias', [])
 
-            # Discount
+            # Discount — cuidado L-34: NO confundir "cuotas" ni "$monto" con un % de descuento
+            descuento_card_l = (descuento_card or '').lower()
+            es_cuotas = 'cuota' in descuento_card_l
+            es_monto = '$' in (descuento_card or '')
+            es_devolucion = 'devoluc' in descuento_card_l
             descuento_valor = 0
-            match = re.search(r'(\d+)', descuento_card)
-            if match:
-                descuento_valor = int(match.group(1))
+            if not es_cuotas:
+                match = re.search(r'(\d+)', descuento_card)
+                if match:
+                    descuento_valor = int(match.group(1))
             descuento_texto = descuento_card.strip() if descuento_card else ''
-            if descuento_valor > 0 and 'dcto' not in descuento_texto.lower() and 'dto' not in descuento_texto.lower():
+            # Solo formatear como "% dcto." si es realmente un porcentaje (no cuotas, no $monto, no devolución)
+            if (descuento_valor > 0 and not es_cuotas and not es_monto and not es_devolucion
+                    and 'dcto' not in descuento_texto.lower() and 'dto' not in descuento_texto.lower()):
                 descuento_texto = f"{descuento_valor}% dcto."
+            # Quality gate "otros" (L-33/L-35: si no es chequeable, no mostrar):
+            # los items de cuotas pertenecen al apartado de cuotas, no a "otros".
+            if seccion == "otro" and es_cuotas:
+                return None
 
             # Days
             dias_validos = ['todos']
@@ -2591,7 +2603,7 @@ class ScraperLiderBCI:
                 tarjeta="Tarjeta Lider BCI",
                 restaurante=nombre,
                 descuento_valor=float(descuento_valor),
-                descuento_tipo="porcentaje" if descuento_valor > 0 else "otro",
+                descuento_tipo=("monto" if es_monto else "porcentaje") if descuento_valor > 0 else "otro",
                 descuento_texto=descuento_texto,
                 dias_validos=dias_validos,
                 valido_desde=valido_desde,
@@ -2605,6 +2617,7 @@ class ScraperLiderBCI:
                 logo_url=logo_url,
                 descripcion=descripcion[:200] if descripcion else '',
                 activo=True,
+                seccion=seccion,
             )
         except Exception:
             return None
