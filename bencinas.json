@@ -17,7 +17,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.026919",
       "activo": true,
       "tags": [
@@ -25,7 +25,8 @@
         "banco consorcio",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_mercado_pago_martes",
@@ -44,7 +45,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.026960",
       "activo": true,
       "tags": [
@@ -52,7 +53,8 @@
         "mercado pago",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_banco_ripley_miercoles",
@@ -71,7 +73,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.026969",
       "activo": true,
       "tags": [
@@ -79,7 +81,8 @@
         "banco ripley",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_banco_ripley_miercoles_2",
@@ -98,7 +101,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.026975",
       "activo": true,
       "tags": [
@@ -106,7 +109,8 @@
         "banco ripley",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_banco_ripley_miercoles_3",
@@ -125,7 +129,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.026981",
       "activo": true,
       "tags": [
@@ -133,7 +137,8 @@
         "banco ripley",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_abc_visa_jueves",
@@ -152,7 +157,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.026987",
       "activo": true,
       "tags": [
@@ -160,7 +165,8 @@
         "abc visa",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_tenpo_viernes",
@@ -179,7 +185,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.026994",
       "activo": true,
       "tags": [
@@ -187,7 +193,8 @@
         "tenpo",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_sbpay_sabado",
@@ -206,7 +213,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027040",
       "activo": true,
       "tags": [
@@ -214,7 +221,8 @@
         "sbpay",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_aramco_spin_domingo",
@@ -233,7 +241,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.aramco.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027052",
       "activo": true,
       "tags": [
@@ -241,7 +249,8 @@
         "spin",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_shell_lider_bci_martes",
@@ -260,7 +269,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.shell.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027063",
       "activo": true,
       "tags": [
@@ -268,7 +277,8 @@
         "lider bci",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_shell_micopiloto_miercoles",
@@ -287,7 +297,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.shell.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027070",
       "activo": true,
       "tags": [
@@ -295,7 +305,8 @@
         "micopiloto",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_shell_banco_bice_domingo",
@@ -314,7 +325,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.shell.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027075",
       "activo": true,
       "tags": [
@@ -322,7 +333,8 @@
         "banco bice",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_shell_banco_security_domingo",
@@ -341,7 +353,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.shell.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027081",
       "activo": true,
       "tags": [
@@ -349,7 +361,8 @@
         "banco security",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_shell_scotiabank_sabado",
@@ -368,7 +381,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.shell.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027087",
       "activo": true,
       "tags": [
@@ -376,7 +389,8 @@
         "scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_shell_scotiabank_sabado_2",
@@ -395,7 +409,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.shell.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027092",
       "activo": true,
       "tags": [
@@ -403,7 +417,8 @@
         "scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_shell_scotiabank_sabado_3",
@@ -422,7 +437,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://www.shell.cl",
       "fecha_scrape": "2026-08-03T15:35:23.027097",
       "activo": true,
       "tags": [
@@ -430,7 +445,8 @@
         "scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "secundaria (medios ago-2026, verificar en app)"
     },
     {
       "id": "bencina_copec_cencosud_scotiabank_lunes",
@@ -449,7 +465,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027103",
       "activo": true,
       "tags": [
@@ -457,7 +473,8 @@
         "cencosud scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_cencosud_scotiabank_lunes_2",
@@ -476,7 +493,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027108",
       "activo": true,
       "tags": [
@@ -484,7 +501,8 @@
         "cencosud scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_jumbo_prime_lunes",
@@ -503,7 +521,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027114",
       "activo": true,
       "tags": [
@@ -511,7 +529,8 @@
         "jumbo prime",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_santander_consumer_semana",
@@ -521,11 +540,9 @@
       "descuento_por_litro": 100,
       "descuento_texto": "$100/L",
       "dias_validos": [
-        "lunes",
-        "martes",
-        "miercoles",
-        "jueves",
-        "viernes"
+        "viernes",
+        "sabado",
+        "domingo"
       ],
       "condicion": "70L máx",
       "tope_litros": 70,
@@ -534,7 +551,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027119",
       "activo": true,
       "tags": [
@@ -542,7 +559,8 @@
         "santander consumer",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_banco_internacional_martes",
@@ -561,7 +579,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027124",
       "activo": true,
       "tags": [
@@ -569,7 +587,8 @@
         "banco internacional",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_scotiabank_miercoles",
@@ -588,7 +607,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027130",
       "activo": true,
       "tags": [
@@ -596,7 +615,8 @@
         "scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_scotiabank_miercoles_2",
@@ -615,7 +635,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027135",
       "activo": true,
       "tags": [
@@ -623,7 +643,8 @@
         "scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_scotiabank_miercoles_3",
@@ -642,7 +663,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027140",
       "activo": true,
       "tags": [
@@ -650,7 +671,8 @@
         "scotiabank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_coopeuch_jueves",
@@ -669,7 +691,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027145",
       "activo": true,
       "tags": [
@@ -677,7 +699,8 @@
         "coopeuch",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_bci_jueves",
@@ -685,7 +708,7 @@
       "banco": "BCI",
       "tarjeta": "Crédito BCI",
       "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
+      "descuento_texto": "7% cashback (tope $7.000/día)",
       "dias_validos": [
         "jueves"
       ],
@@ -696,7 +719,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027150",
       "activo": true,
       "tags": [
@@ -704,7 +727,9 @@
         "bci",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)",
+      "descuento_valor": 0
     },
     {
       "id": "bencina_copec_itaú_viernes",
@@ -714,7 +739,7 @@
       "descuento_por_litro": 100,
       "descuento_texto": "$100/L",
       "dias_validos": [
-        "viernes"
+        "martes"
       ],
       "condicion": "Código desde Itaú Beneficios",
       "tope_litros": 0,
@@ -723,7 +748,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027156",
       "activo": true,
       "tags": [
@@ -731,7 +756,8 @@
         "itaú",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_bancoestado_viernes",
@@ -739,9 +765,9 @@
       "banco": "BancoEstado",
       "tarjeta": "Rutpay",
       "descuento_por_litro": 100,
-      "descuento_texto": "$100/L",
+      "descuento_texto": "$50/L",
       "dias_validos": [
-        "viernes"
+        "martes"
       ],
       "condicion": "50L máx, estaciones participantes",
       "tope_litros": 50,
@@ -750,7 +776,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027161",
       "activo": true,
       "tags": [
@@ -758,7 +784,9 @@
         "bancoestado",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)",
+      "descuento_valor": 50
     },
     {
       "id": "bencina_copec_machbank_sabado",
@@ -777,7 +805,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027166",
       "activo": true,
       "tags": [
@@ -785,7 +813,8 @@
         "machbank",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_banco_bice_domingo",
@@ -804,7 +833,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027171",
       "activo": true,
       "tags": [
@@ -812,7 +841,8 @@
         "banco bice",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     },
     {
       "id": "bencina_copec_copec_pay_semana",
@@ -837,7 +867,7 @@
       "vigencia_mes": "2026-08",
       "valido_hasta": "31-Ago-2026",
       "restricciones_texto": "",
-      "url_fuente": "https://descuentosrata.com/bencina",
+      "url_fuente": "https://ww2.copec.cl/personas/promociones",
       "fecha_scrape": "2026-08-03T15:35:23.027176",
       "activo": true,
       "tags": [
@@ -845,7 +875,8 @@
         "copec pay",
         "bencina",
         "combustible"
-      ]
+      ],
+      "confianza": "oficial (ww2.copec.cl, ago-2026)"
     }
   ],
   "estaciones": [
