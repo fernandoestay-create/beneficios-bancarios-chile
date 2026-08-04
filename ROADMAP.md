@@ -3,6 +3,15 @@
 > Estado real del proyecto. Se actualiza después de cada sesión de trabajo.
 > Última actualización: 2026-08-04
 
+## ✅ Hecho (sesión 2026-08-04 — cont.: cuotas a agosto + "Otros" ampliado a 212 + audit de datos)
+
+Continuación de la sesión del bot, frente **datos y calidad**:
+- **Cuotas re-curadas a AGOSTO** (v2.2): 11/14 bancos vigentes/cubriendo agosto vía webs oficiales desde Chile (9 `oficial-verificada`); Santander preciso (1-31 ago, CAE 1,19%). Tenpo marcado honesto (junio vencida). `mes_referencia`→agosto. Verificado en `/ver/cuotas`.
+- **"Otros beneficios" ampliado 24 → 212 verificables:** flips **L-32** de **BCI** (23→195, `ca07c4b`) y **Lider BCI** (+17, `8a1b0e3`) — sus APIs CMS ya traían todo y lo botaban. Lider manejó trampas **L-34** ("$100 Dcto." como monto, no 100%; ítems de cuotas excluidos). **Restaurantes intactos** (`beneficios.json` NO tocado; solo el dataset separado `beneficios_otros.json`). Verificado en prod: BCI 172 + Santander 21 + Lider 17 + Consorcio 2.
+- **Filtro de calidad DURABLE en el render** (no en el dato): `%>0` + anti-financiamiento (**L-40/L-41**) — sobrevive re-scrapes.
+- **Audit de datos con agente independiente (L-40):** removido "Proyecta Energía" (financiamiento 90% CAE colado como % dcto.); Ripley región corregida (`849b708`, `_region_desde_direccion` + `_COMUNA_REGION`, 8 registros); Consorcio "Masajes" (nombre = descripción).
+- Lecciones **L-40, L-41**. Tags **`v2.2-cuotas-otros-audit`** + **`v2.3-lider-otros`**.
+
 ## ✅ Hecho (sesión 2026-08-04 — pipeline desbloqueado + bot multicanal (WhatsApp+Telegram) + 4 opciones + firma Twilio)
 
 Sesión grande de infra + bot:
@@ -134,7 +143,7 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 6. ~~Cuotas desactualizadas a agosto~~ ✅ **HECHO (2026-08-04)**: re-curadas vía las webs oficiales desde Chile (Chrome). **11/14 bancos vigentes o cubriendo agosto** (9 `oficial-verificada`): Santander (preciso, 1-31 ago, CAE 1,19%), Scotiabank, Banco de Chile, Falabella, Itaú, BCI (hasta sep), BICE (permanente), Security (todos los días); Lider/Consorcio/Entel ya cubrían agosto (hasta dic/permanente). **Tenpo**: campaña de junio vencida, no verificada en agosto → marcado honesto. `mes_referencia`→agosto. Verificado en `/ver/cuotas`.
 7. ~~Ripley — región mal asignada~~ ✅ **HECHO (2026-08-04, `849b708`)**: la raíz era que la región salía del texto multi-sede de la card + los numerales romanos colisionaban por substring ("XIV Región"→Valparaíso). Nuevo `_region_desde_direccion()` + `_COMUNA_REGION` (16 regiones) derivan la región desde la ciudad real; 8 registros corregidos (Kunstmann→Los Ríos, etc.).
 8. ~~Menores (bencina ids, Security dup)~~ ✅ **HECHO/RESUELTO**: 5 ids de bencina renombrados al día real; el "duplicado" de Security ya no existe (la data cambió). Queda menor: Santander/Contribuciones sin nº de cuotas.
-9. **"Otros beneficios" — más bancos:** ✅ **BCI agregado (2026-08-04, `ca07c4b`)**: 23→**195 verificables** (su API traía todo y se botaba; se volteó con `seccion="otro"`, L-32). + filtro durable anti-financiamiento en el render (L-34/L-40). **Pendiente:** los bancos restantes necesitan cada uno extender su scraper para captar sus no-restaurante (BCI es el template): Banco de Chile (por categorías de su API), Falabella (`/descuentos` general), etc. Incremental, banco por banco.
+9. **"Otros beneficios" — más bancos:** ✅ **BCI + Lider BCI agregados (2026-08-04)**: BCI 23→195 (`ca07c4b`) + Lider BCI +17 (`8a1b0e3`) → **212 verificables** en `/ver/beneficios`. Ambos son **flips L-32** (su API CMS ya traía todo y lo botaba); Lider manejó trampas **L-34** ($100=monto ≠ 100%, cuotas ≠ %). + filtro durable anti-financiamiento en el render (L-40/L-41). **Pendiente (próximo candidato flip):** Banco de Chile (su API da 302 a curl directo — el scraper la maneja, mismo patrón CMS). Luego Ripley/Entel/Tenpo (HTML, más frágil). Falabella/Itaú/Scotiabank/Security/Mach necesitan **fetch nuevo** (su URL está scoped a restaurante). Incremental, banco por banco.
 10. **Shell/Aramco (bencina) → oficial:** necesita las **apps** de Aramco/Shell (tu teléfono). Copec ya es oficial; los otros quedan "medios verificados". No accesible desde acá.
 6. ~~Revectorización RAG~~ ✅ **HECHA (2026-08-04)**: 887 restaurantes re-vectorizados a Pinecone (verificado: 887 vectores en el namespace), costo ~US$0.002. Queda en backlog la **migración Pinecone → pgvector** (estándar del workspace).
 7. **Falabella — filtrar ofertas que no son restaurantes:** excluir `app-copec`, `pronto-copec`, `novedades-cmr-puntos` (no son gastronomía).
@@ -158,7 +167,7 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 ## 📊 Métricas relevantes
 
 - Beneficios de restaurantes en producción: **~887** (14 bancos; fluctúa por corrida — Itaú en observación, bajó a ~23)
-- **Apartado "Otros beneficios" (DESPLEGADO):** `/ver/beneficios` muestra **24 beneficios verificables** (con % de descuento real y chequeable), filtrados de los **228 capturados** de Santander/Consorcio en `beneficios_otros.json` (`seccion="otro"`) — los 204 restantes (financiamiento/servicios/CAE) no se muestran por no estar chequeados (L-33/L-35)
+- **Apartado "Otros beneficios" (DESPLEGADO):** `/ver/beneficios` muestra **212 beneficios verificables** — **BCI 172 + Santander 21 + Lider BCI 17 + Consorcio 2** — de `beneficios_otros.json` (`seccion="otro"`, 214 en el archivo; el render oculta los sin % real, L-40/L-41). Financiamiento/servicios/CAE/cuotas no se muestran (L-33/L-34/L-35). Bancos volteados con L-32 (su API ya traía todo)
 - **Cuotas sin interés: 28 campañas** en `cuotas_sin_interes.json` (curado + trazable; varios bancos aún muestran meses anteriores — ver pendientes)
 - **Bencinas (descuentos combustible): 31**, RE-CURADAS desde fuente oficial — Copec 100% oficial (`ww2.copec.cl`); Aramco/Shell desde medios verificados (pendiente pasar a oficial); campo `confianza` por dato
 - **Trazabilidad auditada (L-33):** restaurantes, otros beneficios y cuotas → **100% fuente oficial**; bencinas → re-curada tras salir 100% agregador
