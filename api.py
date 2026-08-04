@@ -4,7 +4,7 @@ API REST - BENEFICIOS BANCARIOS
 FastAPI + OpenAI RAG
 """
 
-from fastapi import FastAPI, HTTPException, Query, Form, Response, Cookie, Depends, Header
+from fastapi import FastAPI, HTTPException, Query, Form, Response, Cookie, Depends, Header, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -3196,10 +3196,37 @@ aplicarCuotas();
 
 
 @app.post("/webhook")
-async def webhook_whatsapp(From: str = Form(""), Body: str = Form("")):
-    """Webhook para Twilio WhatsApp Sandbox"""
+async def webhook_whatsapp(request: Request):
+    """Webhook para Twilio WhatsApp Sandbox.
+
+    Seguridad (opt-in, activable sin riesgo): si TWILIO_AUTH_TOKEN está seteado en el
+    entorno, se VALIDA la firma X-Twilio-Signature y se rechaza (403) toda request que
+    no venga firmada por Twilio. Si NO está seteado, se procesa sin validar (comporta-
+    miento actual). Para activarla: setear TWILIO_AUTH_TOKEN (y TWILIO_WEBHOOK_URL con
+    la URL pública exacta del webhook si difiere de la que ve el server tras el proxy)
+    y PROBAR el bot en vivo — una URL mal configurada rechazaría requests válidas.
+    """
     from twilio.twiml.messaging_response import MessagingResponse
 
+    form = await request.form()
+    params = {k: str(v) for k, v in form.items()}
+
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
+    if auth_token:
+        try:
+            from twilio.request_validator import RequestValidator
+            validator = RequestValidator(auth_token)
+            signature = request.headers.get("X-Twilio-Signature", "")
+            # URL pública que Twilio usó para firmar (evita el http:// interno del proxy de Render)
+            public_url = os.getenv("TWILIO_WEBHOOK_URL", "").strip() or str(request.url)
+            if not validator.validate(public_url, params, signature):
+                print("  ⚠️ Webhook Twilio: firma X-Twilio-Signature invalida -> 403")
+                return Response(content="Firma invalida", status_code=403)
+        except Exception as e:  # noqa
+            print(f"  ⚠️ Webhook Twilio: no se pudo validar la firma ({e}); se procesa igual")
+
+    From = params.get("From", "")
+    Body = params.get("Body", "")
     usuario = From.replace("whatsapp:", "")
     print(f"  WhatsApp de {usuario}: {Body}")
 
