@@ -51,6 +51,7 @@
 | L-38 | Al configurar/activar algo en un webhook (firma, seguridad), VERIFICAR en la consola del proveedor a qué URL/servicio apunta REALMENTE — no asumir. El Sandbox de Twilio apuntaba a OTRO servicio y OTRA ruta (`micartera-ttaa/api/webhooks/whatsapp`), no al que yo modificaba → el bot "no respondía" y la firma quedó en el servicio equivocado; se confirma con los logs del destino (¿llega el POST? ¿200/403?) | Integraciones / Deploy | 2026-08-04 |
 | L-39 | Un bot de lógica ÚNICA sirve varios canales con un adaptador delgado (Twilio/WhatsApp + Telegram): solo cambian el TRANSPORTE (recibir update + enviar respuesta) y el FORMATO por canal (WhatsApp renderiza `*_`; Telegram en texto plano los muestra LITERALES → strippear). Prefijar el usuario por canal (`tg_<id>`) para no mezclar el estado del flujo. Cada canal = endpoint opt-in por su token | Integraciones / Bot | 2026-08-04 |
 | L-40 | Un audit de datos con agente INDEPENDIENTE pilla lo que el filtro de código no: un financiamiento (CAE) colado como "% dcto." en la data CURADA (Proyecta Energía 90%), pese a que el fix del scraper (L-34) existía; y campos semánticamente mal (nombre=descripción). Auditar la DATA curada, no solo el código; el que construye NO revisa | Datos y calidad / Meta | 2026-08-04 |
+| L-41 | `beneficios_otros.json` lo GENERA el scraper pero el refresco/cron NO lo stagean → no se auto-actualiza en prod; al agregar un banco a "otros" hay que regenerarlo y commitearlo a mano. El filtro de calidad (%>0 + anti-financiamiento) va en el RENDER (`api.py`), no en el dato, para ser DURABLE ante re-scrapes. Un scraper con API que ya trae todo y filtra (BCI) → voltearlo (L-32) es quick-win vs extender scrapers que solo fetchean restaurantes | Arquitectura / Datos | 2026-08-04 |
 
 ---
 
@@ -892,6 +893,26 @@ El fix de un patrón en el CÓDIGO (scraper) NO limpia los datos ya CURADOS a ma
 
 ---
 
+### L-41 · El archivo de "otros" se mantiene a mano; el filtro de calidad va en el render (2026-08-04) · Arquitectura / Datos
+
+**Problema**
+Al ampliar "Otros beneficios" (agregar BCI, 23→195), aparecieron dos gotchas: (1) `beneficios_otros.json` lo genera el scraper (`guardar_otros_json`), pero el refresco local y el cron **solo stagean** `beneficios.json/csv`, `bencinas.json`, `historial.json` — **NO `beneficios_otros.json`** → no se auto-actualiza en producción; y (2) la curación manual del archivo (quitar "Proyecta Energía") **se revierte** si algo lo regenera, porque el % de financiamiento (90% de "ahorra hasta 90% con paneles solares") lo produce el scraper igual.
+
+**Fix**
+- **El filtro de calidad vive en el RENDER** (`api.py`, `_render_deals` cuando `es_otros`): exige `descuento_valor>0` **y excluye financiamiento** (paneles solares, CAE, cuenta de luz, crédito). Así el display queda limpio **sin importar qué produzca el scraper** — durable ante re-scrapes (a diferencia de editar el JSON a mano). Extiende L-34/L-40.
+- **Agregar un banco a "otros"** = voltear su scraper si su fuente ya trae todo y filtra (BCI: su API traía 310 ofertas y botaba las no-restaurante → `seccion="otro"`, L-32) → quick-win. Si el scraper solo fetchea la página de restaurantes (Falabella `/descuentos/restaurantes`, Itaú ruta-gourmet), hay que agregar un fetch nuevo — trabajo por banco.
+- Como el refresco/cron no stagean `beneficios_otros.json`, al agregar un banco hay que **regenerarlo y commitearlo a mano** (o agregarlo al staging con una red de seguridad anti proceso-estéril, L-16, si se quiere auto).
+
+**Lección**
+Cuando un dataset de cara al usuario se genera por scraper PERO se cura/mantiene aparte, el filtro de calidad va en el punto de LECTURA (render), no en el dato — sobrevive cualquier regeneración. Y hay que saber qué procesos stagean qué archivo: uno no-staged parece "que se actualiza solo" y no lo hace (primo de L-W20 "¿corrió? ≠ ¿insertó?").
+
+**Evitar a futuro**
+- Filtro de calidad de un dataset regenerable → en el render/consumo, no en el dato curado.
+- Antes de asumir que un archivo se auto-actualiza, revisar qué `git add` hacen el refresco (`refrescar_local.ps1`) y el cron (`scraper.yml`).
+- Para "otros" de un banco nuevo: primero mirar si su scraper ya trae todo y filtra (voltear, L-32); si no, es fetch nuevo.
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -944,8 +965,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 40 lecciones formalizadas (L-01 a L-40; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-40 (2026-08-04)
+**Contador:** 41 lecciones formalizadas (L-01 a L-41; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-41 (2026-08-04)
 **Última actualización:** 2026-08-04
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.
