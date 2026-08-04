@@ -1675,6 +1675,43 @@ class ScraperBancoSecurity:
 
                 print(f"   tid={tid}: {len(self.beneficios)} beneficios acumulados")
 
+            # PASO 2 (L-32): "otros" = beneficios que NO son de las categorías de comida.
+            # Se fetch sin filtro de tid y se toma lo que NO quedó en seen_ids (la comida ya
+            # se capturó arriba con FOOD_TIDS). Los restaurantes NO cambian -> gate.
+            n_otros = 0
+            offset = 0
+            limit = 50
+            while True:
+                params = {
+                    'filter[status][value]': '1',
+                    'include': 'field_dias_de_aplicacion',
+                    'page[limit]': str(limit),
+                    'page[offset]': str(offset),
+                }
+                response = self.session.get(self.API_URL, params=params, timeout=20)
+                response.raise_for_status()
+                data = response.json()
+                items = data.get('data', [])
+                included = data.get('included', [])
+                if not items:
+                    break
+                included_map = {inc['id']: inc for inc in included if inc.get('id')}
+                for item in items:
+                    item_id = item.get('id', '')
+                    if item_id in seen_ids:
+                        continue
+                    seen_ids.add(item_id)
+                    beneficio = self._parsear_item(item, included_map, seccion='otro')
+                    if beneficio:
+                        self.beneficios.append(beneficio)
+                        n_otros += 1
+                total_fetched += len(items)
+                if len(items) < limit:
+                    break
+                offset += limit
+            if n_otros:
+                print(f"   + {n_otros} 'otros' (shopping/viajes/entretención/...)")
+
             print(f"✅ {self.BANCO}: {len(self.beneficios)} beneficios de {total_fetched} total")
             return self.beneficios
 
@@ -1682,8 +1719,8 @@ class ScraperBancoSecurity:
             print(f"❌ Error scrapeando {self.BANCO}: {e}")
             return self.beneficios
 
-    def _parsear_item(self, item: dict, included_map: dict) -> Optional[Beneficio]:
-        """Parsea un item JSON:API a Beneficio"""
+    def _parsear_item(self, item: dict, included_map: dict, seccion: str = 'restaurante') -> Optional[Beneficio]:
+        """Parsea un item JSON:API a Beneficio. seccion='restaurante' (FOOD_TIDS) | 'otro' (L-32)."""
         try:
             attrs = item.get('attributes', {})
             rels = item.get('relationships', {})
@@ -1765,6 +1802,7 @@ class ScraperBancoSecurity:
                 url_fuente=url,
                 restricciones_texto=restricciones_vig[:200] if restricciones_vig else '',
                 activo=True,
+                seccion=seccion,
             )
         except Exception:
             return None
