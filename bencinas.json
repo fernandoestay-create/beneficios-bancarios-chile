@@ -1214,9 +1214,9 @@
       "precio_93": 1497,
       "precio_95": 1524,
       "precio_97": 1558,
-      "precio_diesel": 1240,
+      "precio_diesel": 1239,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-30 10:20:59"
+      "precio_fecha": "2026-08-05 10:35:31"
     },
     {
       "id": "bel_47",
@@ -1279,12 +1279,12 @@
       "latitud": -20.23158419860352,
       "longitud": -70.13776749372482,
       "servicios": [],
-      "precio_93": 1487,
-      "precio_95": 1514,
-      "precio_97": 1546,
+      "precio_93": 1486,
+      "precio_95": 1512,
+      "precio_97": 1545,
       "precio_diesel": 1219,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-08-04 17:35:40"
+      "precio_fecha": "2026-08-05 10:20:29"
     },
     {
       "id": "bel_51",
@@ -4595,11 +4595,11 @@
       "longitud": -71.54580844839253,
       "servicios": [],
       "precio_93": 1428,
-      "precio_95": 1473,
+      "precio_95": 1466,
       "precio_97": 1517,
-      "precio_diesel": 1201,
+      "precio_diesel": 1193,
       "precio_kerosene": 1063,
-      "precio_fecha": "2026-07-30 16:07:51"
+      "precio_fecha": "2026-08-05 10:49:38"
     },
     {
       "id": "bel_325",
@@ -5090,9 +5090,9 @@
       "precio_93": 1424,
       "precio_95": 1468,
       "precio_97": 1512,
-      "precio_diesel": 1205,
+      "precio_diesel": 1204,
       "precio_kerosene": 1025,
-      "precio_fecha": "2026-07-30 11:27:02"
+      "precio_fecha": "2026-08-05 10:41:06"
     },
     {
       "id": "bel_403",
@@ -19217,9 +19217,9 @@
       "precio_93": 1445,
       "precio_95": 1494,
       "precio_97": 1544,
-      "precio_diesel": 1234,
+      "precio_diesel": 1214,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-07-30 09:37:55"
+      "precio_fecha": "2026-08-05 10:19:34"
     },
     {
       "id": "bel_2014",
@@ -19931,9 +19931,9 @@
       "precio_93": 1367,
       "precio_95": 1420,
       "precio_97": 1459,
-      "precio_diesel": 1170,
-      "precio_kerosene": 1077,
-      "precio_fecha": "2026-07-30 11:54:47"
+      "precio_diesel": 1165,
+      "precio_kerosene": 1076,
+      "precio_fecha": "2026-08-05 09:33:09"
     },
     {
       "id": "bel_2053",
@@ -23723,8 +23723,8 @@
       "precio_95": 1485,
       "precio_97": 1535,
       "precio_diesel": 1224,
-      "precio_kerosene": 1084,
-      "precio_fecha": "2026-07-30 10:21:48"
+      "precio_kerosene": 1082,
+      "precio_fecha": "2026-08-05 09:57:44"
     },
     {
       "id": "bel_2067",
@@ -26257,9 +26257,9 @@
       "precio_93": 1497,
       "precio_95": 1524,
       "precio_97": 1558,
-      "precio_diesel": 1240,
+      "precio_diesel": 1239,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-07-30 10:20:59"
+      "precio_fecha": "2026-08-05 10:35:31"
     },
     {
       "id": "bel_47",
@@ -26322,12 +26322,12 @@
       "latitud": -20.23158419860352,
       "longitud": -70.13776749372482,
       "servicios": [],
-      "precio_93": 1487,
-      "precio_95": 1514,
-      "precio_97": 1546,
+      "precio_93": 1486,
+      "precio_95": 1512,
+      "precio_97": 1545,
       "precio_diesel": 1219,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-08-04 17:35:40"
+      "precio_fecha": "2026-08-05 10:20:29"
     },
     {
       "id": "bel_51",
@@ -29893,11 +29893,11 @@
       "longitud": -71.54580844839253,
       "servicios": [],
       "precio_93": 1428,
-      "precio_95": 1473,
+      "precio_95": 1466,
       "precio_97": 1517,
-      "precio_diesel": 1201,
+      "precio_diesel": 1193,
       "precio_kerosene": 1063,
-      "precio_fecha": "2026-07-30 16:07:51"
+      "precio_fecha": "2026-08-05 10:49:38"
     },
     {
       "id": "bel_325",
@@ -30388,9 +30388,9 @@
       "precio_93": 1424,
       "precio_95": 1468,
       "precio_97": 1512,
-      "precio_diesel": 1205,
+      "precio_diesel": 1204,
       "precio_kerosene": 1025,
-      "precio_fecha": "2026-07-30 11:27:02"
+      "precio_fecha": "2026-08-05 10:41:06"
     },
     {
       "id": "bel_403",
@@ -48357,9 +48357,9 @@
       "precio_93": 1445,
       "precio_95": 1494,
       "precio_97": 1544,
-      "precio_diesel": 1234,
+      "precio_diesel": 1214,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-07-30 09:37:55"
+      "precio_fecha": "2026-08-05 10:19:34"
     },
     {
       "id": "bel_2014",
@@ -49365,6 +49365,23 @@
       "precio_fecha": "2026-07-30 15:04:09"
     },
     {
+      "id": "bel_1914",
+      "nombre": "Union Combustibles EL SALTO 3125",
+      "cadena": "Union Combustibles",
+      "direccion": "EL SALTO 3125",
+      "comuna": "Recoleta",
+      "region": "Metropolitana de Santiago",
+      "latitud": -33.39857502385927,
+      "longitud": -70.62781780958176,
+      "servicios": [],
+      "precio_93": 1307,
+      "precio_95": 1346,
+      "precio_97": 0,
+      "precio_diesel": 1050,
+      "precio_kerosene": 0,
+      "precio_fecha": "2024-04-15 12:41:22"
+    },
+    {
       "id": "bel_1916",
       "nombre": "Viva Combustibles RECOLETA 1097",
       "cadena": "Viva Combustibles",
@@ -49581,9 +49598,9 @@
       "precio_93": 1367,
       "precio_95": 1420,
       "precio_97": 1459,
-      "precio_diesel": 1170,
-      "precio_kerosene": 1077,
-      "precio_fecha": "2026-07-30 11:54:47"
+      "precio_diesel": 1165,
+      "precio_kerosene": 1076,
+      "precio_fecha": "2026-08-05 09:33:09"
     },
     {
       "id": "bel_2053",
@@ -53662,8 +53679,8 @@
       "precio_95": 1485,
       "precio_97": 1535,
       "precio_diesel": 1224,
-      "precio_kerosene": 1084,
-      "precio_fecha": "2026-07-30 10:21:48"
+      "precio_kerosene": 1082,
+      "precio_fecha": "2026-08-05 09:57:44"
     },
     {
       "id": "bel_2067",
@@ -56710,12 +56727,12 @@
     }
   ],
   "meta": {
-    "fecha_scrape": "2026-08-05T08:31:05.884505",
-    "fecha_precios": "2026-08-05T08:31:05.884505",
+    "fecha_scrape": "2026-08-05T15:06:49.864021",
+    "fecha_precios": "2026-08-05T15:06:49.864033",
     "vigencia_mes": "2026-08",
     "total_descuentos": 31,
     "total_estaciones": 1469,
-    "total_con_precios": 1815,
+    "total_con_precios": 1816,
     "fuente_precios": "Bencinas en Línea - Comisión Nacional de Energía",
     "fuente_descuentos": "Curado desde fuente oficial (Copec ww2.copec.cl + medios); campo confianza por dato",
     "disclaimer": "Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes"
