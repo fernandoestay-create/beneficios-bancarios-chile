@@ -1,7 +1,12 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-08-04
+**Última actualización:** 2026-08-05
 **Estado general:** 🟢 producción
+
+**Sesión 2026-08-05 — Expansión "Otros beneficios" (2→10 bancos, 788) + pulido UX:**
+- **"Otros beneficios" COMPLETO: 10 bancos / 788 verificables** en `/ver/beneficios` (arrancó en 2/24). Se agregaron los 8 bancos con descuentos % fuera de restaurantes vía flip **L-32** (Banco de Chile +359, BCI +172, Security +80, Falabella +61, Entel +49, Tenpo +18, Lider +17, Mach +9), cada uno con **GATE de restaurantes** (ningún baseline perdido, `/ver` intacto) y filtro durable `%>0`+anti-financiamiento en el render. Itaú/Ripley/Scotiabank/BancoEstado NO tienen "otros" (puntos/vacío/caída, verificado incl. navegador). Tags `v2.2`→`v2.9`. Detalle en el bloque de abajo.
+- **Bencinas — solo logo** (`0a0d48c`): en `/ver/bencinas` las sub-tags mostraban logo + nombre redundante (ej. [logo]Scotiabank / [logo]Shell); ahora **solo el logo** (nombre de fallback si no hay logo). Verificado en prod: sub-tag = 1 img, texto vacío.
+- **Correo — "Otros beneficios"** (`f0093d3`): el correo diario ya listaba Restaurantes/Bencinas/Cuotas pero faltaba "Otros beneficios"; se agregó la **sección resumen** (788 verificables / 10 bancos, mismo filtro que la web) + el **botón "🎁 Ver Otros beneficios"**.
 
 **Sesión 2026-08-04 (parte 2) — Bot WhatsApp+Telegram + firma Twilio activada + bot de 4 opciones:**
 - **Firma Twilio ACTIVADA y verificada EN VIVO:** `TWILIO_AUTH_TOKEN` + `TWILIO_WEBHOOK_URL` seteados en Render (`api-beneficios-chile`). Verificado: POST de Twilio → `200`, falso sin firma → `403`.
