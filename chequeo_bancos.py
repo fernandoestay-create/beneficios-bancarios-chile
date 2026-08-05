@@ -178,6 +178,47 @@ def _seccion_cuotas():
     )
 
 
+def _seccion_otros():
+    """Sección 'Otros beneficios' del mes para el email (lee beneficios_otros.json).
+
+    Cuenta solo los verificables con el MISMO filtro del render de la web
+    (%>0 + anti-financiamiento, L-40/L-41) para que el número cuadre con /ver/beneficios.
+    Devuelve '' si no hay archivo o no hay verificables (no rompe el email)."""
+    import os, json
+    from collections import Counter
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "beneficios_otros.json")
+    if not os.path.exists(path):
+        return ""
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return ""
+    _FIN = ('panel solar', 'paneles solares', 'cuenta de luz', 'financiamiento',
+            'crédito de consumo', 'credito de consumo', 'hipotecar', 'cae ', 'cae:')
+
+    def _ver(d):
+        if (d.get('descuento_valor', 0) or 0) <= 0:
+            return False
+        t = ((d.get('restaurante', '') or '') + ' ' + (d.get('descripcion', '') or '') + ' '
+             + (d.get('descuento_texto', '') or '')).lower()
+        return not any(k in t for k in _FIN)
+
+    verificables = [d for d in data if _ver(d)]
+    if not verificables:
+        return ""
+    por_banco = Counter(d.get('banco', '?') for d in verificables)
+    li = "".join(f"<li><b>{b}</b>: {n}</li>" for b, n in por_banco.most_common(6))
+    return (
+        "<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-top:18px;font-size:13px;line-height:1.6;color:#1e40af'>"
+        "<b style='font-size:14px;color:#1e40af'>🎁 Otros beneficios (no restaurantes)</b>"
+        f"<div style='margin:4px 0 8px;color:#1d4ed8'>{len(verificables)} beneficios verificables en {len(por_banco)} bancos — farmacias, salud, belleza, tiendas, viajes, entretención…</div>"
+        f"<ul style='margin:0;padding-left:18px'>{li}</ul>"
+        "<div style='margin-top:8px;font-size:12px;color:#2563eb'>Todos con % de descuento real y chequeable. Detalle en el botón de abajo.</div>"
+        "</div>"
+    )
+
+
 def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=None, aprendizaje_info=None):
     """Cuerpo HTML del email: banner de alerta (si hay) + tabla con estado por banco."""
     preservados_list = list(preservados or [])
@@ -293,10 +334,12 @@ def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=No
     </table>
     {como}
     {_seccion_cuotas()}
-    <div style="margin-top:18px">
+    {_seccion_otros()}
+    <div style="margin-top:18px;line-height:2.4">
       <a href="https://api-beneficios-chile.onrender.com/ver" style="background:#003058;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">🍽️ Ver Restaurantes</a>
       <a href="https://api-beneficios-chile.onrender.com/ver/bencinas" style="background:#0f6e56;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">⛽ Ver Bencinas</a>
-      <a href="https://api-beneficios-chile.onrender.com/ver/cuotas" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">💳 Ver Cuotas</a>
+      <a href="https://api-beneficios-chile.onrender.com/ver/cuotas" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">💳 Ver Cuotas</a>
+      <a href="https://api-beneficios-chile.onrender.com/ver/beneficios" style="background:#1d4ed8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">🎁 Ver Otros beneficios</a>
     </div>
   </div>
   <div style="background:#f9fafb;padding:12px 18px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
