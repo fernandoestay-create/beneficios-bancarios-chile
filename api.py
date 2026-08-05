@@ -2672,9 +2672,9 @@ ${{chainBadge}}
 <div class="badge">${{badgeText}}</div></div>
 <div class="deal-header"><h3>${{g.cadena}} · ${{g.banco}}</h3>
 <div class="hero-sub">
-<span class="sub-tag bank">${{bankLogoSub}}${{g.banco}}</span>
+<span class="sub-tag bank">${{bankLogoSub||g.banco}}</span>
 <span class="sub-tag mode">⛽ Presencial</span>
-<span class="sub-tag chain">${{chainLogoSub}}${{g.cadena}}</span>
+<span class="sub-tag chain">${{chainLogoSub||g.cadena}}</span>
 </div></div>
 <div class="deal-body">
 <div class="day-bar"><div class="day-circles">${{dayCircles}}</div><span class="mode-badge presencial">⛽ Presencial</span></div>
