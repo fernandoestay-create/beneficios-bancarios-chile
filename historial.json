@@ -984,5 +984,27 @@
   },
   "problemas": [],
   "preservados": []
+ },
+ {
+  "fecha": "2026-08-05",
+  "total": 900,
+  "por_banco": {
+   "Banco de Chile": 249,
+   "Banco Falabella": 102,
+   "BCI": 93,
+   "Banco Itaú": 34,
+   "Scotiabank": 61,
+   "Santander": 68,
+   "Banco Consorcio": 6,
+   "Banco Security": 91,
+   "Banco Ripley": 72,
+   "Entel": 28,
+   "Tenpo": 7,
+   "Lider BCI": 11,
+   "Banco BICE": 72,
+   "Mach": 6
+  },
+  "problemas": [],
+  "preservados": []
  }
 ]
