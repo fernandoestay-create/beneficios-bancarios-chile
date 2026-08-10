@@ -1097,7 +1097,7 @@
  },
  {
   "fecha": "2026-08-10",
-  "total": 901,
+  "total": 903,
   "por_banco": {
    "Banco de Chile": 249,
    "Banco Falabella": 95,
@@ -1106,11 +1106,11 @@
    "Scotiabank": 63,
    "Santander": 68,
    "Banco Consorcio": 6,
-   "Banco Security": 96,
+   "Banco Security": 97,
    "Banco Ripley": 73,
    "Entel": 28,
    "Tenpo": 7,
-   "Lider BCI": 11,
+   "Lider BCI": 12,
    "Banco BICE": 72,
    "Mach": 6
   },
