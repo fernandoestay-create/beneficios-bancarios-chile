@@ -7,7 +7,10 @@
 - **Bug reportado (Fernando):** "Gracielo Bar en BCI sale TODOS los días y es solo el martes". **Raíz:** el scraper de BCI sacaba el día de los `tags` (sin día); el día real vive en `scheduling.dayRecurrence=['MARTES']` (autoritativo), que ignoraba. `keywords` era dato malo (decía "MIERCOLES"). **74/312 ofertas** mostraban "todos" siendo día fijo.
 - **Fix (`1d87de4`):** `ScraperBCI` ahora lee `scheduling.dayRecurrence` primero, fallback a tags. Aplicado a la data: **92 días corregidos** (50 restaurantes + 42 otros). **Gracielo → martes, verificado en producción.**
 - **"Chequear siempre" (`2399c32`):** guard **L-42** en `revision_madrugada.py` — compara la data servida vs la API de BCI y alerta si un beneficio BCI vuelve a mostrar "todos" teniendo día fijo. + el scraper se auto-corrige a diario (cron).
-- **Barrido de todos los bancos (% "todos"):** BCI ya OK. **Santander (100%) verificado NO-bug** — 6 detalles de restaurantes sin día publicado → "todos" honesto (L-19, no inventar). **Pendiente de verificar la fuente:** Consorcio (100%), Tenpo (76%), Entel (62%) — sus scrapers ya leen campos de día, probablemente genuino, pero falta medir la fuente por si ignoran un campo como BCI.
+- **Barrido de TODOS los bancos (% "todos") — CERRADO:** BCI era el único bug. **Santander, Consorcio, Tenpo, Entel verificados NO-bug** (0 mismatches: cuando la fuente tiene día, el scraper lo lee; "todos" = la fuente no publica día → honesto, L-19). Falabella/Itaú/Lider/Mach = 0% "todos".
+- **Prueba ácida SIEMPRE (2 capas) — pedido de Fernando "no podemos tener información errónea":**
+  - **Capa 1 (diaria, automática):** la guardia (`revision_madrugada.py`) enriquecida con 3 invariantes genéricos NUEVOS (`4fd6ced`): **ACID-%** (ningún % > 100), **ACID-FRESH** (data no más vieja de 3 días = proceso estéril L-W20), **ACID-DÍAS** (bancos día-específicos no pueden spikear a "todos" = parser roto). + el guard L-42 de BCI.
+  - **Capa 2 (mensual, profunda):** **rutina cloud agendada** `trig_016ZP5KzJ4m9WzMSpPEeAdn1` (1° de cada mes 08:00 Chile) que corre una auditoría ácida adversarial buscando bugs NUEVOS y agrega un guard por cada hallazgo. 1ª corrida: 2026-09-01.
 - Lección **L-42**.
 
 **Sesión 2026-08-05 — Expansión "Otros beneficios" (2→10 bancos, 788) + pulido UX:**
