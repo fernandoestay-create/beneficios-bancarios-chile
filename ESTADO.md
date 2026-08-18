@@ -1,7 +1,14 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-08-05
+**Última actualización:** 2026-08-06
 **Estado general:** 🟢 producción
+
+**Sesión 2026-08-06 — Fix días BCI (dato erróneo) + guard de días (L-42):**
+- **Bug reportado (Fernando):** "Gracielo Bar en BCI sale TODOS los días y es solo el martes". **Raíz:** el scraper de BCI sacaba el día de los `tags` (sin día); el día real vive en `scheduling.dayRecurrence=['MARTES']` (autoritativo), que ignoraba. `keywords` era dato malo (decía "MIERCOLES"). **74/312 ofertas** mostraban "todos" siendo día fijo.
+- **Fix (`1d87de4`):** `ScraperBCI` ahora lee `scheduling.dayRecurrence` primero, fallback a tags. Aplicado a la data: **92 días corregidos** (50 restaurantes + 42 otros). **Gracielo → martes, verificado en producción.**
+- **"Chequear siempre" (`2399c32`):** guard **L-42** en `revision_madrugada.py` — compara la data servida vs la API de BCI y alerta si un beneficio BCI vuelve a mostrar "todos" teniendo día fijo. + el scraper se auto-corrige a diario (cron).
+- **Barrido de todos los bancos (% "todos"):** BCI ya OK. **Santander (100%) verificado NO-bug** — 6 detalles de restaurantes sin día publicado → "todos" honesto (L-19, no inventar). **Pendiente de verificar la fuente:** Consorcio (100%), Tenpo (76%), Entel (62%) — sus scrapers ya leen campos de día, probablemente genuino, pero falta medir la fuente por si ignoran un campo como BCI.
+- Lección **L-42**.
 
 **Sesión 2026-08-05 — Expansión "Otros beneficios" (2→10 bancos, 788) + pulido UX:**
 - **"Otros beneficios" COMPLETO: 10 bancos / 788 verificables** en `/ver/beneficios` (arrancó en 2/24). Se agregaron los 8 bancos con descuentos % fuera de restaurantes vía flip **L-32** (Banco de Chile +359, BCI +172, Security +80, Falabella +61, Entel +49, Tenpo +18, Lider +17, Mach +9), cada uno con **GATE de restaurantes** (ningún baseline perdido, `/ver` intacto) y filtro durable `%>0`+anti-financiamiento en el render. Itaú/Ripley/Scotiabank/BancoEstado NO tienen "otros" (puntos/vacío/caída, verificado incl. navegador). Tags `v2.2`→`v2.9`. Detalle en el bloque de abajo.

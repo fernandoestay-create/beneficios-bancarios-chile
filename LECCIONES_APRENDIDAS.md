@@ -52,6 +52,7 @@
 | L-39 | Un bot de lógica ÚNICA sirve varios canales con un adaptador delgado (Twilio/WhatsApp + Telegram): solo cambian el TRANSPORTE (recibir update + enviar respuesta) y el FORMATO por canal (WhatsApp renderiza `*_`; Telegram en texto plano los muestra LITERALES → strippear). Prefijar el usuario por canal (`tg_<id>`) para no mezclar el estado del flujo. Cada canal = endpoint opt-in por su token | Integraciones / Bot | 2026-08-04 |
 | L-40 | Un audit de datos con agente INDEPENDIENTE pilla lo que el filtro de código no: un financiamiento (CAE) colado como "% dcto." en la data CURADA (Proyecta Energía 90%), pese a que el fix del scraper (L-34) existía; y campos semánticamente mal (nombre=descripción). Auditar la DATA curada, no solo el código; el que construye NO revisa | Datos y calidad / Meta | 2026-08-04 |
 | L-41 | `beneficios_otros.json` lo GENERA el scraper pero el refresco/cron NO lo stagean → no se auto-actualiza en prod; al agregar un banco a "otros" hay que regenerarlo y commitearlo a mano. El filtro de calidad (%>0 + anti-financiamiento) va en el RENDER (`api.py`), no en el dato, para ser DURABLE ante re-scrapes. Un scraper con API que ya trae todo y filtra (BCI) → voltearlo (L-32) es quick-win vs extender scrapers que solo fetchean restaurantes | Arquitectura / Datos | 2026-08-04 |
+| L-42 | El día del descuento vivía en un campo ESTRUCTURADO que el scraper ignoraba (BCI `scheduling.dayRecurrence=['MARTES']`), leyendo los `tags` (sin día) → 74/312 ofertas mostraban "todos" siendo día fijo (Gracielo "todos" = "Todos los martes"). Mostrar "todos" cuando es un día fijo es info ERRÓNEA (el usuario va el día equivocado), peor que faltar. Fix: leer la fuente autoritativa; `keywords` era poco confiable (decía "MIERCOLES", mal). PERO: si la fuente NO tiene día (Santander: 6 detalles sin día) → "todos" es HONESTO, NO inventar (L-19). Distinguir "día ignorado" (bug) de "sin día publicado" (correcto) MIDIENDO la fuente. Guard L-42 en la guardia vs `dayRecurrence` | Datos y calidad / Scraping | 2026-08-06 |
 
 ---
 
@@ -913,6 +914,30 @@ Cuando un dataset de cara al usuario se genera por scraper PERO se cura/mantiene
 
 ---
 
+### L-42 · El día del descuento estaba en un campo estructurado ignorado → "todos" falso (2026-08-06) · Datos y calidad / Scraping
+
+**Problema**
+Fernando reportó: "Gracielo Bar en BCI sale TODOS los días de descuento y es solo el martes". Una card de restaurante mostraba `dias_validos=['todos']` cuando el beneficio es solo los martes.
+
+**Causa raíz**
+El scraper de BCI sacaba los días de los **`tags`** de la oferta, que NO traen el día. El día real vive en un campo ESTRUCTURADO que el scraper ignoraba: **`oferta.scheduling.dayRecurrence = ['MARTES']`** (con `recurrenceLabel: "Todos los martes"`). Al no haber día en los tags, caía al default `['todos']`. Medido: **74 de 312 ofertas BCI** tenían día fijo en `scheduling` pero mostraban "todos" (Marriott→jueves, Starbucks→mar/mié/jue, Salcobrand→lun/mar…). Además, el campo `keywords` de BCI era **poco confiable** (para Gracielo decía "MIERCOLES", que estaba mal) — la fuente autoritativa es `scheduling.dayRecurrence`.
+
+**Fix**
+- `ScraperBCI._dias_desde_recurrence(scheduling.dayRecurrence)` como fuente primaria; fallback a `_extraer_dias(tags)`; si lista los 7 días → `['todos']`.
+- Aplicado a la data en producción: **92 días corregidos** (50 restaurantes + 42 otros). Gracielo → `['martes']`.
+- **Guard L-42** en `revision_madrugada.py`: la guardia compara la data servida vs la API de BCI (`dayRecurrence`) y alerta si un beneficio BCI vuelve a mostrar "todos" teniendo día fijo (match por id `bci_<offer_id>`, restaurantes + otros).
+
+**Lección**
+Mostrar "todos los días" cuando el descuento es de un día fijo es información ERRÓNEA (el usuario va el día equivocado y no le aplican el descuento) — es PEOR que un dato faltante. El día suele estar en un campo estructurado (`scheduling.dayRecurrence`) que el scraper no mira, mientras lee una fuente más débil (tags/keywords). Es primo de L-19/L-28 (el dato vive en un campo hermano) aplicado a los días. **PERO** el reverso también importa: para Santander, 6 páginas de detalle NO publican ningún día → ahí "todos" es HONESTO y no se debe inventar un día (L-19). La regla: **distinguir "día ignorado" (bug, hay que leerlo) de "sin día publicado" (correcto) MIDIENDO la fuente**, no asumiendo.
+
+**Evitar a futuro**
+- Al parsear días, buscar el campo estructurado autoritativo (schedule/recurrence/validez) ANTES de caer al default "todos"; los tags/keywords son fallback débil.
+- Un campo que casi siempre es "todos" (Santander 100%, Consorcio 100%, Tenpo 76%, Entel 62%) es SOSPECHOSO → medir contra la fuente si hay día ignorado. (Verificado: BCI era bug; Santander no.)
+- "todos" nunca se inventa ni se hardcodea a ciegas: o sale de la fuente, o es porque la fuente no publica día.
+- Todo fix de días → un guard en la guardia de madrugada que lo vigile contra la fuente autoritativa (patrón L-07).
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -965,8 +990,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 41 lecciones formalizadas (L-01 a L-41; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-41 (2026-08-04)
-**Última actualización:** 2026-08-04
+**Contador:** 42 lecciones formalizadas (L-01 a L-42; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-42 (2026-08-06)
+**Última actualización:** 2026-08-06
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.
