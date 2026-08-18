@@ -209,7 +209,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
 
 <div class="card">
   <h3>Guardia de madrugada vigila la trazabilidad</h3>
-  <p>La revision automatica de cada madrugada (~03:00 Chile, <code>revision_madrugada.py</code>) ahora tambien chequea bencinas: si un descuento pierde su campo <code>confianza</code> o vuelve a depender solo del agregador, manda alerta por correo. La trazabilidad se vigila en cada corrida, no se verifica una sola vez.</p>
+  <p>La revision automatica de cada madrugada (~03:00 Chile, <code>revision_madrugada.py</code>, en GitHub Actions) chequea bencinas: si un descuento pierde su campo <code>confianza</code> o vuelve a depender solo del agregador, manda alerta por correo. La trazabilidad se vigila en cada corrida, no se verifica una sola vez. Es parte de una guardia mas amplia de <strong>7 guards</strong> que ademas miden contra la fuente los <strong>dias</strong> y la <strong>region</strong> de los beneficios, los % absurdos, la frescura de los datos y los nombres genericos (ver el resumen del proyecto).</p>
 </div>
 
 <!-- ============ FLUJO RESTAURANTES ============ -->

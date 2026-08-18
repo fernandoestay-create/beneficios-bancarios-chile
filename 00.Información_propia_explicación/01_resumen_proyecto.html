@@ -67,6 +67,14 @@
 <!-- ============ CHANGELOG v03 ============ -->
 <h2>Cambios en v_03 (respecto a v_02)</h2>
 <div class="changelog">
+  <h3>Novedades v_04 - Agosto 2026 (datos sin errores + prueba acida siempre)</h3>
+  <ul>
+    <li><span class="badge new">NUEVO</span> <strong>Datos verificados contra la fuente</strong> - se arreglaron los <strong>dias</strong> (BCI mostraba "todos" siendo dia fijo, ej. Gracielo Bar = solo martes) y las <strong>regiones</strong> (Dominga Bistro / La Mulata salian bajo "Metropolitana" estando en Iquique/Valdivia). El dato real vivia en un campo estructurado que el scraper ignoraba; ahora se lee la fuente autoritativa. <strong>92 dias + 48 regiones corregidas</strong>, verificadas en produccion.</li>
+    <li><span class="badge new">NUEVO</span> <strong>Prueba acida siempre (2 capas)</strong> - una <strong>guardia determinista diaria</strong> (~03:00 Chile, GitHub Actions, gratis, sin computador prendido) con <strong>7 guards</strong> que MIDEN contra la fuente de cada banco (dias, region, % absurdos, frescura de datos, nombres genericos) y avisan por correo solo si algo reaparece; mas una <strong>auditoria con IA mensual</strong> que caza errores nuevos. Cada bug encontrado se vuelve un guard permanente.</li>
+    <li><span class="badge">CAMBIO</span> <strong>"Otros beneficios" ampliado a 10 bancos / ~788 ofertas</strong> - de 2 bancos a 10 (Banco de Chile, BCI, Security, Falabella, Entel, Tenpo, Lider, Mach, Santander, Consorcio), con filtro de calidad durable (solo % real, sin financiamiento) y sin tocar la pagina de restaurantes.</li>
+    <li><span class="badge">CAMBIO</span> <strong>Bot multicanal a 4 opciones</strong> (WhatsApp + Telegram, menu guiado, gratis): restaurantes, bencinas, cuotas sin interes, otros beneficios.</li>
+  </ul>
+
   <h3>Novedades v_03 - Agosto 2026</h3>
   <ul>
     <li><span class="badge new">NUEVO</span> <strong>Pagina "Otros beneficios"</strong> (<code>/ver/beneficios</code>) - retail, viajes, salud y entretencion; 24 ofertas con % verificable (de 228 capturadas en total)</li>
@@ -121,7 +129,7 @@
 <h2>Trazabilidad de Datos <span class="badge new">NUEVO</span></h2>
 <div class="card">
   <p>Principio agregado en agosto 2026: toda la data de cara al usuario debe venir de una <strong>fuente oficial marcada</strong>, nunca de un agregador sin verificar. Cada dato lleva un campo <code>confianza</code> (oficial / secundaria) y su <code>url_fuente</code> - un agregador de terceros sirve solo como <strong>control de calidad</strong>, no como fuente de verdad. Los descuentos de bencina se re-curaron completos desde las paginas oficiales de cada cadena.</p>
-  <p>Criterio aplicado en toda la web: <strong>"si no esta chequeado, mejor no mostrar"</strong>. Cuando falta un dato verificado, la pagina muestra "Estamos confirmando descuentos" en vez de un dato dudoso. Una <strong>guardia de madrugada</strong> (revision automatica diaria, ~03:00 Chile) re-chequea paginas, seguridad y trazabilidad contra produccion, y avisa por correo solo si algo reaparece.</p>
+  <p>Criterio aplicado en toda la web: <strong>"si no esta chequeado, mejor no mostrar"</strong>. Cuando falta un dato verificado, la pagina muestra "Estamos confirmando descuentos" en vez de un dato dudoso. Una <strong>guardia de madrugada</strong> (revision automatica diaria, ~03:00 Chile, en GitHub Actions - gratis y sin computador prendido) tiene <strong>7 guards</strong> que MIDEN contra la fuente real de cada banco: paginas y seguridad, trazabilidad, y ahora tambien los <strong>dias</strong> y la <strong>region</strong> (vs. la API del banco), % absurdos, frescura de datos y nombres genericos. Avisa por correo solo si algo reaparece. Es la <strong>Capa 1</strong> de la "prueba acida siempre"; la <strong>Capa 2</strong> es una auditoria con IA mensual que busca errores nuevos, y cada hallazgo se vuelve un guard permanente de la Capa 1.</p>
 </div>
 
 <!-- ============ TECNOLOGIAS ============ -->
@@ -172,9 +180,10 @@
   <tr><td><code>v_01</code></td><td>14-Mar-2026</td><td>Version inicial. 15 scrapers, 985 beneficios restaurantes, web con filtros + mapa, bot WhatsApp 3 pasos + RAG.</td></tr>
   <tr><td><code>v_02</code></td><td>25-Mar-2026</td><td>Modulo bencinas (28 dctos + 367 estaciones), hero cards, 13 logos SVG, bot WhatsApp v2 sin IA ($0), multiples bancos URL, 11 URLs corregidas.</td></tr>
   <tr><td><code>v_03</code></td><td>03-Ago-2026</td><td>Trazabilidad de datos (confianza + fuente oficial, bencina re-curada), paginas nuevas /ver/beneficios (otros beneficios) y /ver/cuotas, filtros dinamicos por dia, guardia de madrugada automatica.</td></tr>
+  <tr><td><code>v_04</code></td><td>06-Ago-2026</td><td>Datos sin errores: fix dias (BCI, 92 corregidos) + region (BCI/Falabella, 48) midiendo la fuente autoritativa; prueba acida siempre en 2 capas (guardia diaria con 7 guards en GitHub Actions + auditoria IA mensual); "Otros beneficios" ampliado a 10 bancos / ~788 ofertas; bot a 4 opciones (WhatsApp + Telegram).</td></tr>
 </table>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_03 | <strong>Ultima actualizacion:</strong> 2026-08-04 | <strong>Autor:</strong> Fernando Estay Perez</p>
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_04 | <strong>Ultima actualizacion:</strong> 2026-08-06 | <strong>Autor:</strong> Fernando Estay Perez</p>
 
 </body>
 </html>
