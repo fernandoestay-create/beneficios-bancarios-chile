@@ -935,6 +935,7 @@ Mostrar "todos los días" cuando el descuento es de un día fijo es información
 - Un campo que casi siempre es "todos" (Santander 100%, Consorcio 100%, Tenpo 76%, Entel 62%) es SOSPECHOSO → medir contra la fuente si hay día ignorado. (Verificado: BCI era bug; Santander no.)
 - "todos" nunca se inventa ni se hardcodea a ciegas: o sale de la fuente, o es porque la fuente no publica día.
 - Todo fix de días → un guard en la guardia de madrugada que lo vigile contra la fuente autoritativa (patrón L-07).
+- **Se repitió con la REGIÓN (L-42b, 2026-08-06):** la región de BCI vive en el tag `R. <región>` (estructurado) pero el scraper la sacaba del título → 38 beneficios con región VACÍA que pasaban el filtro de Zona (Dominga Bistró/La Mulata de Iquique salían bajo Metropolitana, L-28). En Falabella la ciudad estaba en el nombre ("Dominga Bistro Valdivia") → 9 más. Fix: leer el tag / `region_desde_texto()` (ciudad→región, evitando "Viña <bodega>" ≠ Viña del Mar). Mismo criterio: la región vacía es BUG si la fuente la tiene, y CORRECTO (nacional) si no la publica (Entel/Santander). Guards L-42b + ACID-REGIÓN. **Generaliza: cualquier campo de filtro (día, región, comuna) suele estar en un campo estructurado que el scraper ignora leyendo uno más débil.**
 
 ---
 
