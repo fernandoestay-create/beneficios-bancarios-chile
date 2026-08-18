@@ -52,7 +52,8 @@
 | L-39 | Un bot de lógica ÚNICA sirve varios canales con un adaptador delgado (Twilio/WhatsApp + Telegram): solo cambian el TRANSPORTE (recibir update + enviar respuesta) y el FORMATO por canal (WhatsApp renderiza `*_`; Telegram en texto plano los muestra LITERALES → strippear). Prefijar el usuario por canal (`tg_<id>`) para no mezclar el estado del flujo. Cada canal = endpoint opt-in por su token | Integraciones / Bot | 2026-08-04 |
 | L-40 | Un audit de datos con agente INDEPENDIENTE pilla lo que el filtro de código no: un financiamiento (CAE) colado como "% dcto." en la data CURADA (Proyecta Energía 90%), pese a que el fix del scraper (L-34) existía; y campos semánticamente mal (nombre=descripción). Auditar la DATA curada, no solo el código; el que construye NO revisa | Datos y calidad / Meta | 2026-08-04 |
 | L-41 | `beneficios_otros.json` lo GENERA el scraper pero el refresco/cron NO lo stagean → no se auto-actualiza en prod; al agregar un banco a "otros" hay que regenerarlo y commitearlo a mano. El filtro de calidad (%>0 + anti-financiamiento) va en el RENDER (`api.py`), no en el dato, para ser DURABLE ante re-scrapes. Un scraper con API que ya trae todo y filtra (BCI) → voltearlo (L-32) es quick-win vs extender scrapers que solo fetchean restaurantes | Arquitectura / Datos | 2026-08-04 |
-| L-42 | El día del descuento vivía en un campo ESTRUCTURADO que el scraper ignoraba (BCI `scheduling.dayRecurrence=['MARTES']`), leyendo los `tags` (sin día) → 74/312 ofertas mostraban "todos" siendo día fijo (Gracielo "todos" = "Todos los martes"). Mostrar "todos" cuando es un día fijo es info ERRÓNEA (el usuario va el día equivocado), peor que faltar. Fix: leer la fuente autoritativa; `keywords` era poco confiable (decía "MIERCOLES", mal). PERO: si la fuente NO tiene día (Santander: 6 detalles sin día) → "todos" es HONESTO, NO inventar (L-19). Distinguir "día ignorado" (bug) de "sin día publicado" (correcto) MIDIENDO la fuente. Guard L-42 en la guardia vs `dayRecurrence` | Datos y calidad / Scraping | 2026-08-06 |
+| L-42 | El día del descuento vivía en un campo ESTRUCTURADO que el scraper ignoraba (BCI `scheduling.dayRecurrence=['MARTES']`), leyendo los `tags` (sin día) → 74/312 ofertas mostraban "todos" siendo día fijo (Gracielo "todos" = "Todos los martes"). Mostrar "todos" cuando es un día fijo es info ERRÓNEA (el usuario va el día equivocado), peor que faltar. Fix: leer la fuente autoritativa; `keywords` era poco confiable (decía "MIERCOLES", mal). PERO: si la fuente NO tiene día (Santander: 6 detalles sin día) → "todos" es HONESTO, NO inventar (L-19). Distinguir "día ignorado" (bug) de "sin día publicado" (correcto) MIDIENDO la fuente. Guard L-42/L-42b en la guardia vs `dayRecurrence`/tag `R.` | Datos y calidad / Scraping | 2026-08-06 |
+| L-43 | Prueba ácida SIEMPRE = 2 capas + un loop. **Capa 1 = guardia determinista** (`revision_madrugada.py` en GitHub Actions, cada bug → un guard permanente, gratis, sin PC, **CON egress** → mide la fuente); **Capa 2 = auditoría LLM periódica** (rutina cloud, busca bugs NUEVOS). **El loop:** cada hallazgo de la Capa 2 → un guard de la Capa 1. ⚠️ **El sandbox cloud (rutina agendada/CCR) NO tiene egress** → NO alcanza APIs de bancos ni producción → solo audita datos-en-reposo; la verificación-CONTRA-FUENTE debe correr donde HAY egress (GitHub Actions o local), NO en el cloud. Bajar la cloud a mensual (gasta uso de Claude por corrida); la guardia gratis es la protección real diaria | Meta / Infraestructura | 2026-08-06 |
 
 ---
 
@@ -939,6 +940,24 @@ Mostrar "todos los días" cuando el descuento es de un día fijo es información
 
 ---
 
+### L-43 · Prueba ácida SIEMPRE = 2 capas + loop; el sandbox cloud NO tiene egress (2026-08-06) · Meta / Infraestructura
+
+**Contexto**
+Fernando: "no podemos tener información errónea" + "cómo hacemos una prueba ácida siempre, de forma automática". Se armó un sistema de 2 capas.
+
+**Lección**
+- **Capa 1 — guardia determinista** (`revision_madrugada.py`, cron en **GitHub Actions** 03:00): cada bug conocido = un check que **MIDE contra la fuente** (curl la API del banco) y alerta por mail solo si reaparece. **Gratis** (repo público → Actions ilimitado), **no necesita el PC prendido**, y **tiene egress** → es la protección real diaria. Cada bug nuevo → un guard nuevo (patrón L-07).
+- **Capa 2 — auditoría LLM periódica** (rutina cloud agendada): un agente adversarial busca bugs NUEVOS que la Capa 1 aún no conoce. Su output alimenta la Capa 1 (el loop: hallazgo → guard).
+- ⚠️ **El sandbox cloud (rutina agendada / CCR) tiene el EGRESS BLOQUEADO** — no alcanza las APIs de los bancos ni producción (`EGRESS_BLOCKED`), solo `pypi`/`github`. Por eso una auditoría que DEBE medir la fuente (días, región, consistencia web-vs-fuente) **NO puede correr útilmente en el cloud** — hay que correrla donde HAY egress: **GitHub Actions** (la guardia) o **local** (tu PC en Chile). La cloud solo sirve para datos-en-reposo (consistencia interna).
+- **Costo:** la guardia (GH Actions) = $0. La auditoría LLM cloud gasta uso de Claude **por corrida** → dejarla **mensual** (barrido complementario), no diaria. El PC no hace falta para la protección diaria.
+
+**Cómo aplicarla**
+- Para "que se revise siempre solo": el vigía diario es un **script determinista en GitHub Actions** (mide la fuente, gratis), NO un LLM cada noche (caro, y en el cloud ni siquiera alcanza la fuente).
+- Antes de agendar un audit cloud que dependa de curl/fetch externo: recordar que el sandbox **no tiene egress** — moverlo a GH Actions o local, o habilitar egress del environment en claude.ai.
+- El loop es lo que hace crecer la cobertura: cada bug encontrado (por ti, por mí o por la Capa 2) se convierte en un guard permanente de la Capa 1.
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -991,8 +1010,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 42 lecciones formalizadas (L-01 a L-42; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-42 (2026-08-06)
+**Contador:** 43 lecciones formalizadas (L-01 a L-43; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-43 (2026-08-06)
 **Última actualización:** 2026-08-06
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.

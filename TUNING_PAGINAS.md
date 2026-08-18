@@ -159,6 +159,24 @@ opt-in por su token; auto-registrar el webhook en el arranque. (L-39)
 
 ---
 
+## 🔬 Auditoría de datos vs. la FUENTE (método — 2026-08-06)
+
+El bug #1 de datos es **un campo de filtro (día, región, comuna) que el scraper saca de una
+fuente DÉBIL (título, tags sueltos) cuando la fuente AUTORITATIVA lo tiene en otro campo
+estructurado**. Se muestra "todos"/vacío y el usuario va el día/zona equivocada. Método:
+
+1. **Diagnóstico rápido (mide, no asumas):** `% dias_validos==['todos']` y `% ubicacion==''` **por banco**.
+   Un banco con % muy alto es SOSPECHOSO → medir su fuente. (BCI 24%/198 vacías; Santander 100% — pero honesto.)
+2. **Medir la fuente real de cada banco** (desde acá, con egress a Chile):
+   - **BCI** (`api.bciplus.cl/.../offers`, key `fa98...`): día en `scheduling.dayRecurrence=['MARTES']`; región en tag `R. <región>`; `keywords` NO confiable (decía "MIERCOLES" estando mal). El scraper leía tags(día)/título(región) → bug.
+   - **Falabella**: la ciudad va en el NOMBRE ("Dominga Bistro Valdivia") → `region_desde_texto()` (ojo: "Viña <bodega>" ≠ Viña del Mar).
+   - **Santander/Consorcio/Entel/Tenpo**: verificado que su fuente NO publica día/región → "todos"/vacío es **honesto** (L-19, no inventar).
+3. **Distinguir "dato ignorado" (BUG: la fuente lo tiene) de "dato no publicado" (CORRECTO: nacional/sin día)** — SIEMPRE midiendo la fuente, nunca asumiendo.
+4. **Financiamiento/genéricos**: el filtro de calidad vive en el RENDER (`_es_verificable`, `_FIN` + `_GENERICO`), durable ante re-scrapes (L-41). "Proyecta Energía" (paneles solares) y "Beneficios del mes" (cuponera) se ocultan ahí. Ojo falsos positivos: "Diario Financiero" (el diario) ≠ financiamiento; "Viña" bodega ≠ ciudad.
+5. **Cada hallazgo → un guard determinista en la guardia** (que MIDE contra la API de BCI): L-42 (días), L-42b (región), ACID-REGIÓN/GENÉRICO/%/FRESH/DÍAS.
+
+⚠️ **La rutina cloud (Capa 2) NO tiene egress** → no mide la fuente, solo datos en reposo. La verificación-contra-fuente la hace la **guardia en GitHub Actions** (que sí tiene egress) o corridas locales.
+
 ## 🌙 Guardia automática — `revision_madrugada.py`
 Cada madrugada (~03:00 Chile, workflow `revision_madrugada.yml`) se convierte CADA bug de
 este doc en un **check automático** contra producción (curl + `node --check`) + la data, y
@@ -166,8 +184,10 @@ se manda **correo SOLO si algo reaparece**. Es este fine-tuning hecho código (p
 cada bug resuelto → un guard permanente). Es "el agente que revisa que todo esté bien
 siempre" (pedido de Fernando). Cubre: página viva + JS sano (L-13/L-21), seguridad
 (`/scrape`→404, `/rag`→403), nombres reales (L-29), no-vacíos (L-10/L-14), ids únicos (L-11),
-búsqueda por comuna y filtro de modalidad (L-28), no-colapso (L-16) y **trazabilidad**
-(bencina con `confianza` y sin agregador; otros beneficios de fuente oficial — L-33/L-35).
+búsqueda por comuna y filtro de modalidad (L-28), no-colapso (L-16), **trazabilidad**
+(bencina con `confianza` y sin agregador; otros beneficios de fuente oficial — L-33/L-35),
+**días/región vs la fuente de BCI** (L-42/L-42b) y los invariantes ácidos genéricos
+(**ACID-%** >100, **ACID-FRESH** ≤3 días, **ACID-DÍAS**, **ACID-REGIÓN** ciudad→región, **ACID-GENÉRICO** nombres de categoría).
 Correrlo a mano: GitHub Actions → "Revisión Madrugada" → Run workflow.
 **Al agregar un bug nuevo a este doc, agregar también su guard en `revision_madrugada.py`.**
 

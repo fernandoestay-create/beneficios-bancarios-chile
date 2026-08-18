@@ -3,6 +3,16 @@
 > Estado real del proyecto. Se actualiza después de cada sesión de trabajo.
 > Última actualización: 2026-08-04
 
+## ✅ Hecho (sesión 2026-08-06 — datos SIN errores: fix días+región BCI/Falabella + prueba ácida siempre)
+
+Directiva de Fernando: **"no podemos tener información errónea"** + **"resolver TODOS los problemas"** + **"cómo hacemos una prueba ácida siempre, automática"**.
+
+- **Fix DÍAS BCI (L-42):** el día vivía en `scheduling.dayRecurrence` (autoritativo) y el scraper lo sacaba de los `tags` (sin día) → **74/312 ofertas mostraban "todos" siendo día fijo** (Gracielo "todos" = martes). Fix + **92 días corregidos**. Verificado en prod.
+- **Fix REGIÓN BCI+Falabella (L-42b):** mismo patrón — la región de BCI está en el tag `R. <región>` (Iquique/Valdivia…) y en Falabella en el nombre ("Dominga Bistro Valdivia"), pero salían con región VACÍA → aparecían bajo Metropolitana (L-28). **48 regiones corregidas**; Dominga/La Mulata → su región real, ya no en Metropolitana. Verificado en prod.
+- **Auditoría ácida INTEGRAL de datos (`07eb717`):** barrido de los 2107 beneficios en 7 dimensiones (%, $, financiamiento, nombre, vigencia, región, días) **midiendo la fuente de cada banco**. Veredicto: **data de cara al usuario SANA**. Único visible arreglado: "Beneficios del mes" (cuponera genérica) excluida en el render. El resto era honesto (nacional) o ya render-oculto.
+- **Prueba ácida SIEMPRE = 2 capas (L-43):** (1) **guardia determinista** (`revision_madrugada.py`, GitHub Actions 03:00, **gratis, sin PC, CON egress → mide la fuente**) con **7 guards** nuevos/reforzados (L-42, L-42b, ACID-%/FRESH/DÍAS/REGIÓN/GENÉRICO); (2) **rutina LLM cloud** `trig_016ZP5KzJ4m9WzMSpPEeAdn1` (**mensual**, complemento de datos-en-reposo). ⚠️ El sandbox cloud NO tiene egress → la verificación-contra-fuente la hace la Capa 1 (GH Actions).
+- Lecciones **L-42, L-42b, L-43**. Fine-tuning en `TUNING_PAGINAS.md`. Tags **`v2.11`→`v2.13`**.
+
 ## ✅ Hecho (sesión 2026-08-04 — cont.: cuotas a agosto + "Otros" ampliado a 212 + audit de datos)
 
 Continuación de la sesión del bot, frente **datos y calidad**:
