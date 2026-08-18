@@ -772,8 +772,11 @@ class ScraperBCI:
             # Descripción
             descripcion = oferta.get('descripcion', '')[:200]
 
-            # Región desde título
-            ubicacion = self._extraer_region_titulo(oferta.get('titulo', ''))
+            # Región: la fuente AUTORITATIVA es el tag 'R. <región>' (estructurado), NO el
+            # título — que muchas veces no trae la ciudad → región vacía → el beneficio
+            # aparecía en TODAS las zonas (Dominga Bistró/La Mulata de Iquique salían bajo
+            # Metropolitana porque el vacío pasa el filtro, L-28/L-42). Fallback al título.
+            ubicacion = self._region_desde_tags(tags) or self._extraer_region_titulo(oferta.get('titulo', ''))
 
             oferta_id = oferta.get('id', nombre.lower().replace(' ', '_'))
 
@@ -827,8 +830,41 @@ class ScraperBCI:
         dias = [dias_map[t] for t in tags if t in dias_map]
         return dias if dias else ['todos']
 
+    # Mapeo de los tags 'R. <x>' de BCI a región canónica (el tag a veces es la región,
+    # a veces la ciudad — se normaliza a la región para que el filtro de Zona sea correcto).
+    _R_TAG_REGION = {
+        'metropolitana': 'Metropolitana', 'santiago': 'Metropolitana',
+        'tarapaca': 'Tarapacá', 'iquique': 'Tarapacá',
+        'arica y parinacota': 'Arica y Parinacota', 'arica': 'Arica y Parinacota',
+        'antofagasta': 'Antofagasta', 'calama': 'Antofagasta',
+        'atacama': 'Atacama', 'copiapo': 'Atacama',
+        'coquimbo': 'Coquimbo', 'la serena': 'Coquimbo',
+        'valparaiso': 'Valparaíso', 'vina del mar': 'Valparaíso',
+        "o'higgins": "O'Higgins", 'ohiggins': "O'Higgins", 'rancagua': "O'Higgins",
+        'maule': 'Maule', 'talca': 'Maule',
+        'nuble': 'Ñuble', 'chillan': 'Ñuble',
+        'biobio': 'Biobío', 'concepcion': 'Biobío',
+        'la araucania': 'Araucanía', 'araucania': 'Araucanía', 'temuco': 'Araucanía',
+        'los rios': 'Los Ríos', 'valdivia': 'Los Ríos',
+        'los lagos': 'Los Lagos', 'puerto montt': 'Los Lagos', 'osorno': 'Los Lagos',
+        'aysen': 'Aysén', 'coyhaique': 'Aysén',
+        'magallanes': 'Magallanes', 'punta arenas': 'Magallanes',
+    }
+
+    def _region_desde_tags(self, tags) -> str:
+        """Región desde el tag 'R. <x>' de BCI (fuente autoritativa). Normaliza ciudad→región;
+        si es desconocido devuelve el valor tal cual (mejor que vacío: no pasa el filtro de otra zona)."""
+        import unicodedata
+        for t in (tags or []):
+            if isinstance(t, str) and t.startswith('R. '):
+                val = t[3:].strip()
+                key = ''.join(c for c in unicodedata.normalize('NFD', val.lower())
+                              if unicodedata.category(c) != 'Mn').strip()
+                return self._R_TAG_REGION.get(key, val)
+        return ''
+
     def _extraer_region_titulo(self, titulo: str) -> str:
-        """Intenta extraer ubicación del título de la oferta"""
+        """Intenta extraer ubicación del título de la oferta (fallback si no hay tag 'R. ')"""
         regiones = {
             'santiago': 'Metropolitana', 'providencia': 'Metropolitana',
             'las condes': 'Metropolitana', 'vitacura': 'Metropolitana',

@@ -111,7 +111,8 @@ if dup:
 # Ningún beneficio BCI puede volver a mostrar 'todos' teniendo un día fijo en scheduling
 # (Gracielo mostraba 'todos' siendo 'Todos los martes'; keywords decía 'MIERCOLES', mal).
 try:
-    _dia_fijo = set()  # ids bci_<id> con día específico en scheduling
+    _dia_fijo = set()   # ids bci_<id> con día específico en scheduling
+    _con_region = set()  # ids bci_<id> con tag 'R. <región>' en la fuente
     _pg, _tp = 1, 1
     while _pg <= _tp and _pg <= 6:
         _req = urllib.request.Request(
@@ -124,6 +125,8 @@ try:
             dr = (o.get("scheduling") or {}).get("dayRecurrence") or []
             if dr and len(dr) < 7:
                 _dia_fijo.add(f"bci_{o.get('id')}")
+            if any((t.get("nombre") or "").startswith("R. ") for t in o.get("tags", [])):
+                _con_region.add(f"bci_{o.get('id')}")
         _pg += 1
     try:
         _otros_bci = json.load(open(os.path.join(ROOT, "beneficios_otros.json"), encoding="utf-8"))
@@ -135,6 +138,15 @@ try:
     if len(_malos) > 3:
         fallos.append(f"[L-42] {len(_malos)} beneficios BCI muestran 'todos' teniendo día fijo en scheduling "
                       f"(ej. {_malos[0].get('restaurante','?')}) — regresó el fix de días (dayRecurrence)")
+    # L-42b: la región de BCI sale del tag 'R. <x>' (no del título). Ningún beneficio BCI
+    # puede tener región VACÍA teniendo el tag en la fuente (Dominga Bistró/La Mulata de
+    # Iquique salían bajo Metropolitana por región vacía que pasa el filtro, L-28).
+    _sin_region = [b for b in (d + _otros_bci)
+                   if b.get("banco") == "BCI" and not (b.get("ubicacion") or "").strip()
+                   and b.get("id") in _con_region]
+    if len(_sin_region) > 3:
+        fallos.append(f"[L-42b] {len(_sin_region)} beneficios BCI con región VACÍA teniendo tag 'R.' en la fuente "
+                      f"(ej. {_sin_region[0].get('restaurante','?')}) — regresó el fix de región (aparecen en zonas equivocadas)")
 except Exception:
     pass  # si la API de BCI no responde, no rompemos la guardia
 
