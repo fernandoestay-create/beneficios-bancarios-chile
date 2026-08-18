@@ -1,7 +1,18 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-08-06
+**Última actualización:** 2026-08-18
 **Estado general:** 🟢 producción
+
+**Auditoría ácida mensual 2026-08-18 (rutina cloud, agente independiente) — 4 bugs encontrados y arreglados (L-43):**
+- ⚠️ **Nota del entorno:** la rutina corrió en un contenedor **sin salida a internet** (proxy de egress bloquea bancos y producción). NO se pudo verificar contra la fuente de cada banco (la parte "medir la fuente" de la misión). La auditoría fue **forense sobre la data + el HTML renderizado localmente**, que igual destapó 4 errores reales. **Pendiente: re-correr la parte "contra la fuente" desde un entorno con red** (o desde Chile).
+- **`/ver/beneficios` mostraba "Mejor descuento: 84990%"** — 6 registros guardaban **PESOS** en `descuento_valor` (campo que TODOS los consumidores leen como %): $84.990 Mel Studio, $29.900, $8.000, $3.600, $100, y "$5.490"→"5%". Fix: invariante en `__post_init__` (monto/precio_fijo o >100 → 0, el monto sigue en el texto) + `max_desc` acotado a ≤100 en el render. Verificado: **84990% → 100%**.
+- **68 beneficios se ESCONDÍAN al filtrar por zona** — `ubicacion` (campo de REGIÓN) traía `kobo.cl`, `Rappi app.`, `Roof, Nivel 4`, `Osorno.`, `Región Metropolinada`, `O’Higgins` (apóstrofe tipográfico). Fix: `normalizar_region()` en el chokepoint (alias + ciudad→región con match exacto; lo que no es región se preserva en `direccion`).
+- **La región de Los Ríos no tenía NI UN PIN en el mapa** — `getCoords` comparaba `'los ríos'` contra `'los rios'`/`'losríos'`. 7 restaurantes (SKY BAR Valdivia…) invisibles. Fix: comparación sin tildes/apóstrofes en ambos lados.
+- **13 beneficios decían "todos los días" teniendo día fijo en su propia descripción** (daño de L-42 en bancos dados por OK): **Bar La Virgen** (Santander, restaurante) = sábados/miércoles; **Rappi** (BICE, restaurante) = lun/mié/vie/dom; Petco lun-jue; Farmacias Knop mar+jue; tickets de ski BCI/Santander. Fix: si la fuente nombra días y NO dice "todos los días", se leen esos días (plurales y rangos incluidos; fechas ignoradas).
+- **GATE respetado:** los **889 ids de `beneficios.json` idénticos** antes/después; `/ver` intacto (889/14). `/ver/beneficios` 790→785 (los 5 que eran un $monto, no un %, ya no pasan el filtro de "verificable").
+- **4 guards nuevos en la guardia de madrugada** (L-43a % imposible en dato y en el hero renderizado · L-43b ubicacion que no es región · L-43c región sin pin **ejecutando con node la `getCoords` servida** · L-43d "todos" con día fijo en el texto). **Probados en ambas direcciones:** fallan (exit 1) contra el estado pre-fix y pasan (exit 0) con el fix.
+- Verificado: `py_compile` · `verificar_salud.py` exit 0 (889, 14 bancos, todos los pisos) · `node --check` de las 4 vistas · `revision_madrugada.py` exit 0.
+- Lección **L-43**.
 
 **Sesión 2026-08-06 — Fix días BCI (dato erróneo) + guard de días (L-42):**
 - **Bug reportado (Fernando):** "Gracielo Bar en BCI sale TODOS los días y es solo el martes". **Raíz:** el scraper de BCI sacaba el día de los `tags` (sin día); el día real vive en `scheduling.dayRecurrence=['MARTES']` (autoritativo), que ignoraba. `keywords` era dato malo (decía "MIERCOLES"). **74/312 ofertas** mostraban "todos" siendo día fijo.

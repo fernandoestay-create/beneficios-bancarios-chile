@@ -19,6 +19,108 @@ from dataclasses import dataclass, asdict, field
 # MODELOS DE DATOS
 # ============================================
 
+# ── Normalización de REGIÓN (L-43) ────────────────────────────────────────────
+# `ubicacion` es el campo de REGIÓN: lo consume el filtro de zona de /ver y el mapa.
+# Varios bancos meten ahí texto libre (un local, una URL, un piso, una ciudad), y el
+# filtro del front excluye lo que no calza con la región elegida -> la oferta DESAPARECE
+# (mismo daño que L-28). Regla: si no es una región de Chile, no puede quedar en el campo
+# de región. Se mapea lo inequívoco (alias/ciudad->región) y el resto se vacía (vacío =
+# "aplica siempre", L-28); el texto original NO se pierde: se conserva en `direccion`.
+REGIONES_CHILE = [
+    'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
+    'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble', 'Biobío',
+    'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
+]
+
+
+def _sin_tilde(s: str) -> str:
+    """minúsculas + sin tildes + apóstrofes unificados (para comparar nombres de región)."""
+    s = (s or '').replace('’', "'").replace('´', "'").replace('`', "'")
+    return ''.join(c for c in unicodedata.normalize('NFD', s.lower())
+                   if unicodedata.category(c) != 'Mn').strip()
+
+
+# Alias de región (formas en que las fuentes escriben la MISMA región).
+_ALIAS_REGION = {
+    'region metropolitana': 'Metropolitana', 'region metropolitana de santiago': 'Metropolitana',
+    'metropolitana de santiago': 'Metropolitana', 'rm': 'Metropolitana',
+    'region metropolinada': 'Metropolitana',  # typo de la fuente (Banco de Chile)
+    'metropolinada': 'Metropolitana',
+    "libertador general bernardo o'higgins": "O'Higgins", "libertador o'higgins": "O'Higgins",
+    'ohiggins': "O'Higgins", "del libertador o'higgins": "O'Higgins",
+    'la araucania': 'Araucanía', 'del maule': 'Maule', 'del biobio': 'Biobío',
+    'nuble': 'Ñuble', 'aisen': 'Aysén', 'de los rios': 'Los Ríos', 'de los lagos': 'Los Lagos',
+    'arica': 'Arica y Parinacota', 'valparaiso': 'Valparaíso',
+}
+
+# Ciudad/comuna -> región, SOLO casos inequívocos (no hay otra comuna con ese nombre).
+# Recuperar la región real es mejor que vaciarla; jamás adivinar una ambigua (L-19).
+_CIUDAD_REGION = {
+    'arica': 'Arica y Parinacota', 'iquique': 'Tarapacá', 'alto hospicio': 'Tarapacá',
+    'antofagasta': 'Antofagasta', 'calama': 'Antofagasta', 'copiapo': 'Atacama',
+    'la serena': 'Coquimbo', 'coquimbo': 'Coquimbo', 'ovalle': 'Coquimbo', 'vicuna': 'Coquimbo',
+    'valparaiso': 'Valparaíso', 'vina del mar': 'Valparaíso', 'concon': 'Valparaíso',
+    'quilpue': 'Valparaíso', 'san antonio': 'Valparaíso', 'los andes': 'Valparaíso',
+    'santiago': 'Metropolitana', 'santiago centro': 'Metropolitana', 'providencia': 'Metropolitana',
+    'las condes': 'Metropolitana', 'vitacura': 'Metropolitana', 'lo barnechea': 'Metropolitana',
+    'nunoa': 'Metropolitana', 'la florida': 'Metropolitana', 'maipu': 'Metropolitana',
+    'colina': 'Metropolitana', 'puente alto': 'Metropolitana',
+    'rancagua': "O'Higgins", 'san fernando': "O'Higgins", 'santa cruz': "O'Higgins",
+    'talca': 'Maule', 'curico': 'Maule', 'linares': 'Maule',
+    'chillan': 'Ñuble', 'concepcion': 'Biobío', 'talcahuano': 'Biobío',
+    'los angeles': 'Biobío', 'san pedro de la paz': 'Biobío', 'chiguayante': 'Biobío',
+    'temuco': 'Araucanía', 'pucon': 'Araucanía', 'villarrica': 'Araucanía', 'angol': 'Araucanía',
+    'valdivia': 'Los Ríos', 'panguipulli': 'Los Ríos',
+    'osorno': 'Los Lagos', 'puerto varas': 'Los Lagos', 'puerto montt': 'Los Lagos',
+    'castro': 'Los Lagos', 'ancud': 'Los Lagos', 'frutillar': 'Los Lagos',
+    'coyhaique': 'Aysén', 'punta arenas': 'Magallanes', 'puerto natales': 'Magallanes',
+}
+
+_CANON_REGION = {_sin_tilde(r): r for r in REGIONES_CHILE}
+
+
+def normalizar_region(valor: str) -> str:
+    """Devuelve la región canónica de Chile, o '' si el texto NO es una región.
+
+    Solo match EXACTO tras normalizar (nada de `in`/substring): una dirección como
+    "O´Higgins N°592 B, Pucón." no es la región de O'Higgins — es una calle en Pucón —
+    y adivinar por substring metería la oferta en la región equivocada (L-19: no inventar).
+    """
+    v = _sin_tilde(valor).rstrip('.').strip()
+    v = re.sub(r'^region\s+(de\s+|del\s+)?', '', v).strip()
+    if not v:
+        return ''
+    return _CANON_REGION.get(v) or _ALIAS_REGION.get(v) or _CIUDAD_REGION.get(v) or ''
+
+
+# ── Días desde el texto de la propia fuente (L-43, extiende L-42) ─────────────
+_DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+
+
+def dias_desde_texto(texto: str) -> List[str]:
+    """Días que la descripción de la fuente nombra explícitamente; [] si no nombra ninguno
+    o si además dice "todos los días" (ahí 'todos' es correcto y narrowear ESCONDERÍA
+    ofertas reales). Reconoce rangos ("lunes a viernes") y enumeraciones."""
+    t = _sin_tilde(texto)
+    if not t or re.search(r'todos los dias', t):
+        return []
+    # "desde el lunes 20/07/2026" es una FECHA, no el día del beneficio.
+    t = re.sub(r'\b(' + '|'.join(_DIAS_SEMANA) + r')\s+\d{1,2}[/\-.]\d', ' ', t)
+    # `s?`: la fuente escribe tanto "el sábado" como "los sábados"/"los domingos". Sin el
+    # plural se perdería un día REAL y narrowear dejaría la oferta peor que antes.
+    encontrados = {d for d in _DIAS_SEMANA if re.search(r'\b' + d + r's?\b', t)}
+    if not encontrados:
+        return []
+    _alt = '|'.join(_DIAS_SEMANA)
+    for m in re.finditer(r'\b(' + _alt + r')s?\s+a\s+(' + _alt + r')s?\b', t):
+        i, j = _DIAS_SEMANA.index(m.group(1)), _DIAS_SEMANA.index(m.group(2))
+        rango = range(i, j + 1) if i <= j else list(range(i, 7)) + list(range(0, j + 1))
+        encontrados |= {_DIAS_SEMANA[k] for k in rango}
+    if len(encontrados) >= 7:
+        return []
+    return [d for d in _DIAS_SEMANA if d in encontrados]
+
+
 @dataclass
 class Beneficio:
     """Modelo de un beneficio bancario"""
@@ -55,9 +157,33 @@ class Beneficio:
 
     def __post_init__(self):
         self.fecha_scrape = self.fecha_scrape or datetime.now().isoformat()
+        # (L-43) descuento_valor es SIEMPRE un PORCENTAJE: lo consumen el filtro de
+        # "descuento mínimo", el orden por mayor descuento, el pin del mapa ("N%") y el
+        # stat "Mejor descuento" de la página. Un $monto NO es un %: si el scraper guardó
+        # pesos (tipo 'monto'/'precio_fijo') o un valor imposible (>100), se deja en 0 y
+        # el monto queda SOLO en descuento_texto (que sí se muestra tal cual, sin inventar).
+        if self.descuento_tipo in ('monto', 'precio_fijo') or (self.descuento_valor or 0) > 100:
+            self.descuento_valor = 0.0
         # Ningún beneficio sin texto visible: si no hay % ni texto, etiqueta genérica.
         if not (self.descuento_texto or '').strip() and not self.descuento_valor:
             self.descuento_texto = "Beneficio exclusivo"
+        # (L-43) `ubicacion` = REGIÓN canónica o vacío. Si trae un local/URL/piso/ciudad,
+        # se recupera la región cuando es inequívoca y si no se vacía (vacío = "aplica
+        # siempre", L-28) preservando el texto en `direccion` — no se pierde el dato.
+        if self.ubicacion:
+            _reg = normalizar_region(self.ubicacion)
+            if _reg != self.ubicacion:
+                if not _reg and not (self.direccion or '').strip():
+                    self.direccion = self.ubicacion
+                self.ubicacion = _reg
+        # (L-43, extiende L-42) "todos los días" cuando la fuente dice un día fijo es
+        # información ERRÓNEA (el usuario va el día equivocado). Si el scraper cayó al
+        # default 'todos' pero la descripción de la fuente nombra días —y NO dice "todos
+        # los días"—, se leen esos días. Si la fuente no publica día, 'todos' queda (L-19).
+        if self.dias_validos == ['todos'] and (self.descripcion or '').strip():
+            _dias_txt = dias_desde_texto(self.descripcion)
+            if _dias_txt:
+                self.dias_validos = _dias_txt
         # Días válidos normalizados (chokepoint único, L-14/L-18/L-28): minúscula + sin
         # tilde + sin vacíos, para que SIEMPRE calcen con el filtro del front (data-day="miercoles").
         if self.dias_validos:

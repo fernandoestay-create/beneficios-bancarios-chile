@@ -52,6 +52,7 @@
 | L-39 | Un bot de lógica ÚNICA sirve varios canales con un adaptador delgado (Twilio/WhatsApp + Telegram): solo cambian el TRANSPORTE (recibir update + enviar respuesta) y el FORMATO por canal (WhatsApp renderiza `*_`; Telegram en texto plano los muestra LITERALES → strippear). Prefijar el usuario por canal (`tg_<id>`) para no mezclar el estado del flujo. Cada canal = endpoint opt-in por su token | Integraciones / Bot | 2026-08-04 |
 | L-40 | Un audit de datos con agente INDEPENDIENTE pilla lo que el filtro de código no: un financiamiento (CAE) colado como "% dcto." en la data CURADA (Proyecta Energía 90%), pese a que el fix del scraper (L-34) existía; y campos semánticamente mal (nombre=descripción). Auditar la DATA curada, no solo el código; el que construye NO revisa | Datos y calidad / Meta | 2026-08-04 |
 | L-41 | `beneficios_otros.json` lo GENERA el scraper pero el refresco/cron NO lo stagean → no se auto-actualiza en prod; al agregar un banco a "otros" hay que regenerarlo y commitearlo a mano. El filtro de calidad (%>0 + anti-financiamiento) va en el RENDER (`api.py`), no en el dato, para ser DURABLE ante re-scrapes. Un scraper con API que ya trae todo y filtra (BCI) → voltearlo (L-32) es quick-win vs extender scrapers que solo fetchean restaurantes | Arquitectura / Datos | 2026-08-04 |
+| L-43 | Un campo se corrompe cuando su NOMBRE promete una cosa y el scraper mete otra (`descuento_valor`=$monto → "84990%"; `ubicacion`=local/URL → la oferta se esconde al filtrar): el invariante va en `__post_init__` y el guard EJECUTA la función servida, no una réplica | Datos y calidad / QA | 2026-08-18 |
 | L-42 | El día del descuento vivía en un campo ESTRUCTURADO que el scraper ignoraba (BCI `scheduling.dayRecurrence=['MARTES']`), leyendo los `tags` (sin día) → 74/312 ofertas mostraban "todos" siendo día fijo (Gracielo "todos" = "Todos los martes"). Mostrar "todos" cuando es un día fijo es info ERRÓNEA (el usuario va el día equivocado), peor que faltar. Fix: leer la fuente autoritativa; `keywords` era poco confiable (decía "MIERCOLES", mal). PERO: si la fuente NO tiene día (Santander: 6 detalles sin día) → "todos" es HONESTO, NO inventar (L-19). Distinguir "día ignorado" (bug) de "sin día publicado" (correcto) MIDIENDO la fuente. Guard L-42 en la guardia vs `dayRecurrence` | Datos y calidad / Scraping | 2026-08-06 |
 
 ---
@@ -938,6 +939,35 @@ Mostrar "todos los días" cuando el descuento es de un día fijo es información
 
 ---
 
+### L-43 · Un campo cuyo NOMBRE promete una cosa y el scraper mete otra: el invariante va al chokepoint y el guard ejecuta lo SERVIDO (2026-08-18) · Datos y calidad / QA
+
+**Problema**
+Auditoría ácida mensual (agente independiente, sin contexto previo). Cuatro errores de cara al usuario que la guardia diaria NO detectaba:
+1. `/ver/beneficios` mostraba en el hero **"Mejor descuento: 84990%"**. Medido renderando la página: `max_desc = max(descuento_valor)` y ese campo traía **$84.990** (Mel Studio, Falabella). 6 registros guardaban PESOS en el campo de porcentaje (`$29.900`, `$8.000`, `$3.600`, `$100`, `$5.490` → este último quedó como "5.0", o sea "5%").
+2. **68 beneficios se ESCONDÍAN al filtrar por zona**: `ubicacion` (el campo de REGIÓN que consume el filtro) traía texto libre — `kobo.cl`, `Rappi app.`, `Roof, Nivel 4`, `Osorno.`, `Región Metropolinada`, `O’Higgins` (apóstrofe tipográfico). Como el filtro hace `regions.includes(d.ubicacion)`, un valor presente-pero-no-región nunca calza → la oferta desaparece (primo exacto de L-28, pero por dato sucio, no por lógica).
+3. **La región de Los Ríos no tenía NI UN PIN en el mapa**: `getCoords` comparaba `'los ríos'` contra las claves `'los rios'` (sin tilde) y `'losríos'` (sin espacio) → ninguna calzaba. 7 restaurantes (SKY BAR Valdivia y otros) invisibles en el mapa.
+4. **13 beneficios decían "todos los días" teniendo día fijo en su PROPIA descripción**: Bar La Virgen (Santander, restaurante) "40% dcto. los sábados en Santiago. 40% los miércoles en regiones"; Rappi (BICE, restaurante) "los días lunes, miércoles, viernes y domingos"; Petco "de lunes a jueves"; los tickets de ski de BCI/Santander. Es el daño de L-42 (el usuario va el día equivocado) en bancos que se habían dado por OK.
+
+**Causa raíz**
+El mismo patrón en los cuatro: **un campo cuyo nombre promete una semántica y un scraper que mete otra cosa**, sin nadie que lo verifique. `descuento_valor` = "porcentaje" para todos sus consumidores (hero, orden, filtro de descuento mínimo, pin "N%"), pero Falabella/Lider guardan ahí un $monto cuando la fuente no da %. `ubicacion` = "región" para el filtro y el mapa, pero Security guarda el local (`field_ubicacion_caluga`) y Banco de Chile la ciudad. Y el default `['todos']` se aplica sin mirar que la descripción de la fuente nombra los días.
+
+**Fix**
+- **Invariantes en `Beneficio.__post_init__`** (el único chokepoint por donde pasan TODOS los objetos — L-14/L-18 — y que además corre al cargar los JSON en `api.py`, así que producción se cura en el deploy sin esperar al scrape): (a) `descuento_valor` es % o 0 (tipo `monto`/`precio_fijo` o valor >100 → 0; el monto sigue visible en `descuento_texto`); (b) `normalizar_region()` deja región canónica o vacío — mapea alias y ciudad→región **solo con match exacto** (una dirección "O´Higgins N°592 B, Pucón." NO es la región de O'Higgins) y lo que no es región se guarda en `direccion` en vez de perderse; (c) si `dias_validos == ['todos']` y la descripción nombra días **sin decir "todos los días"**, se leen esos días.
+- **En el render** (L-41, sobrevive a cualquier re-scrape): `max_desc` solo considera `0 < v <= 100`; `getCoords` compara sin tildes/apóstrofes en AMBOS lados.
+- Data curada con round-trip por el dataclass real (L-12) con **GATE**: los 889 ids de `beneficios.json` idénticos antes/después.
+
+**Lección**
+Cuando el nombre de un campo promete una semántica (`descuento_valor` = %, `ubicacion` = región), **hay que auditar que TODO lo que entra la cumpla**: un scraper que "no tiene el dato" mete lo que sí tiene (un $monto, un local, una URL) y el consumidor lo interpreta según el nombre → "84990%" en el hero, u ofertas que desaparecen al filtrar. El invariante va en el chokepoint (`__post_init__`), no en cada scraper. Y el corolario de QA: **un guard que replica la lógica en vez de ejecutar la servida mide mi versión, no la del usuario** — mi primera versión del guard del mapa de-acentuaba de los dos lados y por eso NO veía el bug de Los Ríos; recién al ejecutar con `node` la `getCoords` real extraída del HTML servido, apareció.
+
+**Evitar a futuro**
+- Todo campo numérico que se muestre con unidad (`%`, `$`, `/L`) necesita un invariante de rango: un `%` > 100 es imposible y el guard debe verlo tanto en el dato como en lo RENDERIZADO.
+- Antes de confiar en un filtro, medir cuántos registros tienen en ese campo un valor fuera del vocabulario esperado (acá: `ubicacion` no ∈ 16 regiones). El vacío pasa (L-28); el valor sucio ESCONDE.
+- Comparar strings de geografía siempre normalizados (sin tilde, apóstrofe unificado): `'Los Ríos'` vs `'los rios'` es un bug esperando.
+- Un guard de UI debe **ejecutar el código servido** (extraerlo del HTML y correrlo con node), no reimplementarlo.
+- Al narrowear días desde texto libre: manejar plurales ("los sábados", "los domingos") y rangos, ignorar fechas ("el lunes 20/07"), y NO tocar cuando el texto dice "todos los días" (ahí narrowear escondería una oferta real). En la duda, no tocar (L-19).
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -990,8 +1020,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 42 lecciones formalizadas (L-01 a L-42; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-42 (2026-08-06)
-**Última actualización:** 2026-08-06
+**Contador:** 43 lecciones formalizadas (L-01 a L-43; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-43 (2026-08-18)
+**Última actualización:** 2026-08-18
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.

@@ -912,7 +912,10 @@ async def _render_deals(all_data_param, modo, dia, banco, q, key, acceso_key):
     total = len(all_data)
     total_bancos = len(bancos_list)
     total_rest = len(set(b.restaurante for b in all_data))
-    vals = [b.descuento_valor for b in all_data if b.descuento_valor > 0]
+    # "Mejor descuento" es un PORCENTAJE: solo entran valores 0<v<=100. Un $monto colado
+    # en descuento_valor pintaba "84990%" en el hero (L-43). El filtro vive en el render
+    # para sobrevivir a cualquier re-scrape (L-41), además del invariante del scraper.
+    vals = [b.descuento_valor for b in all_data if 0 < b.descuento_valor <= 100]
     max_desc = max(vals) if vals else 0
 
     titulo_pagina = "Otros Beneficios de Tarjeta" if es_otros else "Descuentos Bancarios Chile"
@@ -1440,10 +1443,14 @@ const REGION_COORDS={{
 'nuble':[-36.6096,-72.1034],'ñuble':[-36.6096,-72.1034],
 'chile':[-33.4489,-70.6693]
 }};
+// Sin tildes/apóstrofes en AMBOS lados: 'Los Ríos' no calzaba con 'los rios' ni con
+// 'losríos' (tilde + espacio) y la región entera se quedaba SIN PIN en el mapa (L-43).
+const _sinTilde=s=>s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[’´`]/g,"'").trim();
 function getCoords(ubicacion,idx){{
 if(!ubicacion)return null;
-const key=ubicacion.toLowerCase().replace(/región\\s*(de(l)?\\s*)?/gi,'').trim();
-for(const[k,v] of Object.entries(REGION_COORDS)){{
+const key=_sinTilde(ubicacion.replace(/región\\s*(de(l)?\\s*)?/gi,''));
+for(const[k0,v] of Object.entries(REGION_COORDS)){{
+const k=_sinTilde(k0);
 if(key.includes(k)||k.includes(key))return[v[0]+(Math.random()-.5)*.02,v[1]+(Math.random()-.5)*.02];
 }}
 return null;

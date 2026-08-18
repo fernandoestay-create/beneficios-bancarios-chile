@@ -174,6 +174,89 @@ for _bk in ["Banco Falabella", "Banco Itaú", "Lider BCI", "Mach"]:
         if _tod / len(_bs) > 0.5:
             fallos.append(f"[ACID-DÍAS] {_bk}: {_tod}/{len(_bs)} en 'todos' (>50%) — normalmente tiene día fijo, ¿se rompió el parser?")
 
+# ── L-43 (auditoría ácida 2026-08-18): 4 guards nuevos ────────────────────────
+# Deliberadamente NO importan scrapers.py: la guardia tiene que poder pillar el bug aunque
+# el helper del scraper se rompa (el que construye no revisa, L-40).
+
+def _sin_tilde(s):
+    s = (s or "").replace("’", "'").replace("´", "'").replace("`", "'")
+    return "".join(c for c in unicodedata.normalize("NFD", s.lower())
+                   if unicodedata.category(c) != "Mn").strip()
+
+
+_REGIONES_OK = {"Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo",
+                "Valparaíso", "Metropolitana", "O'Higgins", "Maule", "Ñuble", "Biobío",
+                "Araucanía", "Los Ríos", "Los Lagos", "Aysén", "Magallanes"}
+_DIAS7 = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+
+# [L-43a] descuento_valor es un PORCENTAJE. Un $monto ahí pinta "84990%" en el stat
+# "Mejor descuento" y descoloca el orden y el filtro de descuento mínimo.
+_pct_malos = [b for b in _todo if (b.get("descuento_valor") or 0) > 100]
+if _pct_malos:
+    fallos.append(f"[L-43a] {len(_pct_malos)} beneficios con descuento_valor > 100 "
+                  f"(un $monto guardado como %): {[b.get('id') for b in _pct_malos[:3]]}")
+
+# [L-43a-runtime] lo que VE el usuario: el stat "Mejor descuento" no puede pasar de 100%.
+for _p in ["/ver"]:
+    for _v, _l in re.findall(r'<div class="val">([^<]*)</div><div class="lbl">([^<]*)</div>',
+                             htmls.get(_p) or ""):
+        _m = re.match(r"^(\d+)%$", _v.strip())
+        if "mejor descuento" in _l.lower() and _m and int(_m.group(1)) > 100:
+            fallos.append(f"[L-43a] {_p} muestra 'Mejor descuento: {_v}' (>100%, imposible)")
+
+# [L-43b] `ubicacion` es el campo de REGIÓN: si trae un local/URL/ciudad, el filtro de zona
+# ESCONDE esa oferta (el front excluye lo que no calza con la región elegida, primo de L-28).
+_reg_malas = [b for b in _todo if (b.get("ubicacion") or "").strip() and b["ubicacion"] not in _REGIONES_OK]
+if _reg_malas:
+    fallos.append(f"[L-43b] {len(_reg_malas)} beneficios con 'ubicacion' que NO es una región de Chile "
+                  f"(se ocultan al filtrar por zona): "
+                  f"{sorted({b['ubicacion'][:28] for b in _reg_malas})[:4]}")
+
+# [L-43c] MAPA: toda región presente en la data tiene que resolver a coordenadas EN EL JS
+# QUE SE SIRVE. 'Los Ríos' no calzaba con las claves 'los rios'/'losríos' (tilde + espacio)
+# y la región entera se quedaba sin un solo pin. Se ejecuta la getCoords REAL de la página
+# con node — replicarla acá a mano haría que el guard mida mi versión, no la servida.
+try:
+    _js = htmls.get("/ver") or ""
+    # Del inicio de la tabla de coordenadas hasta el `let mapObj` que sigue a getCoords:
+    # se lleva la tabla + la función tal cual se sirven, sin depender de su formato interno.
+    _blk = re.search(r"(const REGION_COORDS=\{.*?)\nlet mapObj", _js, re.S)
+    _regs = sorted({(b.get("ubicacion") or "").strip() for b in d if (b.get("ubicacion") or "").strip()})
+    if _blk and "function getCoords" in _blk.group(1) and _regs:
+        _f = os.path.join(tempfile.gettempdir(), "chk_coords.js")
+        open(_f, "w", encoding="utf-8").write(
+            _blk.group(1) + "\n" +
+            f"const R={json.dumps(_regs, ensure_ascii=False)};\n"
+            "console.log(JSON.stringify(R.filter(r=>!getCoords(r,0))));")
+        _r = subprocess.run(["node", _f], capture_output=True, text=True)
+        _sin_pin = json.loads(_r.stdout.strip() or "[]") if _r.returncode == 0 else []
+        if _sin_pin:
+            fallos.append(f"[L-43c] {len(_sin_pin)} región(es) SIN NINGÚN PIN en el mapa "
+                          f"(la getCoords servida no las resuelve): {_sin_pin[:6]}")
+        elif _r.returncode != 0:
+            fallos.append(f"[L-43c] no se pudo ejecutar la getCoords servida: {_r.stderr.strip()[:90]}")
+except Exception:
+    pass
+
+# [L-43d] 'todos los días' cuando la fuente nombra un día fijo es información ERRÓNEA
+# (el usuario va el día equivocado): extiende L-42 a CUALQUIER banco, midiendo el texto
+# que la propia fuente entregó. Si el texto dice "todos los días", 'todos' es correcto.
+_dia_falso = []
+for b in _todo:
+    if b.get("dias_validos") != ["todos"]:
+        continue
+    _t = _sin_tilde(b.get("descripcion") or "")
+    if not _t or "todos los dias" in _t:
+        continue
+    _t = re.sub(r"\b(" + "|".join(_DIAS7) + r")\s+\d{1,2}[/\-.]\d", " ", _t)
+    _hay = {x for x in _DIAS7 if re.search(r"\b" + x + r"s?\b", _t)}
+    if _hay and len(_hay) < 7:
+        _dia_falso.append(b)
+if _dia_falso:
+    fallos.append(f"[L-43d] {len(_dia_falso)} beneficios dicen 'todos los días' pero su propia "
+                  f"descripción nombra días fijos (ej. {_dia_falso[0].get('restaurante','?')} — "
+                  f"{_dia_falso[0].get('banco','?')}): el usuario iría el día equivocado")
+
 # L-28: la búsqueda no puede volver a dejar de indexar la geografía (comuna/tags).
 def _txt(b):
     return norm(" ".join([b.get("restaurante", ""), b.get("banco", ""),
