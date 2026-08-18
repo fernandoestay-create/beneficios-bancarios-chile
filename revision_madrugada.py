@@ -186,6 +186,19 @@ for _bk in ["Banco Falabella", "Banco Itaú", "Lider BCI", "Mach"]:
         if _tod / len(_bs) > 0.5:
             fallos.append(f"[ACID-DÍAS] {_bk}: {_tod}/{len(_bs)} en 'todos' (>50%) — normalmente tiene día fijo, ¿se rompió el parser?")
 
+# ACID-REGIÓN: si el nombre trae una ciudad conocida, la región NO puede estar vacía
+# (Dominga Bistro Valdivia / La Mulata Iquique salían sin región -> bajo CUALQUIER zona,
+# incl. Metropolitana, porque el vacío pasa el filtro, L-28/L-42b).
+_CIUDAD_REG = ['iquique', 'valdivia', 'temuco', 'pucon', 'villarrica', 'chillan', 'talca',
+               'concepcion', 'antofagasta', 'calama', 'arica', 'puerto varas', 'osorno',
+               'copiapo', 'coyhaique', 'punta arenas', 'rancagua', 'curico']
+_sin_reg = [b for b in _todo
+            if not (b.get("ubicacion") or "").strip()
+            and any(re.search(r"\b" + c + r"\b", norm(b.get("restaurante", ""))) for c in _CIUDAD_REG)]
+if len(_sin_reg) > 2:
+    fallos.append(f"[ACID-REGIÓN] {len(_sin_reg)} beneficios con ciudad en el nombre pero región VACÍA "
+                  f"(ej. {_sin_reg[0].get('restaurante','?')}) — aparecen en zonas equivocadas")
+
 # L-28: la búsqueda no puede volver a dejar de indexar la geografía (comuna/tags).
 def _txt(b):
     return norm(" ".join([b.get("restaurante", ""), b.get("banco", ""),

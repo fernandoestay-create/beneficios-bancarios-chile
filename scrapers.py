@@ -128,6 +128,36 @@ class EstacionBencina:
 
 
 # ============================================
+# UTILIDAD: CIUDAD -> REGIÓN (para no dejar región vacía cuando el nombre trae la ciudad)
+# ============================================
+
+# Ciudades chilenas cuya presencia en el nombre/texto identifica la región. "Viña del Mar"
+# se pide COMPLETA a propósito: "Viña <bodega>" (una viña) NO es Viña del Mar (L-28/L-42).
+CIUDAD_REGION = {
+    'arica': 'Arica y Parinacota', 'iquique': 'Tarapacá', 'antofagasta': 'Antofagasta',
+    'calama': 'Antofagasta', 'copiapo': 'Atacama', 'la serena': 'Coquimbo', 'coquimbo': 'Coquimbo',
+    'valparaiso': 'Valparaíso', 'vina del mar': 'Valparaíso', 'quilpue': 'Valparaíso',
+    'rancagua': "O'Higgins", 'santa cruz': "O'Higgins", 'talca': 'Maule', 'curico': 'Maule',
+    'chillan': 'Ñuble', 'concepcion': 'Biobío', 'talcahuano': 'Biobío',
+    'temuco': 'Araucanía', 'pucon': 'Araucanía', 'villarrica': 'Araucanía',
+    'valdivia': 'Los Ríos', 'osorno': 'Los Lagos', 'puerto varas': 'Los Lagos', 'puerto montt': 'Los Lagos',
+    'coyhaique': 'Aysén', 'punta arenas': 'Magallanes',
+}
+
+
+def region_desde_texto(texto: str) -> str:
+    """Devuelve la región si el texto contiene el nombre de una ciudad conocida (palabra
+    completa). Vacío si no hay ciudad (= probablemente nacional; NO inventar región)."""
+    import unicodedata
+    t = ''.join(c for c in unicodedata.normalize('NFD', (texto or '').lower())
+                if unicodedata.category(c) != 'Mn')
+    for ciudad, region in CIUDAD_REGION.items():
+        if re.search(r'\b' + re.escape(ciudad) + r'\b', t):
+            return region
+    return ''
+
+
+# ============================================
 # UTILIDAD: UNICIDAD DE IDS
 # ============================================
 
@@ -641,7 +671,7 @@ class ScraperBancoFalabella:
                 dias_validos=dias_validos,
                 valido_desde=valido_desde,
                 valido_hasta=valido_hasta,
-                ubicacion="",
+                ubicacion=region_desde_texto(restaurante),
                 restricciones_texto=self._restriccion_falabella(bottom, mall),
                 presencial=True,
                 online=False,
