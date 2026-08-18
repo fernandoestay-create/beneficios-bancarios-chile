@@ -107,6 +107,37 @@ dup = sorted({x for x in ids if ids.count(x) > 1})
 if dup:
     fallos.append(f"[L-11] {len(dup)} ids duplicados: {dup[:5]}")
 
+# L-42: los días de BCI salen de scheduling.dayRecurrence (autoritativo), NO de los tags.
+# Ningún beneficio BCI puede volver a mostrar 'todos' teniendo un día fijo en scheduling
+# (Gracielo mostraba 'todos' siendo 'Todos los martes'; keywords decía 'MIERCOLES', mal).
+try:
+    _dia_fijo = set()  # ids bci_<id> con día específico en scheduling
+    _pg, _tp = 1, 1
+    while _pg <= _tp and _pg <= 6:
+        _req = urllib.request.Request(
+            f"https://api.bciplus.cl/bff-loyalty-beneficios/v1/offers?itemsPorPagina=100&pagina={_pg}",
+            headers={"Ocp-Apim-Subscription-Key": "fa981752762743668413b68821a43840",
+                     "Accept": "application/json", "User-Agent": "Mozilla/5.0"})
+        _api = json.loads(urllib.request.urlopen(_req, timeout=25).read().decode("utf-8", "replace"))
+        _tp = (_api.get("paginado") or {}).get("totalPaginas", 1)
+        for o in _api.get("ofertas", []):
+            dr = (o.get("scheduling") or {}).get("dayRecurrence") or []
+            if dr and len(dr) < 7:
+                _dia_fijo.add(f"bci_{o.get('id')}")
+        _pg += 1
+    try:
+        _otros_bci = json.load(open(os.path.join(ROOT, "beneficios_otros.json"), encoding="utf-8"))
+    except Exception:
+        _otros_bci = []
+    _malos = [b for b in (d + _otros_bci)
+              if b.get("banco") == "BCI" and b.get("dias_validos") == ["todos"]
+              and b.get("id") in _dia_fijo]
+    if len(_malos) > 3:
+        fallos.append(f"[L-42] {len(_malos)} beneficios BCI muestran 'todos' teniendo día fijo en scheduling "
+                      f"(ej. {_malos[0].get('restaurante','?')}) — regresó el fix de días (dayRecurrence)")
+except Exception:
+    pass  # si la API de BCI no responde, no rompemos la guardia
+
 # L-28: la búsqueda no puede volver a dejar de indexar la geografía (comuna/tags).
 def _txt(b):
     return norm(" ".join([b.get("restaurante", ""), b.get("banco", ""),
