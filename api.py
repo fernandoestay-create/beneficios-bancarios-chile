@@ -857,11 +857,16 @@ async def _render_deals(all_data_param, modo, dia, banco, q, key, acceso_key):
         # para sobrevivir a cualquier re-scrape que regenere beneficios_otros.json.
         _FIN = ('panel solar', 'paneles solares', 'cuenta de luz', 'financiamiento',
                 'crédito de consumo', 'credito de consumo', 'hipotecar', 'cae ', 'cae:')
+        # Nombres GENÉRICOS de Falabella (categorías/cuponera, no un comercio real): mostrar
+        # "Beneficios del mes — 50% dcto" es engañoso (no es un 50% en un local). Se excluyen.
+        _GENERICO = ('beneficios del mes', 'beneficio en ', 'cuponera')
         def _es_verificable(b):
             if (b.descuento_valor or 0) <= 0:
                 return False
-            t = ((getattr(b, 'restaurante', '') or '') + ' ' +
-                 (getattr(b, 'descripcion', '') or '') + ' ' +
+            nom = (getattr(b, 'restaurante', '') or '').strip().lower()
+            if any(nom.startswith(g) or g in nom for g in _GENERICO):
+                return False
+            t = (nom + ' ' + (getattr(b, 'descripcion', '') or '') + ' ' +
                  (getattr(b, 'descuento_texto', '') or '')).lower()
             return not any(k in t for k in _FIN)
         all_data = [b for b in all_data if _es_verificable(b)]

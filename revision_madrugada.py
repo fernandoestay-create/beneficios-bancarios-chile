@@ -199,6 +199,27 @@ if len(_sin_reg) > 2:
     fallos.append(f"[ACID-REGIÓN] {len(_sin_reg)} beneficios con ciudad en el nombre pero región VACÍA "
                   f"(ej. {_sin_reg[0].get('restaurante','?')}) — aparecen en zonas equivocadas")
 
+# ACID-GENÉRICO: la vista /ver/beneficios no puede mostrar nombres genéricos de categoría
+# (Falabella "Beneficios del mes"/"Beneficio en <x>"/cuponera no son un comercio → engañoso).
+try:
+    _stg, _bg = http("/ver/beneficios")
+    if _stg == 200:
+        _visg = 0
+        for _cand in re.findall(r"(\[\{.*?\}\])\s*;", _bg, re.S):
+            try:
+                _dl = json.loads(_cand)
+            except Exception:
+                continue
+            if isinstance(_dl, list) and _dl and isinstance(_dl[0], dict) and "banco" in _dl[0]:
+                _visg = sum(1 for x in _dl if (x.get("restaurante", "") or "").strip().lower()
+                            .startswith(("beneficio en", "beneficios del mes", "cuponera")))
+                break
+        if _visg:
+            fallos.append(f"[ACID-GENÉRICO] {_visg} nombres genéricos VISIBLES en /ver/beneficios "
+                          f"(ej. 'Beneficios del mes') — el filtro del render regresó")
+except Exception:
+    pass
+
 # L-28: la búsqueda no puede volver a dejar de indexar la geografía (comuna/tags).
 def _txt(b):
     return norm(" ".join([b.get("restaurante", ""), b.get("banco", ""),
