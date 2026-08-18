@@ -138,6 +138,42 @@ try:
 except Exception:
     pass  # si la API de BCI no responde, no rompemos la guardia
 
+# ───────── PRUEBA ÁCIDA: invariantes genéricos (no solo bugs ya vistos) ─────────
+try:
+    _otros_all = json.load(open(os.path.join(ROOT, "beneficios_otros.json"), encoding="utf-8"))
+except Exception:
+    _otros_all = []
+_todo = d + _otros_all
+
+# ACID-%: ningún descuento con % > 100 (absurdo: $monto o CAE leído como %, L-34/L-40).
+_absurdos = []
+for b in _todo:
+    _m = re.search(r"(\d+)\s*%", b.get("descuento_texto", "") or "")
+    if _m and int(_m.group(1)) > 100:
+        _absurdos.append(b.get("restaurante", "?"))
+if _absurdos:
+    fallos.append(f"[ACID-%] {len(_absurdos)} descuentos con % > 100 (absurdo): {_absurdos[:3]}")
+
+# ACID-FRESH: la data no puede quedar vieja (scraper que dejó de correr = proceso estéril, L-W20).
+try:
+    from datetime import datetime as _dtt, timedelta as _td
+    _fs = [b["fecha_scrape"] for b in d if b.get("fecha_scrape")]
+    if _fs:
+        _ult = max(_dtt.fromisoformat(x) for x in _fs)
+        if _dtt.now() - _ult > _td(days=3):
+            fallos.append(f"[ACID-FRESH] datos viejos: último scrape {_ult:%Y-%m-%d %H:%M} (>3 días) — ¿el scraper dejó de correr?")
+except Exception:
+    pass
+
+# ACID-DÍAS: los bancos que publican día fijo (hoy 0% 'todos') no pueden spikear a 'todos'
+# (= se rompió el parser de días, como pasó con BCI). Falabella/Itaú/Lider/Mach traen día específico.
+for _bk in ["Banco Falabella", "Banco Itaú", "Lider BCI", "Mach"]:
+    _bs = [b for b in _todo if b.get("banco") == _bk]
+    if len(_bs) >= 8:
+        _tod = sum(1 for b in _bs if b.get("dias_validos") == ["todos"])
+        if _tod / len(_bs) > 0.5:
+            fallos.append(f"[ACID-DÍAS] {_bk}: {_tod}/{len(_bs)} en 'todos' (>50%) — normalmente tiene día fijo, ¿se rompió el parser?")
+
 # L-28: la búsqueda no puede volver a dejar de indexar la geografía (comuna/tags).
 def _txt(b):
     return norm(" ".join([b.get("restaurante", ""), b.get("banco", ""),
