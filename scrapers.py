@@ -746,8 +746,12 @@ class ScraperBCI:
             descuento_valor = oferta.get('deal', {}).get('discount', {}).get('percentage', 0) or 0
             descuento_texto = f"{descuento_valor}% dcto." if descuento_valor > 0 else oferta.get('titulo', '')
 
-            # Días de la semana desde tags
-            dias_validos = self._extraer_dias(tags)
+            # Días: la fuente AUTORITATIVA es scheduling.dayRecurrence (ej. ['MARTES']),
+            # NO los tags — 74/312 ofertas traían el día solo ahí y quedaban en 'todos'
+            # (Gracielo mostraba 'todos' siendo 'Todos los martes'). keywords es poco
+            # confiable (Gracielo decía 'MIERCOLES', mal). Fallback a tags. L-06/L-28.
+            sched = oferta.get('scheduling') or {}
+            dias_validos = self._dias_desde_recurrence(sched.get('dayRecurrence')) or self._extraer_dias(tags)
 
             # Modalidad desde tags
             presencial = 'Presencial' in tags
@@ -796,8 +800,25 @@ class ScraperBCI:
         except Exception as e:
             return None
 
+    def _dias_desde_recurrence(self, day_recurrence) -> List[str]:
+        """Días desde scheduling.dayRecurrence (fuente AUTORITATIVA de BCI).
+        Ej. ['MARTES'] -> ['martes'] ; ['LUNES','MARTES'] -> ['lunes','martes'].
+        Devuelve [] si no hay recurrencia (para caer al fallback de tags).
+        Si lista los 7 días -> ['todos']."""
+        m = {'lunes': 'lunes', 'martes': 'martes', 'miercoles': 'miercoles',
+             'miércoles': 'miercoles', 'jueves': 'jueves', 'viernes': 'viernes',
+             'sabado': 'sabado', 'sábado': 'sabado', 'domingo': 'domingo'}
+        dias = []
+        for d in (day_recurrence or []):
+            k = str(d).lower().strip()
+            if k in m and m[k] not in dias:
+                dias.append(m[k])
+        if len(dias) >= 7:
+            return ['todos']
+        return dias
+
     def _extraer_dias(self, tags: list) -> List[str]:
-        """Extrae días válidos de los tags de BCI"""
+        """Extrae días válidos de los tags de BCI (fallback si no hay dayRecurrence)"""
         dias_map = {
             'Lunes': 'lunes', 'Martes': 'martes', 'Miércoles': 'miercoles',
             'Miercoles': 'miercoles', 'Jueves': 'jueves', 'Viernes': 'viernes',

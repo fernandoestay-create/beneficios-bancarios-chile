@@ -15122,7 +15122,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "viernes"
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15156,7 +15156,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "jueves"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15224,7 +15224,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15258,7 +15258,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15360,7 +15360,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15462,7 +15462,8 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "lunes",
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15564,7 +15565,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15598,7 +15599,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15771,7 +15772,6 @@
     "descuento_texto": "20% dcto.",
     "dias_validos": [
       "lunes",
-      "martes",
       "miercoles",
       "jueves",
       "viernes"
@@ -15808,7 +15808,9 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "lunes",
+      "martes",
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15911,7 +15913,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -15979,7 +15981,8 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "lunes",
+      "martes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16047,7 +16050,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16081,7 +16084,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16115,7 +16118,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16183,7 +16186,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16251,7 +16254,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16285,7 +16288,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16319,7 +16322,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16424,7 +16427,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "lunes"
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16560,7 +16563,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16594,7 +16597,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "sabado"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16662,7 +16665,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16764,7 +16767,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "martes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16798,7 +16801,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16832,7 +16835,8 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "lunes"
+      "miercoles",
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16866,7 +16870,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "jueves"
+      "martes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16900,7 +16904,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "miercoles"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16934,7 +16938,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "jueves"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -16968,7 +16972,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17002,7 +17006,9 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "lunes",
+      "martes",
+      "domingo"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17070,7 +17076,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17206,7 +17212,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17274,7 +17280,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "domingo"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17342,7 +17348,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17410,7 +17416,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "lunes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17444,7 +17450,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17478,8 +17484,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "jueves",
-      "martes"
+      "lunes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17547,7 +17552,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17615,7 +17620,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "jueves"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17649,7 +17654,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17717,7 +17722,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "jueves"
+      "sabado"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17785,8 +17790,8 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "sabado",
-      "jueves"
+      "jueves",
+      "sabado"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17854,7 +17859,11 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "todos"
+      "lunes",
+      "martes",
+      "miercoles",
+      "jueves",
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17956,7 +17965,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "miercoles"
+      "lunes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -17990,7 +17999,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
-      "jueves"
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -18024,6 +18033,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "20% dcto.",
     "dias_validos": [
+      "martes",
       "miercoles"
     ],
     "horario_inicio": "",
@@ -18126,7 +18136,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "miercoles"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -18194,8 +18204,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "30% dcto.",
     "dias_validos": [
-      "martes",
-      "lunes"
+      "martes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
@@ -18229,7 +18238,7 @@
     "descuento_tipo": "porcentaje",
     "descuento_texto": "40% dcto.",
     "dias_validos": [
-      "todos"
+      "viernes"
     ],
     "horario_inicio": "",
     "horario_fin": "",
