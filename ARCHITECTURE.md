@@ -305,7 +305,7 @@ class Beneficio:
 │  ├── Build: pip install -r requirements.txt             │
 │  ├── Start: uvicorn api:app --host 0.0.0.0 --port $PORT│
 │  ├── Env: OPENAI_API_KEY, PINECONE_*                    │
-│  └── URL: api-beneficios-chile.onrender.com             │
+│  └── URL: datalab-api.duckdns.org             │
 │      ├── /ver        → Página web                       │
 │      ├── /webhook    → Bot WhatsApp (Twilio)            │
 │      ├── /beneficios → API JSON                         │

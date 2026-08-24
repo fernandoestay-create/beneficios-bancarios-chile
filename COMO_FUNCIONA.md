@@ -14,7 +14,7 @@ los limpia, y los muestra en una web pública + un **bot de menú guiado en What
 Telegram** (sin IA, gratis de operar — no confundir con el buscador con IA de la web,
 sección 11). También trae **precios y descuentos de bencina**.
 
-- **Web pública:** https://api-beneficios-chile.onrender.com/ver (restaurantes), `/ver/bencinas`, `/ver/cuotas` y `/ver/beneficios` (otros beneficios de tarjeta).
+- **Web pública:** https://datalab-api.duckdns.org/ver (restaurantes), `/ver/bencinas`, `/ver/cuotas` y `/ver/beneficios` (otros beneficios de tarjeta).
 - **Datos:** ~887 beneficios de restaurantes (14 bancos) + 31 descuentos de bencina (re-curados desde fuente oficial, sección 16) + campañas de cuotas sin interés. Además hay un apartado de **"otros beneficios"** de tarjeta (Santander/Consorcio) en `/ver/beneficios`: **24 verificados** con descuento real, filtrados de 228 candidatos (sección 13).
 - **Costo de operación:** ~$0 (todo en planes gratuitos: GitHub Actions, Render, tu PC).
 

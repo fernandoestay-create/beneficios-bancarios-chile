@@ -253,7 +253,7 @@ Bot: 🍽️ 12 descuentos encontrados
      💳 Falabella, BCI | 📅 Viernes | 🍕 sushi
      🏦 BCI (5 dctos)
        • Sushi Express — 30% dcto.
-     📋 Ver todos: https://api-beneficios-chile.onrender.com/ver?dia=viernes&q=sushi
+     📋 Ver todos: https://datalab-api.duckdns.org/ver?dia=viernes&q=sushi
 ```
 
 ### 7.2 Comandos rápidos
@@ -320,9 +320,9 @@ TWILIO_WHATSAPP_NUMBER=...   (solo para whatsapp_bot.py)
 ### 8.3 URL de producción
 
 ```
-https://api-beneficios-chile.onrender.com/
-https://api-beneficios-chile.onrender.com/ver     ← Página web
-https://api-beneficios-chile.onrender.com/webhook  ← WhatsApp bot
+https://datalab-api.duckdns.org/
+https://datalab-api.duckdns.org/ver     ← Página web
+https://datalab-api.duckdns.org/webhook  ← WhatsApp bot
 ```
 
 ---

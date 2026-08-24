@@ -152,7 +152,7 @@ EOF
 3. Unirse al sandbox siguiendo instrucciones
 4. Configurar webhook URL:
    ```
-   https://api-beneficios-chile.onrender.com/webhook
+   https://datalab-api.duckdns.org/webhook
    ```
    Método: POST
 5. Copiar Account SID + Auth Token
@@ -321,10 +321,10 @@ Cada `git push origin main` → Render despliega automáticamente (~2-3 min).
 ### URLs de producción
 
 ```
-https://api-beneficios-chile.onrender.com/          ← API health check
-https://api-beneficios-chile.onrender.com/ver        ← Página web
-https://api-beneficios-chile.onrender.com/webhook    ← WhatsApp bot
-https://api-beneficios-chile.onrender.com/docs       ← Swagger
+https://datalab-api.duckdns.org/          ← API health check
+https://datalab-api.duckdns.org/ver        ← Página web
+https://datalab-api.duckdns.org/webhook    ← WhatsApp bot
+https://datalab-api.duckdns.org/docs       ← Swagger
 ```
 
 ### render.yaml (ya incluido en el repo)
@@ -358,7 +358,7 @@ services:
 1. **Twilio Console** → Messaging → WhatsApp → Sandbox
 2. Escanear QR o enviar mensaje de activación al número sandbox
 3. Configurar webhook:
-   - **WHEN A MESSAGE COMES IN**: `https://api-beneficios-chile.onrender.com/webhook`
+   - **WHEN A MESSAGE COMES IN**: `https://datalab-api.duckdns.org/webhook`
    - **Method**: POST
 
 ### Para desarrollo local (ngrok)
@@ -433,11 +433,11 @@ curl http://localhost:8000/ | python -m json.tool
 
 ### "El bot no responde en WhatsApp"
 
-1. Verificar webhook URL en Twilio → debe ser `https://api-beneficios-chile.onrender.com/webhook`
+1. Verificar webhook URL en Twilio → debe ser `https://datalab-api.duckdns.org/webhook`
 2. Verificar método → POST
 3. Probar webhook directo:
    ```bash
-   curl -X POST https://api-beneficios-chile.onrender.com/webhook \
+   curl -X POST https://datalab-api.duckdns.org/webhook \
      -d "From=whatsapp:+56912345678" -d "Body=hola"
    ```
 4. Ver logs en Render Dashboard → servicio → Logs

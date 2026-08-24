@@ -2,7 +2,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![Deploy](https://img.shields.io/badge/Render-Deployed-success.svg)](https://api-beneficios-chile.onrender.com/ver)
+[![Deploy](https://img.shields.io/badge/Render-Deployed-success.svg)](https://datalab-api.duckdns.org/ver)
 
 Sistema completo que **scrapea descuentos bancarios en restaurantes de Chile** y los expone a través de una **página web interactiva**, un **bot de WhatsApp con IA**, y una **API REST**.
 
@@ -207,7 +207,7 @@ El bot funciona vía Twilio en el endpoint `POST /webhook` de api.py.
      • Sushi Master — 25% dcto.
      ...y 5 más
 
-   📋 Ver todos: https://api-beneficios-chile.onrender.com/ver?dia=viernes&q=sushi
+   📋 Ver todos: https://datalab-api.duckdns.org/ver?dia=viernes&q=sushi
 ```
 
 ### Comandos rápidos
@@ -262,18 +262,18 @@ Se mantiene en memoria por usuario. Se limpia al completar el flujo.
 
 ```bash
 # Todos los beneficios
-curl https://api-beneficios-chile.onrender.com/beneficios
+curl https://datalab-api.duckdns.org/beneficios
 
 # Buscar sushi en BCI
-curl "https://api-beneficios-chile.onrender.com/beneficios/buscar?restaurante=sushi&banco=BCI"
+curl "https://datalab-api.duckdns.org/beneficios/buscar?restaurante=sushi&banco=BCI"
 
 # Consultar con IA
-curl -X POST https://api-beneficios-chile.onrender.com/rag \
+curl -X POST https://datalab-api.duckdns.org/rag \
   -H "Content-Type: application/json" \
   -d '{"pregunta": "mejores descuentos para hoy viernes"}'
 
 # Estadísticas
-curl https://api-beneficios-chile.onrender.com/estadisticas
+curl https://datalab-api.duckdns.org/estadisticas
 ```
 
 ---
@@ -473,9 +473,9 @@ services:
 ### URLs de producción
 
 ```
-https://api-beneficios-chile.onrender.com/          ← API
-https://api-beneficios-chile.onrender.com/ver        ← Página web
-https://api-beneficios-chile.onrender.com/webhook    ← WhatsApp (Twilio)
+https://datalab-api.duckdns.org/          ← API
+https://datalab-api.duckdns.org/ver        ← Página web
+https://datalab-api.duckdns.org/webhook    ← WhatsApp (Twilio)
 ```
 
 ### Deploy automático
@@ -515,7 +515,7 @@ TOKENS_ACCESO = {
 }
 ```
 
-Link para compartir: `https://api-beneficios-chile.onrender.com/ver?key=prueba`
+Link para compartir: `https://datalab-api.duckdns.org/ver?key=prueba`
 
 Actualmente **desactivado** (`ACCESO_PUBLICO = True`).
 

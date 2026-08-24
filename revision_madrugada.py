@@ -22,7 +22,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 
-URL = os.getenv("PROD_URL", "https://api-beneficios-chile.onrender.com")
+URL = os.getenv("PROD_URL", "https://datalab-api.duckdns.org")
 UA = {"User-Agent": "curl/8.4.0"}
 ROOT = os.path.dirname(os.path.abspath(__file__))
 fallos = []

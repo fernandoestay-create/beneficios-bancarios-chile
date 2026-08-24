@@ -113,7 +113,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://api-beneficios-chile.onrender.com"],
+    allow_origins=["https://datalab-api.duckdns.org"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -1689,7 +1689,7 @@ def _generar_resultado_flow(bancos: list, dia: str, comida: str) -> str:
         bancos_mostrados += 1
 
     # Link con TODOS los filtros
-    BASE_URL = "https://api-beneficios-chile.onrender.com/ver"
+    BASE_URL = "https://datalab-api.duckdns.org/ver"
     params = []
     if dia:
         params.append(f"dia={quote_plus(dia)}")
@@ -1735,7 +1735,7 @@ def _generar_resultado_bencinas(dia: str) -> str:
             texto += f"  _...y {len(items)-5} más_\n"
         texto += "\n"
 
-    BASE_URL = "https://api-beneficios-chile.onrender.com/ver/bencinas"
+    BASE_URL = "https://datalab-api.duckdns.org/ver/bencinas"
     texto += f"📋 *Ver todos con mapa:*\n{BASE_URL}"
     return texto[:1500]
 
@@ -1763,7 +1763,7 @@ def _generar_resultado_cuotas(banco_key: str) -> str:
         lineas.append("")
     if not hay:
         return f"💳 {banco_key}: sin campaña de cuotas sin interés este mes.\n\nEscribe *hola* para volver al menú."
-    lineas.append("📋 *Ver todo:* https://api-beneficios-chile.onrender.com/ver/cuotas")
+    lineas.append("📋 *Ver todo:* https://datalab-api.duckdns.org/ver/cuotas")
     lineas.append("_Verifica siempre en el link oficial del banco._")
     return "\n".join(lineas)[:1500]
 
@@ -1785,7 +1785,7 @@ def _generar_resultado_otros(banco_key: str) -> str:
     if len(items) > 15:
         lineas.append(f"  _...y {len(items)-15} más_")
     lineas.append("")
-    lineas.append("📋 *Ver todo:* https://api-beneficios-chile.onrender.com/ver/beneficios")
+    lineas.append("📋 *Ver todo:* https://datalab-api.duckdns.org/ver/beneficios")
     return "\n".join(lineas)[:1500]
 
 

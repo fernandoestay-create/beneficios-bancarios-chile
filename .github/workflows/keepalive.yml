@@ -17,6 +17,6 @@ jobs:
       - name: Despertar la web
         run: |
           for path in /estadisticas /ver; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "https://api-beneficios-chile.onrender.com$path" || echo "000")
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "https://datalab-api.duckdns.org$path" || echo "000")
             echo "$path -> HTTP $code"
           done

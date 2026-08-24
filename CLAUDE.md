@@ -125,7 +125,7 @@ python upload_pinecone.py
 
 ## 🌐 Recursos externos
 
-- **URL en producción:** https://api-beneficios-chile.onrender.com/ver
+- **URL en producción:** https://datalab-api.duckdns.org/ver
 - **Repo Git:** https://github.com/fernandoestay-create/beneficios-bancarios-chile
 - **Cliente:** Fernando Estay (producto MiCartera propio)
 - **Servicios externos:** Render (hosting), Pinecone (vector DB), OpenAI (embeddings + GPT-4o-mini), Twilio (WhatsApp)

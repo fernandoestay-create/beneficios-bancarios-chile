@@ -58,7 +58,7 @@ Fernando quería agregar beneficios bancarios chilenos para MiCartera. Decisión
 - Migración a pgvector: Pinecone ya estaba funcionando. Razón: no romper lo que funciona.
 
 **Estado al final de la sesión:**
-Sistema completo en producción en https://api-beneficios-chile.onrender.com/ver. 985 beneficios. 15 bancos. Bot WhatsApp funcionando vía Twilio.
+Sistema completo en producción en https://datalab-api.duckdns.org/ver. 985 beneficios. 15 bancos. Bot WhatsApp funcionando vía Twilio.
 
 ---
 

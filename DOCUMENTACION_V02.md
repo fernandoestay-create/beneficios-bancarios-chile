@@ -61,11 +61,11 @@ Sistema que **scrapea descuentos bancarios en restaurantes y bencinas de Chile**
 
 | Recurso | URL |
 |---------|-----|
-| Web Restaurantes | https://api-beneficios-chile.onrender.com/ver |
-| Web Bencinas | https://api-beneficios-chile.onrender.com/ver/bencinas |
-| API REST | https://api-beneficios-chile.onrender.com/ |
-| Swagger | https://api-beneficios-chile.onrender.com/docs |
-| WhatsApp Webhook | https://api-beneficios-chile.onrender.com/webhook |
+| Web Restaurantes | https://datalab-api.duckdns.org/ver |
+| Web Bencinas | https://datalab-api.duckdns.org/ver/bencinas |
+| API REST | https://datalab-api.duckdns.org/ |
+| Swagger | https://datalab-api.duckdns.org/docs |
+| WhatsApp Webhook | https://datalab-api.duckdns.org/webhook |
 
 ---
 

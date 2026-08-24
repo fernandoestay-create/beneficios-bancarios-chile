@@ -336,10 +336,10 @@ def generar_html(reporte, fecha, total_beneficios, preservados=None, bencinas=No
     {_seccion_cuotas()}
     {_seccion_otros()}
     <div style="margin-top:18px;line-height:2.4">
-      <a href="https://api-beneficios-chile.onrender.com/ver" style="background:#003058;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">🍽️ Ver Restaurantes</a>
-      <a href="https://api-beneficios-chile.onrender.com/ver/bencinas" style="background:#0f6e56;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">⛽ Ver Bencinas</a>
-      <a href="https://api-beneficios-chile.onrender.com/ver/cuotas" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">💳 Ver Cuotas</a>
-      <a href="https://api-beneficios-chile.onrender.com/ver/beneficios" style="background:#1d4ed8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">🎁 Ver Otros beneficios</a>
+      <a href="https://datalab-api.duckdns.org/ver" style="background:#003058;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">🍽️ Ver Restaurantes</a>
+      <a href="https://datalab-api.duckdns.org/ver/bencinas" style="background:#0f6e56;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">⛽ Ver Bencinas</a>
+      <a href="https://datalab-api.duckdns.org/ver/cuotas" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;margin-right:8px">💳 Ver Cuotas</a>
+      <a href="https://datalab-api.duckdns.org/ver/beneficios" style="background:#1d4ed8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">🎁 Ver Otros beneficios</a>
     </div>
   </div>
   <div style="background:#f9fafb;padding:12px 18px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">

@@ -159,7 +159,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
     Shell (2 dctos)<br>
     - Consorcio: $90/litro<br>
     - Micopiloto: $70/litro<br><br>
-    Ver todos: https://api-beneficios-chile.onrender.com/ver/bencinas
+    Ver todos: https://datalab-api.duckdns.org/ver/bencinas
   </div>
 </div>
 
@@ -240,7 +240,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
     BCI (8 dctos)<br>
     - Sushi Home: 40% dcto.<br>
     - ...y 7 mas<br><br>
-    Ver todos: https://api-beneficios-chile.onrender.com/ver?dia=miercoles&banco=Banco+de+Chile&banco=BCI&banco=Scotiabank
+    Ver todos: https://datalab-api.duckdns.org/ver?dia=miercoles&banco=Banco+de+Chile&banco=BCI&banco=Scotiabank
   </div>
 </div>
 
@@ -262,7 +262,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
     💳 Cuotas sin interes — Banco de Chile:<br><br>
     - Todos los comercios: <strong>3 cuotas</strong> — 0% real<br>
     - Automotriz: <strong>13 a 36 cuotas</strong> — 0,99% mensual (tasa preferencial, no 0%)<br><br>
-    Ver todo: https://api-beneficios-chile.onrender.com/ver/cuotas<br>
+    Ver todo: https://datalab-api.duckdns.org/ver/cuotas<br>
     Verifica siempre en el link oficial del banco.
   </div>
 </div>
@@ -286,7 +286,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
     - La Parva - Visa — <strong>15% dcto.</strong><br>
     - Valle Nevado — <strong>25% dcto.</strong><br>
     ...y 18 mas<br><br>
-    Ver todo: https://api-beneficios-chile.onrender.com/ver/beneficios
+    Ver todo: https://datalab-api.duckdns.org/ver/beneficios
   </div>
 </div>
 <p style="color:var(--muted); font-size:0.85rem;">Son beneficios NO-restaurante (farmacias, ski, transporte, hoteles) que Santander y Banco Consorcio ya traian de sus paginas y antes se descartaban al filtrar solo restaurantes. Viven en un dataset separado (<code>beneficios_otros.json</code>) que no toca el flujo de Restaurantes.</p>
@@ -343,7 +343,7 @@ user_flow = {}
   <h3>WhatsApp (Twilio)</h3>
   <table>
     <tr><th>Parametro</th><th>Valor</th></tr>
-    <tr><td>URL</td><td><code>https://api-beneficios-chile.onrender.com/webhook</code></td></tr>
+    <tr><td>URL</td><td><code>https://datalab-api.duckdns.org/webhook</code></td></tr>
     <tr><td>Metodo</td><td>POST</td></tr>
     <tr><td>Servicio</td><td>Twilio WhatsApp</td></tr>
     <tr><td>Formato</td><td>Form data (<code>From</code>, <code>Body</code>)</td></tr>
@@ -352,7 +352,7 @@ user_flow = {}
   </table>
   <h3>Probar sin WhatsApp</h3>
 <pre>
-curl -X POST https://api-beneficios-chile.onrender.com/webhook \
+curl -X POST https://datalab-api.duckdns.org/webhook \
   -d "From=whatsapp:+56912345678" \
   -d "Body=hola"
 </pre>
@@ -362,7 +362,7 @@ curl -X POST https://api-beneficios-chile.onrender.com/webhook \
   <h3>Telegram (@Mi_cartera_descuentos_Bot)</h3>
   <table>
     <tr><th>Parametro</th><th>Valor</th></tr>
-    <tr><td>URL</td><td><code>https://api-beneficios-chile.onrender.com/telegram</code></td></tr>
+    <tr><td>URL</td><td><code>https://datalab-api.duckdns.org/telegram</code></td></tr>
     <tr><td>Metodo</td><td>POST</td></tr>
     <tr><td>Servicio</td><td>Telegram Bot API</td></tr>
     <tr><td>Formato</td><td>JSON (<code>message.chat.id</code>, <code>message.text</code>)</td></tr>
@@ -372,7 +372,7 @@ curl -X POST https://api-beneficios-chile.onrender.com/webhook \
   </table>
   <h3>Probar sin Telegram</h3>
 <pre>
-curl -X POST https://api-beneficios-chile.onrender.com/telegram \
+curl -X POST https://datalab-api.duckdns.org/telegram \
   -H "Content-Type: application/json" \
   -d '{"message": {"chat": {"id": 123456789}, "text": "hola"}}'
 </pre>
