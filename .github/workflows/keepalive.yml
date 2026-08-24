@@ -7,7 +7,10 @@ name: Keep-alive (mantener la web despierta)
 
 on:
   schedule:
-    - cron: '*/10 10-23 * * *'   # cada 10 min, ~06:00-19:00 Chile (UTC-4)
+  # APAGADO el 2026-08-24: existía para que Render no durmiera. El servicio
+  # vive ahora en un VPS propio que NO duerme, así que esto solo gastaba
+  # ~2.340 ejecuciones al mes (≈39% de los 2.000 min gratis) sin servir a nada.
+  #  - cron: '*/10 10-23 * * *'
   workflow_dispatch:
 
 jobs:

@@ -63,7 +63,18 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add beneficios.json beneficios.csv bencinas.json historial.json
           git diff --staged --quiet || git commit -m "🔄 Actualizar beneficios y bencinas $(date +%Y-%m-%d)"
-          git push
+
+          # Reintentar el push: si alguien empujó al repo mientras el scraping
+          # corría, el push se rechaza y se pierde el trabajo del día entero.
+          # Pasó el 2026-08-24 — el scraping funcionó y solo falló el guardado.
+          for i in 1 2 3; do
+            git push && exit 0
+            echo "push rechazado (intento $i) — traigo lo del remoto y reintento"
+            git pull --rebase --autostash origin main || exit 1
+            sleep $((i * 5))
+          done
+          echo "::error::no se pudo guardar tras 3 intentos"
+          exit 1
 
       - name: Send email report
         if: success()
