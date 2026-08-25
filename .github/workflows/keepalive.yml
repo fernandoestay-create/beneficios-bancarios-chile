@@ -5,12 +5,15 @@ name: Keep-alive (mantener la web despierta)
 # min en horario de uso (Chile) para que este siempre despierta y los links del mail
 # carguen al instante. Ligero: solo un curl, no scrapea nada.
 
+# APAGADO el 2026-08-24: existía para que Render no durmiera. El servicio vive
+# ahora en un VPS propio que NO duerme, así que solo gastaba ~2.340 ejecuciones
+# al mes (≈39% de los 2.000 min gratis) sin servir a nada.
+#
+# OJO al volver a encenderlo: NO basta con comentar la línea del cron dejando
+# la clave `schedule:` vacía — eso es YAML inválido y GitHub responde creando
+# una corrida FALLIDA en cada push para avisar del error. Pasó el 2026-08-24 y
+# estuvo mandando correos de fallo un día entero. La clave se quita entera.
 on:
-  schedule:
-  # APAGADO el 2026-08-24: existía para que Render no durmiera. El servicio
-  # vive ahora en un VPS propio que NO duerme, así que esto solo gastaba
-  # ~2.340 ejecuciones al mes (≈39% de los 2.000 min gratis) sin servir a nada.
-  #  - cron: '*/10 10-23 * * *'
   workflow_dispatch:
 
 jobs:
