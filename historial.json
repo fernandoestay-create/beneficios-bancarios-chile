@@ -1559,14 +1559,14 @@
  },
  {
   "fecha": "2026-08-31",
-  "total": 892,
+  "total": 894,
   "por_banco": {
-   "Banco de Chile": 264,
+   "Banco de Chile": 265,
    "Banco Falabella": 94,
    "BCI": 93,
    "Banco Itaú": 34,
-   "Scotiabank": 63,
-   "Santander": 60,
+   "Scotiabank": 60,
+   "Santander": 64,
    "Banco Consorcio": 6,
    "Banco Security": 80,
    "Banco Ripley": 73,
