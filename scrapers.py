@@ -910,7 +910,8 @@ class ScraperBCI:
         }
         titulo_lower = titulo.lower()
         for keyword, region in regiones.items():
-            if keyword in titulo_lower:
+            # Palabra completa (\b): 'talca' (Maule) NO debe matchear 'talcahuano' (Biobío). L-42
+            if re.search(r'\b' + re.escape(keyword) + r'\b', titulo_lower):
                 return region
         return ''
 
@@ -2255,7 +2256,8 @@ class ScraperBancoRipley:
         # (más larga primero, para preferir matches específicos sobre genéricos)
         texto_completo = self._sin_tilde(f"{direccion} {texto_extra}")
         for comuna, region in sorted(self._COMUNA_REGION.items(), key=lambda kv: -len(kv[0])):
-            if comuna in texto_completo:
+            # Palabra completa (\b): evita que 'talca' matchee 'talcahuano', etc. L-42
+            if re.search(r'\b' + re.escape(comuna) + r'\b', texto_completo):
                 return region
 
         return ''
@@ -3886,12 +3888,12 @@ class OrquestadorScrapers:
 
         # Búsqueda parcial
         for keyword, region in self.REGIONES_MAP.items():
-            if keyword in ubicacion_lower:
+            if re.search(r'\b' + re.escape(keyword) + r'\b', ubicacion_lower):  # palabra completa (L-42)
                 return region
 
         # Si contiene una comuna de RM, es Metropolitana
         for comuna in self.COMUNAS_RM:
-            if comuna in ubicacion_lower:
+            if re.search(r'\b' + re.escape(comuna) + r'\b', ubicacion_lower):  # palabra completa (L-42)
                 return 'Metropolitana'
 
         return ubicacion.strip()
@@ -3900,7 +3902,7 @@ class OrquestadorScrapers:
         """Extrae la comuna dentro de la Región Metropolitana"""
         textos = f"{direccion} {restricciones} {descripcion}".lower()
         for comuna in self.COMUNAS_RM:
-            if comuna in textos:
+            if re.search(r'\b' + re.escape(comuna) + r'\b', textos):  # palabra completa (L-42)
                 # Capitalizar correctamente
                 return comuna.title()
         return ''
@@ -4067,6 +4069,7 @@ class OrquestadorScrapers:
             "bancos": len({b.banco for b in self.all_beneficios}),
             "reporte_por_banco": reporte,
             "preservados": [{"banco": b, "previos": n} for b, n in preservados],
+            "otros_preservados": [{"banco": b, "previos": n} for b, n in getattr(self, "otros_preservados", [])],
             "problemas": [p["banco"] for p in probs],
             "alerta": bool(probs),
             "aprendizaje": aprend_info,
@@ -4089,8 +4092,31 @@ class OrquestadorScrapers:
 
     def guardar_otros_json(self, filename: str = "beneficios_otros.json"):
         """Guarda la sección 'otro' (apartado de beneficios variados) en un JSON SEPARADO,
-        sin tocar beneficios.json (restaurantes)."""
-        data = [b.to_dict() for b in getattr(self, 'otros_beneficios', [])]
+        sin tocar beneficios.json (restaurantes).
+
+        Red de seguridad anti "proceso estéril" POR BANCO (L-16, extendida a 'otros' el
+        2026-08-31): si un banco traía 'otros' y ahora trae 0 (geo-fence, cambio de la
+        fuente, fallo transitorio), se REINYECTAN sus 'otros' previos en vez de borrarlos
+        en silencio — mejor un dato stale que perder un banco entero del apartado. Es
+        necesario porque ahora el cron/refresco SÍ commitean este archivo (antes no, así
+        que el bug estaba latente). Deja la lista de preservados en self.otros_preservados."""
+        import os
+        from collections import Counter
+        nuevos = list(getattr(self, 'otros_beneficios', []))
+        self.otros_preservados = []
+        if os.path.exists(filename):
+            with open(filename, encoding='utf-8') as f:
+                previos = json.load(f)
+            nuevos_por_banco = Counter(b.banco for b in nuevos)
+            previos_por_banco = Counter(d.get('banco', '') for d in previos)
+            for banco, n_prev in previos_por_banco.items():
+                if banco and n_prev > 0 and nuevos_por_banco.get(banco, 0) == 0:
+                    reinyectados = [Beneficio(**d) for d in previos if d.get('banco') == banco]
+                    nuevos.extend(reinyectados)
+                    self.otros_preservados.append((banco, n_prev))
+                    print(f"🔵 PRESERVADO (otros) {banco}: trajo 0, se conservan "
+                          f"{n_prev} beneficios previos (geo-fence/caída de la fuente)")
+        data = [b.to_dict() for b in nuevos]
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         print(f"🎁 Otros beneficios guardados en: {filename} ({len(data)})")

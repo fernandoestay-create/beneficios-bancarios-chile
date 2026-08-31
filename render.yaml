@@ -1,3 +1,12 @@
+# ⚠️ LEGACY / FALLBACK DORMIDO — Render quedó SUSPENDIDO el 2026-08-23.
+# Producción vive hoy en el VPS propio (https://datalab-api.duckdns.org), que NO
+# lee este archivo (usa ~/servicios/cartera.env). Este render.yaml se conserva SOLO
+# como plan B para revivir en Render. Si lo revives: los webhook URLs de abajo
+# apuntan a onrender (correcto para Render), pero recuerda re-apuntar Twilio/Telegram
+# y que api.py auto-registra Telegram con TELEGRAM_WEBHOOK_URL al arrancar.
+# El 2º servicio legacy (whatsapp_bot.py, un bot paralelo SIN firma Twilio) se
+# eliminó el 2026-08-31: era una trampa de recuperación (L-38). El bot real vive
+# en api.py (/webhook con firma + /telegram).
 services:
   - type: web
     name: api-beneficios-chile
@@ -29,16 +38,3 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_URL
         value: https://api-beneficios-chile.onrender.com/telegram
-
-  - type: web
-    name: whatsapp-bot-beneficios
-    runtime: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn whatsapp_bot:app --bind 0.0.0.0:$PORT"
-    envVars:
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_WHATSAPP_NUMBER
-        sync: false

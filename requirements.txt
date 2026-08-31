@@ -1,24 +1,29 @@
+# Deps con tope de major (<siguiente): un build limpio (Render/VPS nuevo) toma la
+# última probada de la serie, nunca un major nuevo sin probar (openai 3.x, pinecone
+# 10.x, twilio 10.x rompen). Runtime real verificado: openai 2.x · pinecone 9.x ·
+# fastapi 0.138 · pydantic 2.13 · twilio 9.x. Ideal a futuro: lockfile (pip freeze
+# del venv de producción). — auditoría 2026-08-31
+
 # Scraping
-requests>=2.31.0
-beautifulsoup4>=4.12.2
-lxml>=4.9.3
-playwright>=1.40.0
+requests>=2.31.0,<3
+beautifulsoup4>=4.12.2,<5
+lxml>=4.9.3,<7
+playwright>=1.40.0,<2
 
 # API REST
-fastapi>=0.104.1
-uvicorn>=0.24.0
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-python-multipart>=0.0.6
+fastapi>=0.104.1,<1
+uvicorn>=0.24.0,<1
+pydantic>=2.5.0,<3
+python-multipart>=0.0.6,<1
 
 # Bot WhatsApp
-twilio>=8.10.0
-flask>=3.0.0
-python-dotenv>=1.0.0
+twilio>=8.10.0,<10
+flask>=3.0.0,<4
+python-dotenv>=1.0.0,<2
 
 # RAG / IA
-openai>=1.3.6
-pinecone>=3.0.0
+openai>=1.3.6,<3
+pinecone>=3.0.0,<10
 
 # Deployment
-gunicorn>=21.2.0
+gunicorn>=21.2.0,<24

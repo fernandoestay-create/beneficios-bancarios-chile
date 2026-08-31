@@ -77,6 +77,12 @@ for path in ["/scrape/ejecutar", "/scrape/bencinas"]:
 st, _ = http("/rag", method="POST", body={"pregunta": "hola"})
 if st != 403:
     fallos.append(f"[SEG] /rag sin token = HTTP {st}, esperado 403 (perdió el guard ADMIN_TOKEN)")
+# La firma Twilio (/webhook) debe rechazar lo NO firmado. Si TWILIO_AUTH_TOKEN quedara
+# vacío, la firma se apaga en SILENCIO (fail-open) y el bot aceptaría requests falsas.
+# Este guard lo caza. (auditoría 2026-08-31)
+st, _ = http("/webhook", method="POST", body={"Body": "hola", "From": "whatsapp:+56900000000"})
+if st != 403:
+    fallos.append(f"[SEG] /webhook sin firma = HTTP {st}, esperado 403 (firma Twilio APAGADA: TWILIO_AUTH_TOKEN vacío?)")
 
 # ───────────────────── DATA (lo que se sirve) ─────────────────────
 try:

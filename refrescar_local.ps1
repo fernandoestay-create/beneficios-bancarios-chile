@@ -70,12 +70,25 @@ try {
     # 5. Diagnostico de bancos caidos: guarda su HTML para arreglo rapido
     & $PY diagnosticar.py --desde-status
 
-    # 6. Commit + push si hay cambios -> Render redeploya
-    git -C $CLONE add beneficios.json beneficios.csv bencinas.json historial.json
+    # 6. Commit + push si hay cambios -> el VPS pullea (git pull + restart out-of-band)
+    git -C $CLONE add beneficios.json beneficios.csv beneficios_otros.json bencinas.json historial.json
     git -C $CLONE diff --staged --quiet
     if ($LASTEXITCODE -ne 0) {
         git -C $CLONE commit -m "Refresco local (Chile) $(Get-Date -Format yyyy-MM-dd)" --quiet
-        git -C $CLONE push --quiet
+        # Push con reintento + chequeo de exit code: si el cron/otro equipo empujo
+        # mientras corria el scrape, el push se rechaza (non-fast-forward). Antes el
+        # script no chequeaba $LASTEXITCODE -> loggeaba "push hecho" y mandaba mail
+        # verde con la data NO publicada. (L-22 + auditoria 2026-08-31)
+        $pushed = $false
+        foreach ($i in 1..3) {
+            git -C $CLONE push --quiet
+            if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
+            Log "Push rechazado (intento $i) - traigo lo del remoto y reintento"
+            git -C $CLONE pull --rebase --autostash origin main --quiet
+            if ($LASTEXITCODE -ne 0) { Pop-Location; throw "git pull --rebase fallo tras push rechazado" }
+            Start-Sleep -Seconds ($i * 5)
+        }
+        if (-not $pushed) { Pop-Location; throw "No se pudo pushear tras 3 intentos (produccion NO actualizada)" }
         Log "Produccion actualizada (push hecho)"
     } else { Log "Sin cambios que pushear (produccion ya estaba al dia)" }
     Pop-Location

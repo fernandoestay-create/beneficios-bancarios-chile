@@ -92,8 +92,8 @@ class EstacionBencinaResponse(BaseModel):
 
 class ConsultaRAG(BaseModel):
     pregunta: str = Field(..., max_length=1000)
-    banco: Optional[str] = None
-    dia: Optional[str] = None
+    banco: Optional[str] = Field(None, max_length=100)
+    dia: Optional[str] = Field(None, max_length=50)
 
 class RespuestaRAG(BaseModel):
     pregunta: str
@@ -339,8 +339,13 @@ async def startup():
         if _url:
             try:
                 import urllib.request as _u
-                _u.urlopen(f"https://api.telegram.org/bot{_tg}/setWebhook?url={_url}", timeout=15)
-                print(f"✅ Telegram webhook registrado en: {_url}")
+                _secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
+                _sw = f"https://api.telegram.org/bot{_tg}/setWebhook?url={_url}"
+                if _secret:
+                    from urllib.parse import quote
+                    _sw += f"&secret_token={quote(_secret)}"
+                _u.urlopen(_sw, timeout=15)
+                print(f"✅ Telegram webhook registrado en: {_url}" + (" (con secret_token)" if _secret else ""))
             except Exception as e:  # noqa
                 print(f"⚠️ No se pudo registrar el webhook de Telegram: {e}")
         else:
@@ -382,8 +387,8 @@ async def buscar(
     ubicacion: Optional[str] = Query(None, description="Región o ciudad"),
 ):
     resultados = buscar_beneficios(restaurante, banco, dia, min_descuento, ubicacion)
-    if not resultados:
-        raise HTTPException(status_code=404, detail="No se encontraron beneficios")
+    # Lista vacía es un resultado legítimo (filtrar un banco sin ofertas ese día), no un
+    # error. El 404 se reserva para recurso por id (/beneficios/{id}). — auditoría 2026-08-31
     return resultados
 
 
@@ -455,8 +460,10 @@ async def top_restaurantes(limit: int = Query(10, ge=1, le=50)):
 def _requiere_admin(x_admin_token: str = Header(None)):
     """Cierra endpoints sensibles: exige ADMIN_TOKEN (env) en el header X-Admin-Token.
     Fail-closed: sin ADMIN_TOKEN configurado queda cerrado (nada interno usa /rag)."""
+    import hmac
     esperado = os.getenv("ADMIN_TOKEN")
-    if not esperado or x_admin_token != esperado:
+    # compare_digest: comparación en tiempo constante (evita timing attack sobre el token). auditoría 2026-08-31
+    if not esperado or not hmac.compare_digest(x_admin_token or "", esperado):
         raise HTTPException(403, "No autorizado")
 
 
@@ -1580,6 +1587,20 @@ def _detectar_dia_hoy() -> str:
 # {phone: {"mode": "restaurantes"|"bencinas", "step": "ask_mode"|"ask_banco"|"ask_dia"|"ask_comida", ...}}
 user_flow = {}
 
+# TTL del estado conversacional: sin esto, un usuario que inicia un flujo y lo abandona
+# deja su entrada viva para siempre (fuga de memoria lenta). _user_flow_seen marca la
+# última actividad por usuario; _tocar_user_flow poda los inactivos. auditoría 2026-08-31
+_user_flow_seen = {}
+_USER_FLOW_TTL = 1800  # 30 min
+
+def _tocar_user_flow(usuario: str):
+    import time
+    now = time.time()
+    _user_flow_seen[usuario] = now
+    for u in [u for u, ts in _user_flow_seen.items() if now - ts > _USER_FLOW_TTL]:
+        user_flow.pop(u, None)
+        _user_flow_seen.pop(u, None)
+
 BANCOS_ALIAS = {
     'banco de chile': 'Banco de Chile', 'chile': 'Banco de Chile',
     'falabella': 'Banco Falabella', 'banco falabella': 'Banco Falabella',
@@ -1793,6 +1814,10 @@ async def procesar_comando_whatsapp(texto: str, usuario: str = "") -> str:
     """Procesa mensajes del bot (WhatsApp + Telegram): menú guiado + datos locales, SIN IA."""
     texto_original = texto.strip()
     texto = texto_original.lower()
+
+    # TTL: marca al usuario activo y poda flujos abandonados (>30 min). auditoría 2026-08-31
+    if usuario:
+        _tocar_user_flow(usuario)
 
     # ── Flujo conversacional activo? ──
     if usuario and usuario in user_flow:
@@ -2853,7 +2878,8 @@ const REGION_CENTER={{
       const reg=regSel.value;
       if(reg&&COMUNAS_MAP[reg]){{COMUNAS_MAP[reg].forEach(c=>{{const o=document.createElement('option');o.value=c;o.textContent=c;comSel.appendChild(o)}})}}
       // Centrar mapas en la region seleccionada
-      const center=reg?REGION_CENTER[reg]:null;
+      // Normaliza apóstrofo tipográfico (U+2019) a ASCII: la data CNE trae O’Higgins pero la clave es ASCII. auditoría 2026-08-31
+      const center=reg?(REGION_CENTER[reg]||REGION_CENTER[reg.replace(/’/g,"'")]):null;
       if(center){{
         if(preciosMapObj)preciosMapObj.setView([center[0],center[1]],center[2]);
         if(mapObj)mapObj.setView([center[0],center[1]],center[2]);
@@ -3375,7 +3401,11 @@ async def webhook_whatsapp(request: Request):
                 print("  ⚠️ Webhook Twilio: firma X-Twilio-Signature invalida -> 403")
                 return Response(content="Firma invalida", status_code=403)
         except Exception as e:  # noqa
-            print(f"  ⚠️ Webhook Twilio: no se pudo validar la firma ({e}); se procesa igual")
+            # Fail-CLOSED: si opté por validar firma (TWILIO_AUTH_TOKEN seteado) y la
+            # validación lanza, rechazo en vez de procesar una request potencialmente NO
+            # firmada. Una request legítima de Twilio valida sin excepción. — auditoría 2026-08-31
+            print(f"  ⚠️ Webhook Twilio: error validando la firma ({e}) -> 403 (fail-closed)")
+            return Response(content="Firma no verificable", status_code=403)
 
     From = params.get("From", "")
     Body = params.get("Body", "")
@@ -3407,6 +3437,12 @@ async def telegram_webhook(request: Request):
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     if not token:
         return {"ok": False, "error": "TELEGRAM_BOT_TOKEN no configurado"}
+    # Opt-in (como la firma Twilio): si TELEGRAM_WEBHOOK_SECRET está seteado, exigir que
+    # Telegram lo mande en el header (se registra vía secret_token en setWebhook). Inerte
+    # si no está seteado, así no rompe la instalación actual. — auditoría 2026-08-31
+    secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
+    if secret and request.headers.get("X-Telegram-Bot-Api-Secret-Token", "") != secret:
+        return Response(content="origen no autorizado", status_code=403)
     try:
         data = await request.json()
     except Exception:  # noqa
@@ -3424,10 +3460,12 @@ async def telegram_webhook(request: Request):
     respuesta_tg = respuesta.replace("*", "").replace("_", "")
     try:
         import urllib.request as _u
+        import asyncio
         payload = json.dumps({"chat_id": chat_id, "text": respuesta_tg}).encode("utf-8")
         req = _u.Request(f"https://api.telegram.org/bot{token}/sendMessage",
                          data=payload, headers={"Content-Type": "application/json"})
-        _u.urlopen(req, timeout=15)
+        # to_thread: no bloquear el event loop (worker único) con la llamada síncrona. auditoría 2026-08-31
+        await asyncio.to_thread(_u.urlopen, req, timeout=15)
     except Exception as e:  # noqa
         print(f"  ⚠️ Telegram sendMessage error: {e}")
     return {"ok": True}
