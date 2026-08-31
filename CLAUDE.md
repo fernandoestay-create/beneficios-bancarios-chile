@@ -125,10 +125,10 @@ python upload_pinecone.py
 
 ## 🌐 Recursos externos
 
-- **URL en producción:** https://datalab-api.duckdns.org/ver
+- **URL en producción:** **https://datalab-api.duckdns.org/ver** (VPS propio; Render quedó suspendido — ver sección "MUDÓ AL VPS" abajo)
 - **Repo Git:** https://github.com/fernandoestay-create/beneficios-bancarios-chile
 - **Cliente:** Fernando Estay (producto MiCartera propio)
-- **Servicios externos:** Render (hosting), Pinecone (vector DB), OpenAI (embeddings + GPT-4o-mini), Twilio (WhatsApp)
+- **Servicios externos:** VPS Contabo (hosting, systemd `cartera.service` tras Caddy), Pinecone (vector DB), OpenAI (embeddings + GPT-4o-mini), Twilio (WhatsApp), Telegram
 
 ---
 
@@ -153,4 +153,70 @@ Antes de empezar a trabajar:
 - No se creó `00.Información_propia_explicación/index.md` ni `build_html.py` porque la docs natural ya está en HTML estático. Convertir a flujo `.md → .html` queda como tarea futura si Fernando quiere editar la docs natural en `.md`.
 - El código real vive en `beneficios-bancarios-chile/`. La docs técnica ahí (`README.md`, `ARCHITECTURE.md`, etc.) NO se modificó.
 
-**Última actualización:** 2026-08-04 (v2.1: **bot multicanal WhatsApp + Telegram** de 4 opciones —menú, sin IA, gratis—; firma Twilio activada; pipeline de bencina desbloqueado (L-37); apartado "Otros beneficios" `/ver/beneficios` desplegado (23 verificables tras quitar un financiamiento CAE colado); filtros dinámicos día+región+comuna+categoría; RAG revectorizado; lecciones L-31→L-40)
+**Última actualización:** 2026-08-31 (auditoría ácida del sistema completo + fixes A+B, commit `17b6a6d`: prod confirmada en el **VPS** (Render 503 suspendido); `beneficios_otros.json` ahora se **auto-actualiza** (se stagea en cron+refresco) + red de seguridad por banco (L-41 resuelto); geo `\b` (talca≠talcahuano); firma Twilio **fail-closed** + guard `/webhook` en la guardia; `/telegram` secret_token opt-in; `/beneficios/buscar` 404→200; O'Higgins mapa; `user_flow` TTL; deps capadas; `render.yaml` landmine legacy eliminado; **L-44**. ⚠️ **Pendiente: confirmar en el VPS la cadencia del `git pull`+restart** — un push no está en prod hasta ese pull, que NO es inmediato, L-44)
+_(Anterior 2026-08-04, v2.1: bot multicanal WhatsApp+Telegram de 4 opciones, firma Twilio, pipeline bencina desbloqueado L-37, apartado "Otros beneficios", filtros dinámicos, RAG revectorizado, L-31→L-40.)_
+
+---
+
+## ⚠️ MICARTERA SE MUDÓ DE RENDER AL VPS PROPIO (2026-08-23)
+
+| | Antes | Ahora |
+|---|---|---|
+| **URL** | `api-beneficios-chile.onrender.com` | **`https://datalab-api.duckdns.org`** |
+| **Dónde** | Render free (Oregon) | VPS Contabo `169.58.222.109` |
+| **Cómo** | plan free, dormía | servicio systemd `cartera.service` tras Caddy |
+| **Respuesta** | **32 s** dormido | **2,0 s** |
+| **HTTPS** | de Render | Let's Encrypt vía Caddy, renovación automática |
+
+- **Código:** `~/servicios/beneficios-bancarios-chile` · **entorno:** `~/.venvs/cartera`
+- **Secretos:** `~/servicios/cartera.env`, permisos 600, fuera de git
+- **Registros:** `journalctl --user -u cartera`
+
+⚠️ **El webhook de Telegram se registró a mano.** La app lo hace al arrancar, pero no lo
+hizo; se forzó con `setWebhook`. Verificado: apunta a `/telegram` y sin errores. Si algún
+día el bot deja de responder, **eso es lo primero que hay que mirar** —
+`getWebhookInfo` — no los registros del servicio.
+
+🔴 **PENDIENTE: reapuntar el Sandbox de Twilio** a
+`https://datalab-api.duckdns.org/webhook`. Hasta que se haga, **el bot de WhatsApp no
+responde**. *(L-38: ya pasó una vez que el Sandbox apuntaba al servicio equivocado y el
+síntoma fue exactamente ese. Verificar con un mensaje real, no mirando la configuración.)*
+
+🔴 **PENDIENTE: rotar el token del bot de Telegram.** Quedó visible en pantalla durante la
+migración. BotFather → `/revoke`.
+
+**Render quedó SUSPENDIDO, no borrado.** El `render.yaml` sigue en git: volver exige solo
+repegar los secretos `sync:false`.
+
+📋 **Registro único de tareas:** `~/.claude/CLAUDE.md`.
+
+---
+
+## 📱 WhatsApp — el Sandbox de Twilio caduca cada 72 horas
+
+**Si el bot deja de responder y el síntoma es este mensaje:**
+
+> ⚠️ Your number `whatsapp:+569…` is not connected to a Sandbox.
+
+**no está roto: caducó la membresía.** Se renueva mandando un WhatsApp
+
+| | |
+|---|---|
+| **al número** | `+1 415 523 8886` |
+| **con el texto** | `join matter-color` |
+
+Dura **72 horas** y se puede repetir sin límite. *(Anotado el 2026-08-24 porque no estaba
+escrito en ninguna parte y hubo que ir a buscarlo a la consola de Twilio.)*
+
+**Antes de culpar al Sandbox**, comprobar que el webhook sigue bien apuntado — son fallos
+distintos con el mismo síntoma:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://datalab-api.duckdns.org/webhook
+```
+
+Debe dar **403** (rechaza lo no firmado). Un **200** ahí significa que la validación de firma
+está apagada, no que todo esté bien (L-21 de Hermes: una variable vacía la apaga en silencio).
+
+⚠️ El Sandbox es para pruebas. Para uso real sin caducidad hay que solicitar un **número de
+WhatsApp Business** propio en Twilio.

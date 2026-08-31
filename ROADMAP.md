@@ -1,7 +1,24 @@
 # Roadmap — MiCartera (Scrapers + Bot descuentos)
 
 > Estado real del proyecto. Se actualiza después de cada sesión de trabajo.
-> Última actualización: 2026-08-04
+> Última actualización: 2026-08-31
+
+## ✅ Hecho (sesión 2026-08-31 — auditoría ácida del sistema completo (ALCANCE B) + fixes A+B)
+
+Directiva de Fernando: correr la auditoría profunda ("si, hazla") + robustez "con test en vivo" (eligió alcance **A+B**).
+
+- **🔴 Confirmado: producción es el VPS, no Render.** Render (`onrender.com`) → **503 suspendido**; el VPS (`datalab-api.duckdns.org`) sirve todo (903 benef, scrape 08-30) y tiene mis fixes días/región LIVE. El VPS **pullea git out-of-band** y **el pull NO es inmediato** → **L-44**.
+- **Auditoría ácida ALCANCE B (11 agentes por frente + verificación en vivo):** veredicto **SANO en datos/producto (9/8), FRÁGIL en deploy/reproducibilidad (4)**. 3 P1 + 11 P2/P3.
+- **Fixes A+B aplicados + verificados + pusheados (`17b6a6d`):**
+  - `beneficios_otros.json` ahora se **stagea** (cron + refresco) + **red de seguridad por banco** en `guardar_otros_json` (L-41 **resuelto**, L-16 extendida).
+  - geo con `\b` (`talca`≠`talcahuano`, L-42) en BCI/Ripley/orquestador.
+  - firma Twilio **fail-CLOSED** + guard `[SEG] /webhook→403`; `/telegram` secret_token opt-in; `ADMIN_TOKEN` compare_digest; `ConsultaRAG` max_length.
+  - `/beneficios/buscar` 404→200; O'Higgins centra el mapa; `/telegram` no bloquea el loop; `user_flow` TTL 30 min.
+  - deps con tope de major (openai<3, pinecone<10…); fuera `pydantic-settings` y playwright del cron; **`render.yaml`: eliminado el 2º bot legacy sin firma** (landmine L-38) + marcado LEGACY.
+  - Verificado: py_compile, boot (892+1236+31+28), 4 páginas 200 + `node --check`, health check exit 0, 0 secrets.
+- Lección **L-44** (deploy: "¿pusheó? ≠ ¿está sirviendo?"); **L-41 resuelta**.
+
+**⏳ Pendiente inmediato (de esta auditoría):** (1) confirmar en el VPS la cadencia del `git pull`+restart y tener un "deploy now"; (2) **cuotas de septiembre** (cambio de mes, re-curar mañana); (3) reapuntar Twilio Sandbox al VPS + rotar token Telegram; (4) P3 hygiene: key BCI duplicada, BancoEstado LEGACY, `/rag` async, módulo único de geografía.
 
 ## ✅ Hecho (sesión 2026-08-06 — datos SIN errores: fix días+región BCI/Falabella + prueba ácida siempre)
 

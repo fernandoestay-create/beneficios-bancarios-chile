@@ -25,6 +25,7 @@
 | 13 | 2026-08-04 | **Cuotas a agosto + "Otros" ampliado 24→788 (10 bancos) + audit (v2.2→v2.8)**: cuotas re-curadas a agosto (11/14 bancos, 9 oficial-verificada), **"Otros beneficios" 24→788** — 8 bancos vía flip **L-32** (fuente ya traía todo y lo botaba): Banco de Chile +359, BCI +172, Banco Security +80, **Banco Falabella** +61 (páginas RSC por categoría), Entel +49, Tenpo +18, Lider +17, Mach +9. **GATE en cada banco: ningún restaurante baseline perdido** → `/ver` intacto (898/14). Trampas L-34 manejadas, **filtro de calidad DURABLE en el render** (L-40/L-41), Ripley región corregida. **Expansión "otros" COMPLETA:** los 4 restantes (Itaú, Ripley, Scotiabank, BancoEstado) NO tienen descuentos % fuera de restaurantes (usan programas de puntos / secciones vacías / campaña caída; verificado, incl. navegador para los SPA) |
 
 | 14 | 2026-08-06 | **Datos SIN errores + prueba ácida siempre (v2.11→v2.13)**: fix **días** BCI (92, `scheduling.dayRecurrence` vs tags — Gracielo salía "todos" siendo martes, L-42) + fix **región** BCI/Falabella (48, tag `R.`/nombre — Dominga Bistró/La Mulata salían en Metropolitana estando en Iquique/Valdivia, L-42b). **Auditoría ácida INTEGRAL** de los 2107 beneficios en 7 dimensiones midiendo la fuente → data de cara al usuario **SANA** (único visible: "Beneficios del mes" genérico, excluido). **Prueba ácida SIEMPRE = 2 capas (L-43):** guardia determinista (GitHub Actions, gratis, sin PC, mide la fuente, **7 guards**) + auditoría LLM cloud mensual (⚠️ sandbox sin egress → solo datos-en-reposo). Fine-tuning en TUNING_PAGINAS.md |
+| 15 | 2026-08-31 | **Auditoría ácida del sistema completo (ALCANCE B) + fixes A+B**: confirmado **prod=VPS** (Render 503 suspendido); 11 agentes por frente + verificación en vivo → **SANO en datos (9/10), frágil en deploy (4/10)**. Fixes: `beneficios_otros.json` stageado + red de seguridad por banco (**L-41 resuelto**), geo `\b` (`talca`≠`talcahuano`), firma Twilio fail-closed + guard `/webhook`, `/telegram` secret_token, `/beneficios/buscar` 404→200, O'Higgins mapa, `user_flow` TTL, deps capadas, `render.yaml` landmine eliminado. **L-44** (¿pusheó? ≠ ¿está sirviendo?). Commit `17b6a6d` |
 
 > Nota: las sesiones 1 y 2 son inferidas de fechas de archivos y metadata. No hubo cronología explícita previa a la migración.
 
@@ -331,6 +332,30 @@ Fernando reportó: "No me aparece los descuentos de banco falabella, revisar que
 **Pendiente:** cuotas a agosto (mes_referencia junio, ~20/28 vencidas); región de Ripley mal en ≥7/72; Shell/Aramco desde apps oficiales; los otros ~12 bancos de "Otros beneficios"; opción futura: bot híbrido con LLM/RAG para preguntas abiertas.
 
 **Resultado:** pipeline de datos andando otra vez + bot **multicanal (WhatsApp + Telegram)** de 4 secciones, gratis, con la data curada auditada por 2 agentes independientes. Sistema en `v2.1-bot-multicanal`.
+
+---
+
+### Sesión 15 — 2026-08-31 — Auditoría ácida del sistema completo (ALCANCE B) + fixes A+B
+
+**Contexto:** Fernando pidió la auditoría profunda del sistema entero ("si, hazla") y, al elegir el alcance, **A+B** (quick wins + robustez con test en vivo). En paralelo avisó del cambio de mes (cuotas de septiembre, para el día siguiente).
+
+**Decisiones (con su porqué):**
+- **Verificar producción contra la URL REAL, no los docs (L-44).** Un `curl` mostró Render **503 suspendido** y el VPS `datalab-api.duckdns.org` vivo → la verificación previa había sido contra un servicio muerto. El VPS pullea git out-of-band y **el pull no es inmediato**: "¿pusheó? ≠ ¿está sirviendo?".
+- **Auditoría estática (agentes) + verificación en vivo (orquestador).** Los agentes que solo leen el repo dieron por "roto" el deployer al VPS (no está en el repo); en vivo el VPS ya servía mis fixes → el pull existe, es out-of-band.
+- **Al empezar a stagear un archivo generado, darle su red de seguridad (L-16).** `beneficios_otros.json` no se stageaba (semanas congelado, L-41); al agregarlo al `git add`, se le sumó la preservación por banco para que un banco caído no se borre en silencio.
+- **Fail-closed en seguridad.** La firma Twilio procesaba igual ante excepción (fail-open) → ahora rechaza (403); + guard que caza si la firma se apaga.
+
+**Lo que se construyó (commit `17b6a6d`, verificado):**
+1. Confirmación prod = VPS + fixes días/región LIVE (Gracielo=martes, La Mulata=Tarapacá).
+2. Auditoría ALCANCE B (11 agentes por frente + en vivo): SANO en datos/producto (9/8), frágil en deploy/reproducibilidad (4); 3 P1 + 11 P2/P3.
+3. Fixes A+B: staging `beneficios_otros.json` + red de seguridad por banco; geo `\b`; firma Twilio fail-closed + guard `/webhook→403`; `/telegram` secret_token + `to_thread`; `ADMIN_TOKEN` compare_digest + `ConsultaRAG` max_length; `/beneficios/buscar` 404→200; O'Higgins centra el mapa; `user_flow` TTL 30 min; deps con tope de major (openai<3, pinecone<10…) − `pydantic-settings` − playwright del cron; `render.yaml` con el 2º bot legacy sin firma eliminado (landmine L-38) + marcado LEGACY.
+4. Verificado: py_compile 4/4, boot (892+1236+31+28), 4 páginas 200 + `node --check`, health check exit 0, 0 secrets.
+
+**Pendiente:** cadencia del `git pull`+restart del VPS (confirmar en el VPS); **cuotas de septiembre** (cambio de mes); reapuntar Twilio Sandbox + rotar token Telegram; P3 hygiene (key BCI duplicada, BancoEstado LEGACY, `/rag` async, módulo único de geografía).
+
+**Lecciones:** **L-44** nueva (deploy: ¿pusheó? ≠ ¿está sirviendo?); **L-41 resuelta**. Contador del proyecto: **44 lecciones**.
+
+**Resultado:** sistema auditado de punta a punta y endurecido en deploy/seguridad/datos; cerrado el gap operativo (el apartado "Otros" no se auto-actualizaba). Producción sana en el VPS. Commit `17b6a6d`.
 
 ---
 

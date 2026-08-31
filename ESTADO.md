@@ -1,7 +1,26 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-08-06
-**Estado general:** 🟢 producción
+**Última actualización:** 2026-08-31
+**Estado general:** 🟢 producción (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido)
+
+**Sesión 2026-08-31 — Auditoría ácida del sistema completo (ALCANCE B) + fixes A+B + confirmación migración VPS:**
+
+- **🔴 Confirmado en vivo: producción es el VPS, NO Render.** `api-beneficios-chile.onrender.com` → **503 "Service suspended"** (muerto). `datalab-api.duckdns.org` → **200 en 0.9s** (903 beneficios, 14 bancos, scrape 2026-08-30). Los fixes de la sesión anterior (días BCI, región Dominga/La Mulata) están **LIVE en el VPS** (verificado: Gracielo=martes, La Mulata=Tarapacá, ya no salen en Metropolitana). El VPS **pullea git out-of-band** (no visible en el repo); ojo: **el pull NO es inmediato** (tras pushear, el VPS tardó en reflejarlo). → **L-44**.
+- **Auditoría ácida ALCANCE B (11 agentes por frente + verificación en vivo del orquestador).** Veredicto: **SANO en datos y producto (9/10 y 8/10), FRÁGIL en deploy y reproducibilidad (4/10)**. Seguridad en vivo OK (/scrape→404, /rag→403, /webhook→403); el "5/10" era robustez del código (fail-open ante excepción), ya corregido.
+- **Fixes A+B aplicados, verificados y pusheados (`17b6a6d`):**
+  - **Deploy/datos:** `beneficios_otros.json` ahora se **stagea** en `scraper.yml` + `refrescar_local.ps1` (P1: "Otros" llevaba semanas congelado, L-41 resuelto) + **red de seguridad anti proceso-estéril por banco** en `guardar_otros_json` (L-16 extendida) + refresco chequea exit code del push (L-22).
+  - **Datos:** geo con `\b` en BCI/Ripley/orquestador (`'talca'` ya no matchea `'talcahuano'`, L-42; verificado).
+  - **Seguridad:** firma Twilio **fail-CLOSED** ante excepción (era fail-open) + **guard `[SEG] /webhook→403`** en la guardia (caza si `TWILIO_AUTH_TOKEN` queda vacío); `/telegram` con **secret_token opt-in**; `ADMIN_TOKEN` con `hmac.compare_digest`; `ConsultaRAG.banco/dia` con `max_length`.
+  - **API/UX:** `/beneficios/buscar` 404→**200** (lista vacía es válida); **O'Higgins** ahora centra el mapa (normaliza apóstrofo U+2019); `/telegram` no bloquea el event loop (`asyncio.to_thread`); `user_flow` con **TTL 30 min** (fuga + estado viejo).
+  - **Deps/config:** `requirements.txt` + install del cron con **tope de major** (openai<3, pinecone<10, twilio<10…); quitado `pydantic-settings` (0 usos) y playwright del cron (BancoEstado diferido); **`render.yaml`: eliminado el 2º servicio legacy `whatsapp_bot.py`** (sin firma, landmine L-38) + marcado LEGACY.
+  - **Verificado:** py_compile 4/4, boot OK (892+1236+31+28), 4 páginas 200 + `node --check`, `/beneficios/buscar`→200, `/rag`→403, geo `\b` test, health check exit 0, 0 secrets.
+
+**➡️ PRÓXIMA SESIÓN (pendientes de esta auditoría):**
+1. **⚠️ Cadencia del pull del VPS (P1 abierto):** confirmar EN EL VPS (`crontab -l` / `systemctl --user list-timers`) cada cuánto hace `git pull && systemctl --user restart cartera.service`, y tener un "deploy now" a mano. Sin esto, un push urgente puede tardar en salir. (Los fixes `17b6a6d` saldrán en el próximo pull del VPS — verificar con `curl .../beneficios/buscar` → debe dar **200**, no 404.)
+2. **💳 Cuotas de SEPTIEMBRE (cambio de mes):** `cuotas_sin_interes.json` está en `agosto 2026` → re-curar a septiembre desde las webs oficiales (desde Chile, L-24). El correo ya avisa el desfase solo. Barrer los 14 bancos.
+3. **Twilio Sandbox** → reapuntar a `datalab-api.duckdns.org/webhook` (pendiente de CLAUDE.md) + **rotar token Telegram** (BotFather /revoke).
+4. **P3 hygiene restantes** (no bloqueantes): centralizar la SUBSCRIPTION_KEY de BCI (hoy duplicada en scrapers.py + revision_madrugada.py); marcar BancoEstado LEGACY; `/rag` async (buscar_semantico/consultar_openai bloqueantes); extraer UN módulo de geografía (hoy 6 mapas paralelos, hice el fix `\b` mínimo).
+- Lección nueva **L-44**; **L-41 marcada RESUELTA**.
 
 **Sesión 2026-08-06 — Fix días BCI + fix REGIÓN (Dominga/La Mulata) + prueba ácida diaria (L-42/L-42b):**
 - **Bug 1 — días (Fernando):** "Gracielo Bar en BCI sale TODOS los días y es solo el martes". **Raíz:** el scraper de BCI sacaba el día de los `tags` (sin día); el día real vive en `scheduling.dayRecurrence=['MARTES']` (autoritativo). **74/312 ofertas** mostraban "todos" siendo día fijo. **Fix (`1d87de4`):** lee `dayRecurrence` primero. **92 días corregidos**; Gracielo → martes, verificado en prod. Guard **L-42** (`2399c32`).

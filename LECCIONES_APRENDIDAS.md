@@ -54,6 +54,7 @@
 | L-41 | `beneficios_otros.json` lo GENERA el scraper pero el refresco/cron NO lo stagean → no se auto-actualiza en prod; al agregar un banco a "otros" hay que regenerarlo y commitearlo a mano. El filtro de calidad (%>0 + anti-financiamiento) va en el RENDER (`api.py`), no en el dato, para ser DURABLE ante re-scrapes. Un scraper con API que ya trae todo y filtra (BCI) → voltearlo (L-32) es quick-win vs extender scrapers que solo fetchean restaurantes | Arquitectura / Datos | 2026-08-04 |
 | L-42 | El día del descuento vivía en un campo ESTRUCTURADO que el scraper ignoraba (BCI `scheduling.dayRecurrence=['MARTES']`), leyendo los `tags` (sin día) → 74/312 ofertas mostraban "todos" siendo día fijo (Gracielo "todos" = "Todos los martes"). Mostrar "todos" cuando es un día fijo es info ERRÓNEA (el usuario va el día equivocado), peor que faltar. Fix: leer la fuente autoritativa; `keywords` era poco confiable (decía "MIERCOLES", mal). PERO: si la fuente NO tiene día (Santander: 6 detalles sin día) → "todos" es HONESTO, NO inventar (L-19). Distinguir "día ignorado" (bug) de "sin día publicado" (correcto) MIDIENDO la fuente. Guard L-42/L-42b en la guardia vs `dayRecurrence`/tag `R.` | Datos y calidad / Scraping | 2026-08-06 |
 | L-43 | Prueba ácida SIEMPRE = 2 capas + un loop. **Capa 1 = guardia determinista** (`revision_madrugada.py` en GitHub Actions, cada bug → un guard permanente, gratis, sin PC, **CON egress** → mide la fuente); **Capa 2 = auditoría LLM periódica** (rutina cloud, busca bugs NUEVOS). **El loop:** cada hallazgo de la Capa 2 → un guard de la Capa 1. ⚠️ **El sandbox cloud (rutina agendada/CCR) NO tiene egress** → NO alcanza APIs de bancos ni producción → solo audita datos-en-reposo; la verificación-CONTRA-FUENTE debe correr donde HAY egress (GitHub Actions o local), NO en el cloud. Bajar la cloud a mensual (gasta uso de Claude por corrida); la guardia gratis es la protección real diaria | Meta / Infraestructura | 2026-08-06 |
+| L-44 | "¿Pusheó?" ≠ "¿Está sirviendo?" a nivel DEPLOY: Render quedó suspendido (503), prod real es el VPS que pullea git out-of-band → un push no está en prod hasta el pull+restart; verificar con `curl` a la URL real, no los docs; combinar auditoría estática (agentes) con verificación en vivo | Deploy / Meta | 2026-08-31 |
 
 ---
 
@@ -897,6 +898,8 @@ El fix de un patrón en el CÓDIGO (scraper) NO limpia los datos ya CURADOS a ma
 
 ### L-41 · El archivo de "otros" se mantiene a mano; el filtro de calidad va en el render (2026-08-04) · Arquitectura / Datos
 
+> **✅ RESUELTO (2026-08-31, auditoría):** el gotcha (1) —`beneficios_otros.json` no stageado→ no se auto-actualizaba— se arregló: se agregó al `git add` de `scraper.yml` y `refrescar_local.ps1`, Y se le dio red de seguridad anti proceso-estéril POR BANCO en `guardar_otros_json` (L-16 extendida: un banco que caiga a 0 en "otros" se preserva, no se borra). El filtro de calidad sigue en el render (`_es_verificable`), así que stagear el archivo crudo es seguro.
+
 **Problema**
 Al ampliar "Otros beneficios" (agregar BCI, 23→195), aparecieron dos gotchas: (1) `beneficios_otros.json` lo genera el scraper (`guardar_otros_json`), pero el refresco local y el cron **solo stagean** `beneficios.json/csv`, `bencinas.json`, `historial.json` — **NO `beneficios_otros.json`** → no se auto-actualiza en producción; y (2) la curación manual del archivo (quitar "Proyecta Energía") **se revierte** si algo lo regenera, porque el % de financiamiento (90% de "ahorra hasta 90% con paneles solares") lo produce el scraper igual.
 
@@ -958,6 +961,23 @@ Fernando: "no podemos tener información errónea" + "cómo hacemos una prueba �
 
 ---
 
+### L-44 · "¿Pusheó?" ≠ "¿Está sirviendo?" a nivel DEPLOY: verificar contra la producción REAL, no los docs ni el push (2026-08-31) · Deploy / Meta
+
+**Contexto**
+Auditoría ácida del sistema completo. Por los docs viejos y el hábito, di por hecho que producción era Render (`api-beneficios-chile.onrender.com`). Un `curl` en vivo: Render devuelve **503 "Service suspended"** (muerto); la producción real es el **VPS** (`datalab-api.duckdns.org`, migrado 2026-08-23), que carga todo en memoria al bootear y **pullea git out-of-band** (crontab/systemd EN el VPS, NO visible en el repo).
+
+**Lección**
+- La regla cardinal L-W20 ("¿corrió? ≠ ¿insertó?") tiene una tercera cara a nivel DEPLOY: **"¿pusheó? ≠ ¿está sirviendo?"**. Un `git push` exitoso NO está en producción hasta que el VPS haga `git pull` + restart. Latencia observada: **no inmediata** — tras pushear `17b6a6d`, el VPS seguía sirviendo la versión vieja minutos después (`/beneficios/buscar` todavía daba 404).
+- Un agente de auditoría **estático** (solo lee el repo) reporta como "roto" lo que en vivo funciona: creyó inexistente el deployer al VPS porque no está en el repo. En vivo el VPS YA tenía mis fixes (Gracielo=martes, 789 "otros") → el pull SÍ existe, es out-of-band. **Combinar auditoría estática (agentes por frente) con verificación EN VIVO del orquestador contra la URL de producción real.**
+- Los docs mienten y se contradicen entre sí: el CLAUDE.md tenía la nota de migración pero ESTADO/HISTORIAL seguían diciendo onrender; el CLAUDE.md del clone decía duckdns y el del Drive onrender. Un doc que contradice a otro (o a la realidad) es un bug, no un detalle.
+
+**Cómo aplicarla**
+- Ante "¿está X en producción?": `curl` la URL de producción REAL y compara contra el último commit. Sonda barata de "¿ya pulleó?": un endpoint cuyo comportamiento cambió (aquí `/beneficios/buscar` 404→200). No confíes en los docs ni en que el push bastó.
+- **Documentar la cadencia del pull del VPS** (`crontab -l` / `systemctl --user list-timers`) y tener un "deploy now" a mano (`git pull && systemctl --user restart cartera.service`) para cambios urgentes (ej. cuotas del mes).
+- El deployer out-of-band (vive en el VPS, fuera del repo) debe quedar DOCUMENTADO en el repo, o la próxima auditoría lo dará por inexistente.
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -1010,8 +1030,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 43 lecciones formalizadas (L-01 a L-43; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-43 (2026-08-06)
-**Última actualización:** 2026-08-06
+**Contador:** 44 lecciones formalizadas (L-01 a L-44; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-44 (2026-08-31)
+**Última actualización:** 2026-08-31
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.
