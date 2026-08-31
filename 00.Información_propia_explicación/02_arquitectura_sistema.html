@@ -226,13 +226,13 @@ api.py genera HTML con:
 <!-- ============ DEPLOY ============ -->
 <h2>Deploy en Produccion</h2>
 <div class="card">
-  <h3>Render.com</h3>
+  <h3>VPS propio (Contabo) &mdash; desde 2026-08-23</h3>
   <ul>
-    <li><strong>Servicio principal:</strong> <code>api-beneficios-chile</code> - FastAPI + Uvicorn</li>
-    <li><strong>Build:</strong> <code>pip install -r requirements.txt</code></li>
-    <li><strong>Start:</strong> <code>uvicorn api:app --host 0.0.0.0 --port $PORT</code></li>
-    <li><strong>Auto-deploy:</strong> push a <code>main</code> en GitHub</li>
-    <li><strong>Servicio secundario:</strong> <code>whatsapp-bot-beneficios</code> (Flask alternativo)</li>
+    <li><strong>URL:</strong> <code>https://datalab-api.duckdns.org</code> (antes Render, hoy SUSPENDIDO)</li>
+    <li><strong>Servicio:</strong> <code>cartera.service</code> (systemd) &mdash; FastAPI + Uvicorn, tras Caddy (HTTPS Let's Encrypt, respuesta ~2s)</li>
+    <li><strong>Deploy:</strong> el VPS hace <code>git pull</code> + reinicio del servicio (out-of-band). Un push NO esta en produccion hasta ese pull, y NO es inmediato (regla L-44: "&iquest;pusheo? &ne; &iquest;esta sirviendo?")</li>
+    <li><strong>Codigo:</strong> <code>~/servicios/beneficios-bancarios-chile</code> &middot; <strong>secretos:</strong> <code>~/servicios/cartera.env</code> (fuera de git)</li>
+    <li><strong>Legacy:</strong> <code>render.yaml</code> sigue en git como fallback dormido (Render suspendido, no borrado; el 2&ordm; servicio inseguro se elimino en la auditoria 2026-08-31)</li>
   </ul>
   <h3>Variables de entorno</h3>
   <ul>
@@ -241,7 +241,7 @@ api.py genera HTML con:
   </ul>
 </div>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 | <strong>Ultima actualizacion:</strong> Marzo 2026</p>
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_05 | <strong>Ultima actualizacion:</strong> 2026-08-31 (migracion a VPS propio + auditoria acida A+B)</p>
 
 </body>
 </html>
