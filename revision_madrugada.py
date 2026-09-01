@@ -219,6 +219,18 @@ try:
             if isinstance(_dl, list) and _dl and isinstance(_dl[0], dict) and "banco" in _dl[0]:
                 _visg = sum(1 for x in _dl if (x.get("restaurante", "") or "").strip().lower()
                             .startswith(("beneficio en", "beneficios del mes", "cuponera")))
+                # ACID-UNIDAD: 'descuento_valor' no siempre es un % — 'precio_fijo'/'monto'
+                # guardan ahí un PESO crudo (Mel Studio $84.990, Uno Salud Dental $29.900).
+                # ACID-% no lo pilla (busca "%" en descuento_texto, que viene como "$84.990",
+                # sin %). Un peso >100 colado en /ver/beneficios corrompe el sort "Mayor
+                # descuento", el filtro de % mínimo y el hero "Mejor descuento" (que llegó a
+                # mostrar "84990%" — auditoría 2026-09-01, L-45).
+                _altos = [x for x in _dl if (x.get("descuento_valor") or 0) > 100]
+                if _altos:
+                    fallos.append(f"[ACID-UNIDAD] {len(_altos)} beneficios con descuento_valor>100 "
+                                  f"VISIBLES en /ver/beneficios (ej. {_altos[0].get('restaurante','?')}="
+                                  f"{_altos[0].get('descuento_valor')}) — un peso ($) tratado como %; "
+                                  f"¿el filtro _es_verificable de api.py dejó de excluir tipos no-%?")
                 break
         if _visg:
             fallos.append(f"[ACID-GENÉRICO] {_visg} nombres genéricos VISIBLES en /ver/beneficios "

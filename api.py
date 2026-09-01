@@ -870,6 +870,12 @@ async def _render_deals(all_data_param, modo, dia, banco, q, key, acceso_key):
         def _es_verificable(b):
             if (b.descuento_valor or 0) <= 0:
                 return False
+            # descuento_valor no siempre es un %: 'precio_fijo'/'monto' guardan un peso
+            # crudo (ej. Mel Studio $84.990) en el MISMO campo numérico. Sin este check
+            # se cuela como "84990% dcto." — corrompe el sort "Mayor descuento", el filtro
+            # de % mínimo y el hero "Mejor descuento" (auditoría 2026-09-01).
+            if getattr(b, 'descuento_tipo', '') not in ('porcentaje', 'cashback'):
+                return False
             nom = (getattr(b, 'restaurante', '') or '').strip().lower()
             if any(nom.startswith(g) or g in nom for g in _GENERICO):
                 return False

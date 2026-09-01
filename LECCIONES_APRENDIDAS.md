@@ -55,6 +55,7 @@
 | L-42 | El día del descuento vivía en un campo ESTRUCTURADO que el scraper ignoraba (BCI `scheduling.dayRecurrence=['MARTES']`), leyendo los `tags` (sin día) → 74/312 ofertas mostraban "todos" siendo día fijo (Gracielo "todos" = "Todos los martes"). Mostrar "todos" cuando es un día fijo es info ERRÓNEA (el usuario va el día equivocado), peor que faltar. Fix: leer la fuente autoritativa; `keywords` era poco confiable (decía "MIERCOLES", mal). PERO: si la fuente NO tiene día (Santander: 6 detalles sin día) → "todos" es HONESTO, NO inventar (L-19). Distinguir "día ignorado" (bug) de "sin día publicado" (correcto) MIDIENDO la fuente. Guard L-42/L-42b en la guardia vs `dayRecurrence`/tag `R.` | Datos y calidad / Scraping | 2026-08-06 |
 | L-43 | Prueba ácida SIEMPRE = 2 capas + un loop. **Capa 1 = guardia determinista** (`revision_madrugada.py` en GitHub Actions, cada bug → un guard permanente, gratis, sin PC, **CON egress** → mide la fuente); **Capa 2 = auditoría LLM periódica** (rutina cloud, busca bugs NUEVOS). **El loop:** cada hallazgo de la Capa 2 → un guard de la Capa 1. ⚠️ **El sandbox cloud (rutina agendada/CCR) NO tiene egress** → NO alcanza APIs de bancos ni producción → solo audita datos-en-reposo; la verificación-CONTRA-FUENTE debe correr donde HAY egress (GitHub Actions o local), NO en el cloud. Bajar la cloud a mensual (gasta uso de Claude por corrida); la guardia gratis es la protección real diaria | Meta / Infraestructura | 2026-08-06 |
 | L-44 | "¿Pusheó?" ≠ "¿Está sirviendo?" a nivel DEPLOY: Render quedó suspendido (503), prod real es el VPS que pullea git out-of-band → un push no está en prod hasta el pull+restart; verificar con `curl` a la URL real, no los docs; combinar auditoría estática (agentes) con verificación en vivo | Deploy / Meta | 2026-08-31 |
+| L-45 | `descuento_valor` no siempre es un %: `precio_fijo`/`monto` guardan ahí un PESO crudo ($84.990) en el MISMO campo que usan sort/filtro/hero-stat como si fuera %; el guard ACID-% no lo pilla porque mira `%` en el TEXTO, no el campo numérico → el hero "Mejor descuento" de `/ver/beneficios` mostraba "84990%" | Datos y calidad / UX | 2026-09-01 |
 
 ---
 
@@ -978,6 +979,30 @@ Auditoría ácida del sistema completo. Por los docs viejos y el hábito, di por
 
 ---
 
+### L-45 · `descuento_valor` mezcla % con pesos crudos en el mismo campo — el hero "Mejor descuento" mostraba "84990%" (2026-09-01) · Datos y calidad / UX
+
+**Contexto**
+Auditoría ácida diaria (Capa 2). Egress bloqueado en el sandbox cloud (L-43) → auditoría de datos-en-reposo, no contra la fuente. Se auditó `beneficios_otros.json` por consistencia interna.
+
+**Problema**
+`descuento_tipo` tiene valores `porcentaje`, `cashback` (ambos son %) pero también `precio_fijo` y `monto` — que guardan un **PESO crudo** en el MISMO campo numérico `descuento_valor` (ej. `falabella_mel-studio`: `descuento_tipo="precio_fijo"`, `descuento_valor=84990.0`, `descuento_texto="$84.990 Plan Elite"`). El filtro `_es_verificable` de `/ver/beneficios` (api.py, L-41) solo exigía `descuento_valor > 0` — no miraba `descuento_tipo` — así que estos 4 ítems de Falabella + 1 de Lider BCI (`monto`, $100) pasaban el filtro y quedaban VISIBLES, tratados como si `descuento_valor` fuera un %.
+
+**Causa raíz**
+El campo `descuento_valor` es polisémico (a veces %, a veces $) y ningún consumidor del render lo desambigua con `descuento_tipo` antes de usarlo en operaciones numéricas (`max()`, `sort()`, comparación con el slider de "% mínimo"). Verificado en vivo (boot local con `TestClient`, misma data de producción): el hero **"Mejor descuento" de `/ver/beneficios` mostraba `84990%`** (debía ser ≤100%); el sort por defecto ("Mayor descuento") ponía a Mel Studio ($84.990, un beneficio de precio fijo) por encima de cualquier descuento real de 100%. El guard `ACID-%` existente (L-34/L-40) **no lo detectaba** porque busca un patrón `\d+%` en `descuento_texto` — y estos vienen como `"$84.990"`, sin el símbolo `%` — es primo de L-34 (CAE colado como %) pero con un vector distinto: no es un regex laxo sobre texto, es el CAMPO NUMÉRICO mismo mezclando unidades.
+
+**Fix**
+`_es_verificable` (api.py) ahora exige además `descuento_tipo in ('porcentaje', 'cashback')` — implementa al pie de la letra lo que la página ya decía ser ("Otros beneficios... con % de descuento real", L-41), sin inventar nada nuevo. Verificado: "Mejor descuento" → **100%** (antes 84990%); 5 ítems (4 precio_fijo + 1 monto) excluidos de `/ver/beneficios` (832→827); **0** ítems con `descuento_valor>100` visibles. **Gate de `/ver` intacto** (894 restaurantes, `beneficios.json` sin tocar — la vista de restaurantes ni pasa por este filtro). Guard nuevo **ACID-UNIDAD** en `revision_madrugada.py`: parsea el JSON embebido de `/ver/beneficios` en vivo (mismo patrón que ACID-GENÉRICO) y falla si reaparece algún `descuento_valor > 100` visible.
+
+**Lección**
+Cuando un campo numérico es **polisémico** (a veces %, a veces $, según un campo hermano de "tipo"), CUALQUIER consumidor que lo trate como una unidad única (sort, max, comparación contra un slider de %) se corrompe con el valor de la otra unidad. El guard de texto (regex sobre `descuento_texto`) no cubre el campo numérico crudo — hacen falta los dos. Y el "verificable" de una página debe filtrar por el campo de TIPO explícito, no inferir la unidad del valor.
+
+**Evitar a futuro**
+- Cualquier filtro/sort/stat que use `descuento_valor` como si fuera "el %" debe primero excluir (o normalizar) los `descuento_tipo` que no son porcentuales (`precio_fijo`, `monto`).
+- Un guard de "% > 100" que mira solo el TEXTO no cubre un campo numérico crudo con otra unidad — verificar ambos.
+- Ante un hero/stat "Mejor X" o un sort "Mayor X" sobre un dataset con tipos mixtos: renderizarlo en vivo (TestClient) y mirar el número, no asumir que el filtro de abajo ya lo sanea.
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -1030,8 +1055,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 44 lecciones formalizadas (L-01 a L-44; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-44 (2026-08-31)
-**Última actualización:** 2026-08-31
+**Contador:** 45 lecciones formalizadas (L-01 a L-45; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-45 (2026-09-01)
+**Última actualización:** 2026-09-01
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.

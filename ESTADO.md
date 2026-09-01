@@ -1,7 +1,16 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-08-31
+**Última actualización:** 2026-09-01
 **Estado general:** 🟢 producción (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido)
+
+**Sesión 2026-09-01 — Auditoría ácida diaria (Capa 2, cloud): bug de unidades en `descuento_valor` (L-45):**
+
+- **⚠️ Egress bloqueado en el sandbox cloud (conocido, L-43):** confirmado de nuevo — 0 alcance a `datalab-api.duckdns.org`, Render ni APIs de bancos. Auditoría hecha 100% sobre datos-en-reposo + boot local (`TestClient` con la data real de producción), sin poder medir contra la fuente ni contra el VPS en vivo hoy.
+- **Hallazgo real:** `/ver/beneficios` mostraba el hero **"Mejor descuento: 84990%"** (absurdo). Raíz: `descuento_valor` mezcla % (`porcentaje`/`cashback`) con PESOS crudos (`precio_fijo`/`monto`, ej. Mel Studio $84.990) en el mismo campo numérico; el filtro `_es_verificable` de `api.py` solo exigía `descuento_valor>0`, sin mirar `descuento_tipo` → esos ítems colaban tratados como %. El guard `ACID-%` no lo pillaba (mira `%` en `descuento_texto`, y estos vienen como `"$84.990"`, sin símbolo).
+- **Fix (commit de esta sesión):** `_es_verificable` ahora exige `descuento_tipo in ('porcentaje','cashback')`. Verificado: "Mejor descuento" 84990%→**100%**; 5 ítems (4 Falabella `precio_fijo` + 1 Lider BCI `monto`) excluidos de `/ver/beneficios` (832→827); 0 con `descuento_valor>100` visibles. **Gate de `/ver` intacto** (894 restaurantes, `beneficios.json` sin tocar). Guard nuevo **ACID-UNIDAD** en `revision_madrugada.py` (mismo patrón que ACID-GENÉRICO: parsea el JSON en vivo de `/ver/beneficios`).
+- **Verificado:** py_compile (api.py, revision_madrugada.py), `python verificar_salud.py` exit 0, boot local 894/1242/31/28, render `/ver/beneficios` y `/ver` vía TestClient.
+- **No verificado hoy (requiere egress):** consistencia de días/región contra las APIs de los bancos (BCI, etc.) — eso lo cubre la guardia diaria en GitHub Actions (Capa 1, L-43), no este sandbox.
+- Lección nueva **L-45**.
 
 **Sesión 2026-08-31 — Auditoría ácida del sistema completo (ALCANCE B) + fixes A+B + confirmación migración VPS:**
 
