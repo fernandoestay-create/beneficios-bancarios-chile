@@ -974,7 +974,8 @@ Auditoría ácida del sistema completo. Por los docs viejos y el hábito, di por
 
 **Cómo aplicarla**
 - Ante "¿está X en producción?": `curl` la URL de producción REAL y compara contra el último commit. Sonda barata de "¿ya pulleó?": un endpoint cuyo comportamiento cambió (aquí `/beneficios/buscar` 404→200). No confíes en los docs ni en que el push bastó.
-- **Documentar la cadencia del pull del VPS** (`crontab -l` / `systemctl --user list-timers`) y tener un "deploy now" a mano (`git pull && systemctl --user restart cartera.service`) para cambios urgentes (ej. cuotas del mes).
+- **Documentar la cadencia del pull del VPS** (`crontab -l` / `systemctl --user list-timers`) y tener un "deploy now" a mano para cambios urgentes (ej. cuotas del mes). **Deploy manual — usuario del VPS = `root`** (169.58.222.109, panel Contabo → Default User): `ssh root@169.58.222.109 "cd ~/servicios/beneficios-bancarios-chile && git pull && systemctl --user restart cartera.service"`.
+- ⚠️ **Repo PÚBLICO → endurecer el VPS (pendiente de seguridad, 2026-09-01):** que `root` sea el usuario NO es una credencial (la contraseña no está en git, y el IP ya figuraba en CLAUDE.md), pero un login **root por contraseña** en una IP pública es lo que los bots atacan por defecto. Conviene: deshabilitar login root por SSH (usar un usuario sudo), **auth por clave SSH** (no contraseña) y **fail2ban**. La nota del usuario en sí es bajo riesgo; el hardening del server es lo que de verdad protege.
 - El deployer out-of-band (vive en el VPS, fuera del repo) debe quedar DOCUMENTADO en el repo, o la próxima auditoría lo dará por inexistente.
 
 ---
