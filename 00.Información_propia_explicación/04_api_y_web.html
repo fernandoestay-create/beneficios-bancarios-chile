@@ -29,8 +29,8 @@
 </head>
 <body>
 
-<h1>API REST y Paginas Web v_02</h1>
-<p class="subtitle">Endpoints, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas) y archivos estaticos</p>
+<h1>API REST y Paginas Web v_05</h1>
+<p class="subtitle">Endpoints, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas), archivos estaticos y ciclo de despliegue &mdash; actualizado 2026-09-02</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -47,10 +47,10 @@
   <tr><th>Metodo</th><th>Ruta</th><th>Descripcion</th><th>Estado</th></tr>
   <tr><td>GET</td><td><code>/</code></td><td>Health check (JSON con estado)</td><td>Sin cambios</td></tr>
   <tr><td>GET</td><td><code>/beneficios</code></td><td>Lista todos los beneficios restaurantes</td><td>Sin cambios</td></tr>
-  <tr><td>GET</td><td><code>/beneficios/buscar</code></td><td>Buscar con filtros (query params)</td><td>Sin cambios</td></tr>
+  <tr><td>GET</td><td><code>/beneficios/buscar</code></td><td>Buscar con filtros (query params)</td><td>Si no hay resultados devuelve <strong>200 con lista vacia</strong> (antes devolvia 404, que es un error: "no encontre nada" es una respuesta valida)</td></tr>
   <tr><td>GET</td><td><code>/beneficios/{id}</code></td><td>Beneficio por ID</td><td>Sin cambios</td></tr>
   <tr><td>GET</td><td><code>/bancos</code></td><td>Lista de bancos con conteo</td><td>Sin cambios</td></tr>
-  <tr><td>GET</td><td><code>/estadisticas</code></td><td>Stats generales</td><td>Sin cambios</td></tr>
+  <tr style="background:#fffbeb;"><td>GET</td><td><code>/estadisticas</code></td><td>Estadisticas generales</td><td><span class="badge">ago-2026</span> Ahora expone <code>fecha_datos</code> (de cuando es el dato servido) y <code>version_commit</code> (que version corre). <strong>Ojo:</strong> <code>ultimo_scrape</code> NO es la fecha del scraping, es la hora en que arranco la aplicacion</td></tr>
   <tr><td>GET</td><td><code>/restaurantes/top</code></td><td>Top restaurantes por descuento</td><td>Sin cambios</td></tr>
   <tr><td>POST</td><td><code>/rag</code></td><td>Consulta IA con contexto (RAG)</td><td>Cerrado: exige header <code>X-Admin-Token</code> (fail-closed sin <code>ADMIN_TOKEN</code>)</td></tr>
   <tr><td>POST</td><td><code>/scrape/ejecutar</code></td><td>Ejecutaba scrapers manualmente</td><td><strong>Eliminado (jul-2026, seguridad)</strong>: era un POST anonimo que borraba bancos completos</td></tr>
@@ -58,7 +58,7 @@
   <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/beneficios</code></td><td>Pagina web Otros beneficios (no-restaurante)</td><td><span class="badge">NUEVO ago-2026</span></td></tr>
   <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/bencinas</code></td><td>Pagina web bencinas</td><td><span class="badge">NUEVO v_02</span></td></tr>
   <tr style="background:#fffbeb;"><td>GET</td><td><code>/ver/cuotas</code></td><td>Pagina web cuotas sin interes</td><td><span class="badge">NUEVO jul-2026</span></td></tr>
-  <tr><td>POST</td><td><code>/webhook</code></td><td>Webhook WhatsApp (Twilio)</td><td><strong>Flujo v2</strong> (firma Twilio aun pendiente)</td></tr>
+  <tr><td>POST</td><td><code>/webhook</code></td><td>Webhook WhatsApp (Twilio)</td><td><strong>Menu de 4 opciones.</strong> La firma <code>X-Twilio-Signature</code> <strong>ya esta activa y verificada</strong> (ago-2026) y es <strong>fail-closed</strong>: ante cualquier error de validacion responde 403, no deja pasar</td></tr>
   <tr style="background:#fffbeb;"><td>POST</td><td><code>/telegram</code></td><td>Webhook Telegram (mismo bot que WhatsApp)</td><td><span class="badge">NUEVO ago-2026</span></td></tr>
   <tr style="background:#fffbeb;"><td>GET</td><td><code>/static/logos/*</code></td><td>Archivos estaticos (SVG, JPG)</td><td><span class="badge">NUEVO v_02</span></td></tr>
 </table>
@@ -76,10 +76,10 @@
   <p>Las 4 paginas comparten una <strong>barra de navegacion</strong> (Restaurantes / Otros beneficios / Bencina / Cuotas) para moverse entre ellas sin volver al inicio.</p>
   <table>
     <tr><th>Pagina</th><th>Ruta</th><th>Dataset</th><th>Proposito</th></tr>
-    <tr><td>Restaurantes</td><td><code>/ver</code></td><td><code>beneficios.json</code></td><td>Descuentos bancarios en restaurantes (14 bancos)</td></tr>
-    <tr style="background:#fffbeb;"><td>Otros beneficios</td><td><code>/ver/beneficios</code></td><td><code>beneficios_otros.json</code></td><td>Descuentos con tarjeta NO-restaurante (retail, viajes, salud, entretencion)</td></tr>
+    <tr><td>Restaurantes</td><td><code>/ver</code></td><td><code>beneficios.json</code></td><td>Descuentos bancarios en restaurantes &mdash; <strong>936 en 14 bancos</strong> (medido 2026-09-02)</td></tr>
+    <tr style="background:#fffbeb;"><td>Otros beneficios</td><td><code>/ver/beneficios</code></td><td><code>beneficios_otros.json</code></td><td>Descuentos con tarjeta NO-restaurante (retail, viajes, salud, entretencion) &mdash; <strong>1.229 en el dataset</strong>, de los que se muestran solo los verificables</td></tr>
     <tr><td>Bencina</td><td><code>/ver/bencinas</code></td><td><code>bencinas.json</code></td><td>Descuentos por litro + estaciones en el mapa</td></tr>
-    <tr style="background:#fffbeb;"><td>Cuotas</td><td><code>/ver/cuotas</code></td><td><code>cuotas_sin_interes.json</code></td><td>Campañas de cuotas sin interes por banco y categoria</td></tr>
+    <tr style="background:#fffbeb;"><td>Cuotas</td><td><code>/ver/cuotas</code></td><td><code>cuotas_sin_interes.json</code></td><td>Campanas de cuotas sin interes por banco y categoria &mdash; <strong>32 campanas en 12 bancos</strong>, curadas a septiembre 2026</td></tr>
   </table>
   <p><strong>Render compartido:</strong> <code>/ver</code> y <code>/ver/beneficios</code> corren por la misma funcion <code>_render_deals()</code> en <code>api.py</code> (mismo motor de filtros y busqueda, distinto dataset segun el parametro <code>modo</code>). <code>/ver/bencinas</code> y <code>/ver/cuotas</code> tienen cada una su propio render dedicado, con la misma barra de navegacion y la misma identidad visual.</p>
 </div>
@@ -146,7 +146,8 @@
   <p>Descuentos con tarjeta que <strong>no son de restaurante</strong>: retail, viajes, salud, entretencion. Antes estos beneficios se scrapeaban igual pero se descartaban (<code>return None</code>) al filtrar solo restaurantes; ahora se capturan con un campo <code>seccion="otro"</code> y se guardan en un dataset separado.</p>
 
   <h3>Criterio de calidad: solo lo verificable</h3>
-  <p>De <strong>228 candidatos</strong> capturados (Santander + Consorcio), la pagina muestra <strong>24 beneficios verificables</strong> con porcentaje de descuento real, no inventado. Los otros ~204 (financiamiento, servicios, menciones de CAE) no se muestran: "si no esta chequeado, mejor no mostrar".</p>
+  <p>El dataset tiene <strong>1.229 beneficios capturados</strong> de <strong>10 bancos</strong> (medido el 2026-09-02; arranco en agosto con 228 de Santander y Consorcio). La pagina <strong>no los muestra todos</strong>: pasa un filtro de calidad y deja fuera lo que no tiene un porcentaje de descuento real &mdash; financiamiento, servicios, menciones de CAE y precios fijos en pesos. El criterio es "si no esta chequeado, mejor no mostrar". <em>El numero exacto de beneficios visibles hoy no esta medido</em>: cambia en cada corrida y se calcula al momento de renderizar la pagina.</p>
+  <p><strong>El filtro vive en el render, no en el dato.</strong> Asi sobrevive a cualquier re-scrape: aunque el scraper vuelva a producir un beneficio de financiamiento, la pagina no lo muestra. Una trampa concreta que se corrigio: el campo numerico del descuento a veces guarda pesos y no porcentaje (un plan de $84.990 aparecia como "84990%" en el titular "Mejor descuento"), asi que el filtro exige ademas que el tipo de descuento sea porcentaje o cashback.</p>
 
   <h3>Mismo motor que /ver</h3>
   <p>Reusa los mismos filtros de la pagina de Restaurantes (Buscar, Banco, Dia, Zona, Comuna, Descuento minimo, Modalidad, Ordenar) via <code>_render_deals()</code>: misma logica de filtrado y de tarjetas, dataset distinto. <code>/ver</code> (restaurantes) no se toco: los datasets estan completamente aislados.</p>
@@ -160,7 +161,7 @@
     <li>Al aplicar un filtro (banco, zona, comuna, etc.), los circulos de dia <strong>sin resultados</strong> se atenuan y quedan bloqueados (no seleccionables) en vez de mostrarse como una opcion valida que despues da 0 resultados</li>
     <li>Cuando una seccion queda sin ningun dato, en vez de una lista vacia se muestra <strong>"⏳ Estamos confirmando los descuentos de esta seccion"</strong></li>
   </ul>
-  <p><strong>Pendiente:</strong> extender el mismo criterio dinamico a los filtros de Zona/Comuna, y a las paginas de Bencina y Cuotas (hoy solo cubre Restaurantes y Otros beneficios).</p>
+  <p><strong>Ya extendido (ago-2026):</strong> el mismo criterio dinamico cubre hoy tambien <strong>Zona y Comuna</strong> en Restaurantes y Otros beneficios, el <strong>filtro de dia en Bencina</strong> y el <strong>filtro de categoria en Cuotas</strong> (atenua las categorias sin campanas para el mes y banco elegidos). La guardia de madrugada vigila que el comportamiento no se pierda.</p>
 </div>
 
 <!-- ============ PAGINA BENCINAS ============ -->
@@ -172,7 +173,8 @@
     <li><strong>Fotos de estaciones:</strong> <code>copec_station.jpg</code>, <code>shell_station.jpg</code>, <code>aramco_station.jpg</code></li>
     <li><strong>Logos SVG locales:</strong> servidos desde <code>/static/logos/</code></li>
     <li><strong>Descuentos agrupados por cadena:</strong> cada cadena muestra sus descuentos con banco, monto/litro, dias, condiciones</li>
-    <li><strong>Mapa con estaciones reales:</strong> 367 markers con coordenadas reales de OpenStreetMap (no aproximadas)</li>
+    <li><strong>Mapa con estaciones reales:</strong> <strong>1.470</strong> estaciones de Copec, Shell y Aramco con coordenadas y <strong>precio real</strong>, desde la API publica de la Comision Nacional de Energia (<code>bencinaenlinea.cl</code>). <em>Ya no se usa OpenStreetMap</em>: devolvia 0 estaciones en la nube por timeouts</li>
+    <li><strong>Tercera vista "PU Bencina":</strong> comparador de precios de <strong>1.821 estaciones de todo Chile</strong>, con ranking de las mas baratas sincronizado a la zona visible del mapa (ver <a href="06_precios_combustible.html">Precios Combustible</a>)</li>
     <li><strong>Filtro por dia:</strong> pre-aplicable desde URL (<code>?dia=lunes</code>)</li>
   </ul>
 
@@ -230,9 +232,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
   <h3>Bencinas (/ver/bencinas)</h3>
   <ul>
     <li>Misma tecnologia Leaflet</li>
-    <li>367 markers con coordenadas <strong>reales</strong> de OpenStreetMap</li>
+    <li><strong>1.470</strong> markers con coordenadas <strong>reales</strong> de la CNE (<code>bencinaenlinea.cl</code>), no de OpenStreetMap</li>
     <li>Markers diferenciados por cadena (Copec, Shell, Aramco)</li>
-    <li>Popups con nombre estacion, direccion, cadena</li>
+    <li>Popups con nombre de la estacion, direccion, cadena y <strong>precio por combustible</strong></li>
+    <li>La vista "PU Bencina" suma las 1.821 estaciones de todo Chile con precio</li>
   </ul>
 </div>
 
@@ -242,15 +245,29 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
   <p>Se mantiene el sistema de tokens con expiracion de v_01:</p>
 <pre>
 ACCESO_PUBLICO = True   # True = sin clave, False = pide clave
-TOKENS_ACCESO = {
-    "prueba": datetime(2026, 3, 20, 23, 59, 59),
-    "demo":   datetime(2026, 4, 1, 23, 59, 59),
-}
+TOKENS_ACCESO = {}      # vacio: los tokens de prueba de marzo 2026 se eliminaron
 </pre>
-  <p>Actualmente <strong>desactivado</strong> (publico).</p>
+  <p>Actualmente <strong>desactivado</strong>: el sitio es publico. Los tokens de demostracion que existian en marzo (<code>prueba</code>, <code>demo</code>) ya vencieron y se sacaron del codigo, para no dejar credenciales caducadas viviendo en el repositorio.</p>
 </div>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 + actualizaciones jul-ago 2026 | <strong>Ultima actualizacion:</strong> 2026-08-04</p>
+<!-- ============ DESPLIEGUE ============ -->
+<h2>Como llega un cambio a produccion (y por que a veces no llega) <span class="badge">actualizado 2026-09-02</span></h2>
+<div class="card" style="border-left:4px solid var(--fuel);">
+  <p><strong>Produccion vive en un VPS propio:</strong> <code>https://datalab-api.duckdns.org</code>. El servicio de Render quedo <strong>suspendido el 2026-08-23</strong> &mdash; su direccion antigua responde 503 y ya no es la produccion de nada.</p>
+  <p>La aplicacion <strong>lee todos los archivos de datos una sola vez, al arrancar</strong>, y desde ahi responde de memoria. Eso tiene una consecuencia que es facil pasar por alto: <strong>bajar los datos nuevos al servidor no cambia lo que ve el usuario si el servicio no se reinicia</strong>. Dicho corto: <em>pushear no es desplegar</em>.</p>
+  <p>Pasa de verdad: el 2026-09-02 se descubrio que el sitio llevaba <strong>3 dias</strong> mostrando los datos del 30 de agosto aunque el repositorio ya tenia los del 1 de septiembre. El <code>git pull</code> habia corrido; el reinicio, no.</p>
+  <ul>
+    <li><strong><code>deploy_vps.sh</code></strong> hace las tres cosas en orden &mdash; baja el codigo, reinicia el servicio y <strong>verifica</strong> que lo que quedo sirviendo este al dia. No basta con que el reinicio no falle: hay que comprobar el resultado.</li>
+    <li><strong>Como se comprueba desde fuera:</strong> <code>GET /estadisticas</code> trae <code>fecha_datos</code> (la fecha real del dato que se esta sirviendo) y <code>version_commit</code>. Si <code>fecha_datos</code> es vieja, el despliegue no ocurrio, por muy verde que se vea todo lo demas.</li>
+    <li><strong>No mirar <code>ultimo_scrape</code>:</strong> ese campo es la hora en que arranco la aplicacion, no la del scraping. Siempre se ve reciente, incluso con datos de la semana pasada.</li>
+    <li><strong>Guard ACID-DEPLOY:</strong> la guardia de madrugada avisa por correo si produccion se queda atras del repositorio.</li>
+  </ul>
+  <div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:1rem;margin-top:1rem;">
+    <strong>Estado honesto al 2026-09-02:</strong> el despliegue al VPS <strong>todavia esta pendiente</strong>. El sitio sigue sirviendo los datos del <strong>30 de agosto</strong> hasta que se corra <code>deploy_vps.sh</code> en el servidor. Las cifras de este documento son las del repositorio, no las que el sitio muestra ahora mismo.
+  </div>
+</div>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_05 | <strong>Ultima actualizacion:</strong> 2026-09-02 (produccion en el VPS, cifras re-medidas, firma de Twilio activa, ciclo de despliegue)</p>
 
 </body>
 </html>

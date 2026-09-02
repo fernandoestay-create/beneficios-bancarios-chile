@@ -40,7 +40,7 @@
 <body>
 
 <h1>Bot WhatsApp + Telegram v3</h1>
-<p class="subtitle">Mismo cerebro, dos canales: menu guiado de 4 opciones (Restaurantes, Bencinas, Cuotas sin interes, Otros beneficios), $0 costo OpenAI</p>
+<p class="subtitle">Mismo cerebro, dos canales: menu guiado de 4 opciones (Restaurantes, Bencinas, Cuotas sin interes, Otros beneficios), $0 costo OpenAI &mdash; actualizado 2026-09-02</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -52,7 +52,7 @@
 </div>
 
 <!-- ============ COMPARACION v1 vs v2 ============ -->
-<h2>Comparacion v_01 vs v_02</h2>
+<h2>De donde viene el bot: v_01 vs v_02 <span style="font-size:0.8rem;color:var(--muted);font-weight:400;">(historico &mdash; hoy el bot va en la v_03 con 4 opciones y 2 canales)</span></h2>
 <div class="compare">
   <div class="old">
     <h4>v_01 (anterior)</h4>
@@ -65,7 +65,7 @@
     </ul>
   </div>
   <div>
-    <h4>v_02 (actual)</h4>
+    <h4>v_02 (marzo 2026)</h4>
     <ul>
       <li>Flujo: "Restaurantes o Bencinas?" -> bifurcacion</li>
       <li>Restaurantes + Bencinas</li>
@@ -104,7 +104,7 @@
     <ul>
       <li>Endpoint: <code>POST /webhook</code></li>
       <li>Costo: lo cobra Twilio por mensaje</li>
-      <li>Seguridad: valida <code>X-Twilio-Signature</code> si hay <code>TWILIO_AUTH_TOKEN</code> configurado (opt-in)</li>
+      <li>Seguridad: valida <code>X-Twilio-Signature</code> (activa y verificada desde ago-2026). Es <strong>fail-closed</strong>: ante cualquier error de validacion responde 403, nunca deja pasar</li>
       <li>Formato: markdown WhatsApp (<code>*negrita*</code>, <code>_cursiva_</code>) se renderiza normal</li>
       <li>Se activa solo si esta configurado Twilio</li>
     </ul>
@@ -125,6 +125,7 @@
 
 <!-- ============ FLUJO GENERAL ============ -->
 <h2>Flujo General del Bot (4 opciones x 2 canales)</h2>
+<p style="color:var(--muted);font-size:0.85rem;">Los numeros que muestra el menu (936, 31, 32, 1.229) <strong>no estan escritos a mano</strong>: el bot los cuenta al vuelo sobre los datos que tiene cargados, asi que cambian solos con cada actualizacion. Los de los ejemplos de abajo son los medidos el <strong>2026-09-02</strong>.</p>
 <div class="card">
 <pre>
 Usuario envia CUALQUIER mensaje (por WhatsApp o por Telegram)
@@ -146,7 +147,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
 <h2>Flujo Bencinas (2 pasos)</h2>
 <div class="chat">
   <div class="msg user"><div class="who">Usuario</div>hola</div>
-  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (936 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (32 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (1.229 beneficios)</div>
   <div class="msg user"><div class="who">Usuario</div>2</div>
   <div class="msg bot"><div class="who">Bot</div>⛽ Bencinas<br><br>Que dia?<br>1. Hoy &nbsp;2. Lunes &nbsp;3. Martes ... 9. Todos<br>(o escribe el dia directo: "lunes", "hoy"...)</div>
   <div class="msg user"><div class="who">Usuario</div>lunes</div>
@@ -216,7 +217,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
 <h2>Flujo Restaurantes (3 pasos)</h2>
 <div class="chat">
   <div class="msg user"><div class="who">Usuario</div>hola</div>
-  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (936 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (32 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (1.229 beneficios)</div>
   <div class="msg user"><div class="who">Usuario</div>1</div>
   <div class="msg bot"><div class="who">Bot</div>🍽️ Restaurantes<br><br>Que dia?<br>1. Hoy &nbsp;2. Lunes &nbsp;3. Martes ... 9. Todos<br>(o escribe el dia directo: "miercoles", "hoy"...)</div>
   <div class="msg user"><div class="who">Usuario</div>miercoles</div>
@@ -226,7 +227,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
     3. BCI<br>
     4. Scotiabank<br>
     5. Santander<br>
-    ... (15 bancos)<br><br>
+    ... (14 bancos activos)<br><br>
     Escribe los numeros separados por coma: ej "1,3,4"<br>
     O escribe "todos"
   </div>
@@ -248,7 +249,7 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
 <h2>Flujo Cuotas sin Interes (2 pasos)</h2>
 <div class="chat">
   <div class="msg user"><div class="who">Usuario</div>hola</div>
-  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (936 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (32 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (1.229 beneficios)</div>
   <div class="msg user"><div class="who">Usuario</div>3</div>
   <div class="msg bot"><div class="who">Bot</div>💳 Cuotas sin interes<br><br>Que banco?<br>
     1. Banco de Chile<br>
@@ -266,30 +267,34 @@ Bot: menu de 4 opciones (misma logica en ambos canales)
     Verifica siempre en el link oficial del banco.
   </div>
 </div>
-<p style="color:var(--muted); font-size:0.85rem;">Sin pregunta de dia: las cuotas son campañas del mes, no varian por dia de la semana. La lista de bancos es dinamica: solo entran los que tienen campaña vigente.</p>
+<p style="color:var(--muted); font-size:0.85rem;">Sin pregunta de dia: las cuotas son campanas del mes, no varian por dia de la semana. La lista de bancos es dinamica: solo entran los que tienen campana vigente. Al <strong>2026-09-02</strong> son <strong>32 campanas en 12 bancos</strong>, curadas a <strong>septiembre 2026</strong>.</p>
 
 <!-- ============ FLUJO OTROS BENEFICIOS (nuevo, 2026-08-04) ============ -->
 <h2>Flujo Otros Beneficios (2 pasos)</h2>
 <div class="chat">
   <div class="msg user"><div class="who">Usuario</div>hola</div>
-  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (885 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (28 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (23 beneficios)</div>
+  <div class="msg bot"><div class="who">Bot</div>👋 Hola! Como estas?<br>En que quieres ahorrar hoy? 💰<br><br><strong>1.</strong> 🍽️ Restaurantes (936 descuentos)<br><strong>2.</strong> ⛽ Bencinas (31 descuentos)<br><strong>3.</strong> 💳 Cuotas sin interes (32 campañas)<br><strong>4.</strong> 🎁 Otros beneficios (1.229 beneficios)</div>
   <div class="msg user"><div class="who">Usuario</div>4</div>
   <div class="msg bot"><div class="who">Bot</div>🎁 Otros beneficios<br><br>Que banco?<br>
-    1. Santander<br>
-    2. Banco Consorcio<br>
-    3. Todos
+    1. Banco de Chile<br>
+    2. BCI<br>
+    3. Santander<br>
+    4. Banco Security<br>
+    5. Banco Falabella<br>
+    ... (10 bancos con otros beneficios)<br>
+    11. Todos
   </div>
   <div class="msg user"><div class="who">Usuario</div>1</div>
   <div class="msg bot"><div class="who">Bot</div>
-    🎁 Otros beneficios — Santander (21):<br><br>
+    🎁 Otros beneficios — Santander:<br><br>
     - Corralco - VISA — <strong>25% dcto.</strong><br>
     - La Parva - Visa — <strong>15% dcto.</strong><br>
     - Valle Nevado — <strong>25% dcto.</strong><br>
-    ...y 18 mas<br><br>
+    ...y muchos mas (el bot pone el total del dia)<br><br>
     Ver todo: https://datalab-api.duckdns.org/ver/beneficios
   </div>
 </div>
-<p style="color:var(--muted); font-size:0.85rem;">Son beneficios NO-restaurante (farmacias, ski, transporte, hoteles) que Santander y Banco Consorcio ya traian de sus paginas y antes se descartaban al filtrar solo restaurantes. Viven en un dataset separado (<code>beneficios_otros.json</code>) que no toca el flujo de Restaurantes.</p>
+<p style="color:var(--muted); font-size:0.85rem;">Son beneficios NO-restaurante (farmacias, ski, transporte, hoteles, retail) que los bancos ya traian de sus paginas y antes se descartaban al filtrar solo restaurantes. Arranco con 2 bancos en agosto y hoy son <strong>10 bancos / 1.229 beneficios</strong> (medido 2026-09-02). Viven en un dataset separado (<code>beneficios_otros.json</code>) que no toca el flujo de Restaurantes.</p>
 
 <!-- ============ DETALLES TECNICOS ============ -->
 <h2>Detalles Tecnicos</h2>
@@ -310,7 +315,7 @@ user_flow = {}
 #   "tg_123456789": { ... },       # Telegram (prefijo "tg_" + chat_id)
 # }
 </pre>
-  <p>Se mantiene en memoria (se pierde si el servidor reinicia). Cada usuario tiene su propio estado, y ese estado se borra apenas el bot entrega el resultado (la proxima vez que escribe, arranca de nuevo desde el menu). "Cuotas" y "Otros beneficios" comparten el mismo paso <code>ask_banco_generico</code> — solo cambia el <code>mode</code>, asi el codigo no se duplica.</p>
+  <p>Se mantiene en memoria (se pierde si el servidor reinicia) y cada conversacion caduca sola a los 30 minutos, para que no quede estado viejo dando vueltas ni se acumule memoria. Cada usuario tiene su propio estado, y ese estado se borra apenas el bot entrega el resultado (la proxima vez que escribe, arranca de nuevo desde el menu). "Cuotas" y "Otros beneficios" comparten el mismo paso <code>ask_banco_generico</code> — solo cambia el <code>mode</code>, asi el codigo no se duplica.</p>
 
   <h3>Seleccion de bancos</h3>
   <ul>
@@ -348,7 +353,7 @@ user_flow = {}
     <tr><td>Servicio</td><td>Twilio WhatsApp</td></tr>
     <tr><td>Formato</td><td>Form data (<code>From</code>, <code>Body</code>)</td></tr>
     <tr><td>Respuesta</td><td>TwiML XML</td></tr>
-    <tr><td>Seguridad</td><td>Opt-in: si <code>TWILIO_AUTH_TOKEN</code> esta seteado, valida la firma <code>X-Twilio-Signature</code> y responde 403 si no calza. Sin el token, procesa sin validar (comportamiento anterior).</td></tr>
+    <tr><td>Seguridad</td><td>Valida la firma <code>X-Twilio-Signature</code> con <code>TWILIO_AUTH_TOKEN</code> y responde <strong>403</strong> si no calza. Desde la revision de ago-2026 es <strong>fail-closed</strong>: si la validacion lanza un error, tambien rechaza (antes dejaba pasar). Un <code>curl</code> sin firma debe devolver <strong>403</strong>; si devuelve 200, la validacion esta apagada.</td></tr>
   </table>
   <h3>Probar sin WhatsApp</h3>
 <pre>
@@ -356,6 +361,15 @@ curl -X POST https://datalab-api.duckdns.org/webhook \
   -d "From=whatsapp:+56912345678" \
   -d "Body=hola"
 </pre>
+  <p style="font-size:0.85rem;color:var(--muted);">Esto <strong>debe</strong> responder 403 (no lleva firma). Un 200 aqui significa que la validacion esta apagada, no que todo este bien.</p>
+
+  <div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:1rem;margin-top:1rem;">
+    <strong>Dos avisos honestos sobre WhatsApp (al 2026-09-02):</strong>
+    <ul>
+      <li><strong>Pendiente:</strong> despues de mudar el sistema al VPS quedo pendiente reapuntar el Sandbox de Twilio a <code>https://datalab-api.duckdns.org/webhook</code>. Mientras eso no se haga, el bot de WhatsApp no responde aunque el codigo este perfecto. Ya paso antes: el Sandbox apuntaba a otro servicio y el sintoma fue exactamente ese.</li>
+      <li><strong>El Sandbox caduca cada 72 horas.</strong> Si aparece "tu numero no esta conectado a un Sandbox", no esta roto: se renueva mandando un WhatsApp al <code>+1 415 523 8886</code> con el texto <code>join matter-color</code>. Para uso real sin caducidad hay que pedir un numero de WhatsApp Business propio.</li>
+    </ul>
+  </div>
 </div>
 
 <div class="card">
@@ -378,7 +392,7 @@ curl -X POST https://datalab-api.duckdns.org/telegram \
 </pre>
 </div>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_03 | <strong>Ultima actualizacion:</strong> 2026-08-04 (bot multicanal: WhatsApp + Telegram con el mismo cerebro; menu ampliado de 2 a 4 opciones — se suman Cuotas sin interes y Otros beneficios)</p>
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_03 del bot | <strong>Ultima actualizacion:</strong> 2026-09-02 (cifras del menu re-medidas, firma de Twilio fail-closed, avisos del Sandbox, caducidad del estado conversacional). Recuerda que un cambio en el codigo del bot no llega a produccion hasta que el servicio se reinicia &mdash; ver <a href="02_arquitectura_sistema.html">Arquitectura &rarr; Ciclo de Despliegue</a>.</p>
 
 </body>
 </html>

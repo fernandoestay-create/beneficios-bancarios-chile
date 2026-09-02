@@ -29,8 +29,8 @@
 </head>
 <body>
 
-<h1>Scrapers - Detalle Tecnico v_02</h1>
-<p class="subtitle">15 scrapers de restaurantes + scraper de bencinas con estaciones OpenStreetMap</p>
+<h1>Scrapers - Detalle Tecnico v_05</h1>
+<p class="subtitle">15 scrapers de restaurantes (14 bancos activos) + bencinas &mdash; actualizado 2026-09-02</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -38,6 +38,7 @@
   <a href="03_scrapers_detalle.html">Scrapers</a>
   <a href="04_api_y_web.html">API y Web</a>
   <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+  <a href="06_precios_combustible.html">Precios Combustible</a>
 </div>
 
 <!-- ============ MODELO BENEFICIO ============ -->
@@ -65,6 +66,8 @@ class Beneficio:
     restricciones_texto: str   # "Tope $30.000"
     descripcion: str           # texto descriptivo
     logo_url: str              # logo del banco
+    seccion: str               # "restaurante" (por defecto) | "otro"
+    confianza: str             # procedencia del dato (oficial / secundaria)
     activo: bool               # True
     fecha_scrape: str          # ISO timestamp
     tags: List[str]            # etiquetas
@@ -73,6 +76,9 @@ class Beneficio:
 
 <!-- ============ 15 SCRAPERS ============ -->
 <h2>Los 15 Scrapers de Restaurantes</h2>
+<div class="card" style="border-left:4px solid #d97706;">
+  <p><strong>Ojo con la columna "~Beneficios":</strong> son ordenes de magnitud de cuando se escribio esta tabla, NO cifras vigentes. Las campanas de cada banco cambian todos los meses y el numero sube o baja solo. Lo medido el <strong>2026-09-02</strong> es el total: <strong>936 beneficios de restaurantes en 14 bancos activos</strong>. La cifra por banco del dia vive en el correo diario del sistema, no en este documento.</p>
+</div>
 <table>
   <tr><th>#</th><th>Clase</th><th>Banco</th><th>Metodo de Scraping</th><th>~Beneficios</th></tr>
   <tr><td>1</td><td><code>ScraperBancoChile</code></td><td>Banco de Chile</td><td>API CMS interna (<code>/api/beneficios</code>)</td><td>~200</td></tr>
@@ -82,7 +88,7 @@ class Beneficio:
   <tr><td>5</td><td><code>ScraperScotiabank</code></td><td>Scotiabank</td><td>JS embebido (arrays <code>sitiosSantiago</code>)</td><td>~61</td></tr>
   <tr><td>6</td><td><code>ScraperSantander</code></td><td>Santander</td><td>HTML scraping</td><td>~80</td></tr>
   <tr><td>7</td><td><code>ScraperConsorcio</code></td><td>Banco Consorcio</td><td>HTML scraping</td><td>~40</td></tr>
-  <tr><td>8</td><td><code>ScraperBancoEstado</code></td><td>BancoEstado</td><td>API/HTML</td><td>~60</td></tr>
+  <tr style="opacity:.65"><td>8</td><td><code>ScraperBancoEstado</code></td><td>BancoEstado</td><td>API/HTML (usa navegador, unico que quedo asi)</td><td><strong>0 &mdash; DIFERIDO</strong>: su campana estacional ya no existe en el sitio, asi que el scraper no tiene nada que traer. Se retoma cuando el banco relance</td></tr>
   <tr><td>9</td><td><code>ScraperBancoSecurity</code></td><td>Banco Security</td><td>HTML scraping</td><td>~50</td></tr>
   <tr><td>10</td><td><code>ScraperBancoRipley</code></td><td>Banco Ripley</td><td>HTML scraping</td><td>~40</td></tr>
   <tr><td>11</td><td><code>ScraperEntel</code></td><td>Entel</td><td>HTML scraping</td><td>~30</td></tr>
@@ -93,7 +99,7 @@ class Beneficio:
 </table>
 
 <!-- ============ SCRAPER BENCINAS ============ -->
-<h2><span class="badge">NUEVO v_02</span> Scraper de Bencinas</h2>
+<h2>Scraper de Bencinas</h2>
 <div class="card fuel">
   <h3>ScraperBencinas</h3>
   <p><strong>Archivo:</strong> <code>scrapers.py</code></p>
@@ -115,15 +121,10 @@ class Beneficio:
     <li><code>url_fuente</code> - link a la pagina del descuento</li>
   </ul>
 
-  <h3>Estaciones de OpenStreetMap</h3>
-  <p>Se consulta la <strong>Overpass API</strong> de OpenStreetMap para obtener <strong>367 estaciones de bencina reales</strong> en Chile de las cadenas Copec, Shell y Aramco. Cada estacion incluye:</p>
-  <ul>
-    <li>Nombre de la estacion</li>
-    <li>Cadena (brand)</li>
-    <li>Latitud y longitud reales</li>
-    <li>Direccion (si esta disponible)</li>
-  </ul>
-  <p>Esto permite mostrar markers reales en el mapa Leaflet, a diferencia de las coordenadas aproximadas por region usadas en restaurantes.</p>
+  <h3>Estaciones: de OpenStreetMap a la CNE (cambio de v_03)</h3>
+  <p style="opacity:.7"><em>Historico (v_02, marzo 2026):</em> las estaciones se consultaban a la <strong>Overpass API de OpenStreetMap</strong> y se obtenian 367 puntos de Copec, Shell y Aramco. <strong>Eso ya no es asi:</strong> esa API resulto inestable y devolvia <strong>0 estaciones</strong> cuando corria en la nube (timeouts).</p>
+  <p><strong>Hoy</strong> las estaciones y los precios vienen de la <strong>API publica de la Comision Nacional de Energia</strong> (<code>bencinaenlinea.cl</code>): <strong>1.821 estaciones de todo Chile con precio real</strong> por combustible, de las cuales 1.470 son de Copec, Shell o Aramco. El detalle completo esta en <a href="06_precios_combustible.html">Precios Combustible</a>.</p>
+  <p>Los descuentos, en cambio, <strong>no se scrapean</strong>: se curan a mano desde la fuente oficial de cada cadena y cada dato lleva su <code>confianza</code> y su <code>url_fuente</code>. Al guardar, el sistema preserva lo curado para que un re-scrape no lo pise.</p>
 </div>
 
 <!-- ============ ORQUESTADOR ============ -->
@@ -150,22 +151,25 @@ python scrapers.py
 # INICIANDO SCRAPING DE BENEFICIOS BANCARIOS
 # Scrapeando Banco de Chile (API CMS)...
 # Banco de Chile: 229 beneficios extraidos
-# ... (15 bancos)
-# TOTAL BENEFICIOS RESTAURANTES: 985
+# ... (15 scrapers; BancoEstado devuelve 0, esta diferido)
+# TOTAL BENEFICIOS RESTAURANTES: 936  (14 bancos activos)
+# TOTAL OTROS BENEFICIOS (no-restaurante): 1229  (dataset separado)
 #
 # INICIANDO SCRAPING DE BENCINAS
-# Scrapeando descuentos Copec, Shell, Aramco...
-# 28 descuentos bencina extraidos
-# Consultando estaciones OpenStreetMap...
-# 367 estaciones encontradas
+# Descuentos: se PRESERVAN los 31 ya curados desde fuente oficial
+# Consultando estaciones y precios a la CNE (bencinaenlinea.cl)...
+# 1470 estaciones con precio encontradas
 #
-# Datos guardados en: beneficios.json (985)
-# Datos guardados en: bencinas.json (28 dctos + 367 estaciones)
+# Datos guardados en: beneficios.json (936)
+# Datos guardados en: beneficios_otros.json (1229)
+# Datos guardados en: bencinas.json (31 dctos + 1470 estaciones del mapa + 1821 con precio)
+#
+# (cifras medidas el 2026-09-02; cambian en cada corrida)
 </pre>
 </div>
 
 <!-- ============ LOGOS ============ -->
-<h2><span class="badge">NUEVO v_02</span> Logos Locales (/static/logos/)</h2>
+<h2>Logos Locales (/static/logos/)</h2>
 <div class="card">
   <p>13 logos SVG + 3 fotos JPG servidos localmente via FastAPI StaticFiles:</p>
   <table>
@@ -189,7 +193,7 @@ python scrapers.py
   </table>
 </div>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_02 | <strong>Ultima actualizacion:</strong> Marzo 2026</p>
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_05 | <strong>Ultima actualizacion:</strong> 2026-09-02 (BancoEstado diferido, estaciones desde la CNE, campo <code>seccion</code>, cifras re-medidas)</p>
 
 </body>
 </html>

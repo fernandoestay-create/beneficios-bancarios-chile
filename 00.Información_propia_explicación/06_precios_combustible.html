@@ -37,7 +37,7 @@
 <body>
 
 <h1>v_03 - Comparador de Precios Combustible</h1>
-<p class="subtitle">PU Bencina: precios reales de 1,750+ estaciones de todo Chile via CNE | 01 Abril 2026</p>
+<p class="subtitle">PU Bencina: precios reales de 1.821 estaciones de todo Chile via CNE | creado abril 2026, cifras re-medidas el 2026-09-02</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -62,7 +62,7 @@
   <h3>Ahora (v_03): bencinaenlinea.cl (CNE)</h3>
   <ul>
     <li>Fuente: API publica de la Comision Nacional de Energia</li>
-    <li>Resultado: <strong>1,815 estaciones</strong> de todo Chile</li>
+    <li>Resultado: <strong>1,470 estaciones</strong> de todo Chile</li>
     <li>Precios reales: 93, 95, 97, Diesel, Kerosene</li>
     <li>120+ marcas (no solo las 3 principales)</li>
     <li>Endpoint: <code>GET https://api.bencinaenlinea.cl/api/busqueda_estacion_filtro</code></li>
@@ -70,10 +70,11 @@
   </ul>
 </div>
 
+<p style="color:var(--muted);font-size:0.85rem;margin-top:1rem;">Medido el 2026-09-02:</p>
 <div class="stats">
-  <div class="stat"><div class="val" style="color:var(--primary)">1,815</div><div class="label">Estaciones totales</div></div>
-  <div class="stat"><div class="val" style="color:var(--green)">1,750</div><div class="label">Con precios</div></div>
-  <div class="stat"><div class="val" style="color:#6366f1">1,462</div><div class="label">Con descuentos</div></div>
+  <div class="stat"><div class="val" style="color:var(--primary)">1,821</div><div class="label">Estaciones totales</div></div>
+  <div class="stat"><div class="val" style="color:var(--green)">1,821</div><div class="label">Con precio</div></div>
+  <div class="stat"><div class="val" style="color:#6366f1">1,470</div><div class="label">Copec/Shell/Aramco</div></div>
   <div class="stat"><div class="val" style="color:var(--red)">120+</div><div class="label">Marcas</div></div>
 </div>
 
@@ -108,16 +109,16 @@ class EstacionBencina:
 <div class="card">
 <pre>
 {
-  "descuentos": [...],          // 28 descuentos bancarios (Copec/Shell/Aramco)
-  "estaciones": [...],          // 1,462 estaciones Copec/Shell/Aramco con precios
-  "precios_todas": [...],       // 1,815 estaciones de TODO Chile con precios
+  "descuentos": [...],          // 31 descuentos bancarios CURADOS desde fuente oficial
+  "estaciones": [...],          // 1,470 estaciones Copec/Shell/Aramco con precios
+  "precios_todas": [...],       // 1,821 estaciones de TODO Chile con precios
   "meta": {
     "fecha_scrape": "...",
     "fecha_precios": "...",
-    "vigencia_mes": "2026-04",
-    "total_descuentos": 28,
-    "total_estaciones": 1462,
-    "total_con_precios": 1815,
+    "vigencia_mes": "2026-08",
+    "total_descuentos": 31,
+    "total_estaciones": 1470,
+    "total_con_precios": 1821,
     "fuente_precios": "Bencinas en Linea - Comision Nacional de Energia",
     "disclaimer": "Los precios son de exclusiva responsabilidad de las estaciones informantes"
   }
@@ -142,7 +143,7 @@ class EstacionBencina:
 <table>
   <tr><th>Vista</th><th>Contenido</th></tr>
   <tr><td><span class="badge orange">Tarjetas</span></td><td>Cards de descuentos bancarios con fotos, logos, dias, detalles</td></tr>
-  <tr><td><span class="badge green">Mapa</span></td><td>1,462 estaciones con logos de cadena + precios en popups + boton "Ir"</td></tr>
+  <tr><td><span class="badge green">Mapa</span></td><td>1,470 estaciones con logos de cadena + precios en popups + boton "Ir"</td></tr>
   <tr><td><span class="badge red">PU Bencina</span></td><td>Comparador de precios: mapa con marcadores logo+precio, ranking sincronizado con viewport</td></tr>
 </table>
 </div>
@@ -175,26 +176,30 @@ class EstacionBencina:
 </ul>
 </div>
 
-<h2>7. GitHub Actions — Schedule actualizado</h2>
+<h2>7. GitHub Actions — Schedule vigente <span class="badge orange">actualizado 2026-09-02</span></h2>
 <div class="card">
+<p>Los crones mensual y quincenal de abril <strong>ya no existen</strong>: el scraping pasó a ser <strong>diario</strong>. Esto es lo que corre hoy:</p>
 <table>
-  <tr><th>Cron</th><th>Descripcion</th><th>Frecuencia</th></tr>
-  <tr><td><code>0 5 1-4 * *</code></td><td>Scraping completo (beneficios + bencinas + precios)</td><td>Dias 1-4 del mes, 2AM Chile</td></tr>
-  <tr><td><code>0 5 10,20,30 * *</code></td><td>Actualizacion quincenal</td><td>3 veces/mes</td></tr>
-  <tr><td><code>0 13 * * 1,4</code></td><td><strong>Precios combustible (NUEVO)</strong></td><td>Lunes y jueves, 10AM Chile</td></tr>
+  <tr><th>Workflow</th><th>Cron</th><th>Que hace</th><th>Horario Chile</th></tr>
+  <tr><td><code>scraper.yml</code></td><td><code>0 13 * * *</code></td><td>Scraping completo (beneficios + otros + bencinas + precios) + chequeo por banco + correo diario</td><td>Diario, 09:00</td></tr>
+  <tr><td><code>revision_madrugada.yml</code></td><td><code>0 7 * * *</code></td><td>Guardia de madrugada: re-chequea cada bug conocido contra produccion y la fuente; avisa solo si algo reaparece</td><td>Diario, 03:00</td></tr>
+  <tr><td><code>keepalive.yml</code></td><td><code>*/10 10-23 * * *</code></td><td>Ping para que el sitio no se duerma</td><td>Cada 10 min, ~06:00-19:00</td></tr>
 </table>
+<p>Ademas hay un <strong>refresco local</strong> (tarea de Windows, 08:30 Chile) que scrapea desde una IP chilena: hay bancos que sirven su pagina vacia a las IP extranjeras del servidor de GitHub.</p>
 </div>
 
-<h2>8. Email report actualizado</h2>
+<h2>8. Correo diario <span class="badge orange">actualizado 2026-09-02</span></h2>
 <div class="card">
-<p>El email de reporte ahora incluye una linea adicional:</p>
+<p>El correo diario llega a las 09:00 y trae el estado de <strong>cada banco</strong> (no solo el total), mas el resumen de las cuatro secciones. Cifras medidas el 2026-09-02:</p>
 <ul>
-  <li>Beneficios restaurantes: 914</li>
-  <li>Bancos: 13</li>
-  <li>Descuentos bencina: 28</li>
-  <li>Estaciones con descuentos: 1,462</li>
-  <li><strong>Estaciones con precios: 1,815</strong> (nuevo)</li>
+  <li>Beneficios restaurantes: <strong>936</strong></li>
+  <li>Bancos activos: <strong>14</strong> (BancoEstado diferido)</li>
+  <li>Otros beneficios: <strong>1.229</strong> en el dataset</li>
+  <li>Descuentos bencina: <strong>31</strong></li>
+  <li>Cuotas sin interes: <strong>32 campanas en 12 bancos</strong> (septiembre 2026)</li>
+  <li>Estaciones con precio: <strong>1.821</strong></li>
 </ul>
+<p>El asunto empieza con "TODO OK" o con "REVISAR", asi se distingue de un vistazo sin abrirlo.</p>
 </div>
 
 <h2>9. Disclaimer legal</h2>
@@ -205,7 +210,8 @@ class EstacionBencina:
 
 <div style="margin-top:3rem;padding:1.5rem;background:#fff7ed;border-radius:12px;border:1px solid #fed7aa">
 <h3 style="color:var(--primary)">Resumen v_03</h3>
-<p>El proyecto paso de <strong>0 estaciones</strong> (Overpass API fallaba) a <strong>1,815 estaciones con precios reales</strong> de todo Chile. Los usuarios ahora pueden comparar precios de combustible por zona, cadena y tipo, con ranking sincronizado al viewport del mapa y navegacion directa via Google Maps.</p>
+<p>El proyecto paso de <strong>0 estaciones</strong> (Overpass API fallaba) a <strong>1.821 estaciones con precios reales</strong> de todo Chile. Los usuarios ahora pueden comparar precios de combustible por zona, cadena y tipo, con ranking sincronizado al viewport del mapa y navegacion directa via Google Maps.</p>
+<p style="margin-top:1rem;font-size:0.85rem;color:var(--muted)"><strong>Ultima actualizacion:</strong> 2026-09-02 &mdash; se re-midieron las cifras, se corrigio el schedule de GitHub Actions (hoy es diario, no mensual) y el resumen del correo. Produccion vive en el VPS propio <code>datalab-api.duckdns.org</code>; Render quedo suspendido el 2026-08-23.</p>
 </div>
 
 </body>

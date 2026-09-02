@@ -41,7 +41,7 @@
 <body>
 
 <h1>Beneficios Bancarios Chile + Descuentos Bencina</h1>
-<p class="subtitle">v_03 - Agosto 2026 | Sistema de scraping, API REST, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas) y bot WhatsApp + Telegram para descuentos bancarios en Chile, con trazabilidad de fuente oficial</p>
+<p class="subtitle">v_05 - Septiembre 2026 | Sistema de scraping, API REST, 4 paginas web (restaurantes, otros beneficios, bencinas, cuotas) y bot WhatsApp + Telegram para descuentos bancarios en Chile, con trazabilidad de fuente oficial</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -53,20 +53,29 @@
 </div>
 
 <!-- ============ STATS ============ -->
-<h2>Numeros Clave</h2>
+<h2>Numeros Clave <span style="font-size:0.8rem;color:var(--muted);font-weight:400;">(medidos el 2026-09-02)</span></h2>
 <div class="stats">
-  <div class="stat"><div class="num">885</div><div class="label">Beneficios Restaurantes</div></div>
-  <div class="stat"><div class="num">24</div><div class="label">Otros Beneficios (verificables)</div></div>
+  <div class="stat"><div class="num">936</div><div class="label">Beneficios Restaurantes</div></div>
+  <div class="stat"><div class="num">1.229</div><div class="label">Otros Beneficios (dataset)</div></div>
   <div class="stat fuel"><div class="num">31</div><div class="label">Descuentos Bencina</div></div>
-  <div class="stat fuel"><div class="num">367</div><div class="label">Estaciones (OpenStreetMap)</div></div>
-  <div class="stat"><div class="num">15</div><div class="label">Bancos Scrapeados</div></div>
-  <div class="stat"><div class="num">3</div><div class="label">Cadenas Bencina</div></div>
+  <div class="stat fuel"><div class="num">1.821</div><div class="label">Estaciones con precio (CNE)</div></div>
+  <div class="stat"><div class="num">14</div><div class="label">Bancos Activos</div></div>
+  <div class="stat"><div class="num">32</div><div class="label">Campanas de Cuotas</div></div>
   <div class="stat"><div class="num">$0</div><div class="label">Costo OpenAI (Bot)</div></div>
 </div>
 
 <!-- ============ CHANGELOG v03 ============ -->
 <h2>Cambios en v_03 (respecto a v_02)</h2>
 <div class="changelog">
+  <h3>Novedades v_05 - Septiembre 2026 (pushear no es desplegar)</h3>
+  <ul>
+    <li><span class="badge new">NUEVO</span> <strong>Ciclo de despliegue explicito</strong> - la aplicacion carga todos los datos en memoria al arrancar, asi que un <code>git pull</code> en el servidor <strong>no despliega nada si el servicio no se reinicia</strong>. El 2026-09-02 se descubrio que produccion llevaba <strong>3 dias</strong> sirviendo datos del 30-ago aunque el repositorio ya tenia los del 1-sep. Ahora existe <code>deploy_vps.sh</code>: hace pull, reinicia y <strong>verifica</strong> que lo que quedo sirviendo este al dia (no se conforma con que el reinicio no falle).</li>
+    <li><span class="badge new">NUEVO</span> <strong><code>/estadisticas</code> dice de cuando es el dato</strong> - expone <code>fecha_datos</code> (la fecha real del dato servido) y <code>version_commit</code> (que version del codigo corre). Ojo con la trampa historica: <code>ultimo_scrape</code> <strong>NO</strong> es la fecha del scraping, es la hora en que arranco la aplicacion.</li>
+    <li><span class="badge new">NUEVO</span> <strong>Guard ACID-DEPLOY</strong> - la guardia de madrugada avisa si produccion se queda atras del repositorio.</li>
+    <li><span class="badge">CAMBIO</span> <strong>Cuotas curadas a septiembre 2026</strong> - 32 campanas en 12 bancos.</li>
+    <li><span class="badge">CAMBIO</span> <strong>"Otros beneficios" creciendo</strong> - 1.229 beneficios en el dataset separado; en la pagina se muestran solo los verificables (con % real).</li>
+  </ul>
+
   <h3>Novedades v_04 - Agosto 2026 (datos sin errores + prueba acida siempre)</h3>
   <ul>
     <li><span class="badge new">NUEVO</span> <strong>Datos verificados contra la fuente</strong> - se arreglaron los <strong>dias</strong> (BCI mostraba "todos" siendo dia fijo, ej. Gracielo Bar = solo martes) y las <strong>regiones</strong> (Dominga Bistro / La Mulata salian bajo "Metropolitana" estando en Iquique/Valdivia). El dato real vivia en un campo estructurado que el scraper ignoraba; ahora se lee la fuente autoritativa. <strong>92 dias + 48 regiones corregidas</strong>, verificadas en produccion.</li>
@@ -114,7 +123,7 @@
 <!-- ============ DESCRIPCION ============ -->
 <h2>Descripcion General</h2>
 <div class="card">
-  <p>Sistema completo de <strong>web scraping y analytics</strong> que extrae ofertas de descuento de <strong>15 bancos chilenos</strong> (restaurantes y otros rubros) y <strong>3 cadenas de bencina</strong> (Copec, Shell, Aramco), exponiendo los datos - todos trazables a su fuente oficial - a traves de:</p>
+  <p>Sistema completo de <strong>web scraping y analytics</strong> que extrae ofertas de descuento de bancos chilenos (<strong>15 scrapers, 14 bancos activos</strong>; BancoEstado sigue diferido porque su campana no existe) (restaurantes y otros rubros) y <strong>3 cadenas de bencina</strong> (Copec, Shell, Aramco), exponiendo los datos - todos trazables a su fuente oficial - a traves de:</p>
   <ul>
     <li><strong>Pagina web de restaurantes</strong> (<code>/ver</code>) - filtros interactivos, tarjetas, mapa Leaflet</li>
     <li><strong>Pagina de otros beneficios</strong> (<code>/ver/beneficios</code>) - retail, viajes, salud y entretencion, solo ofertas verificables</li>
@@ -139,7 +148,7 @@
   <div class="tech-item"><strong>Scraping:</strong> requests / BeautifulSoup / lxml</div>
   <div class="tech-item"><strong>Frontend:</strong> HTML/CSS/JS embebido en f-string Python</div>
   <div class="tech-item"><strong>Mapas:</strong> Leaflet + CARTO tiles</div>
-  <div class="tech-item"><strong>Estaciones:</strong> OpenStreetMap Overpass API (367 estaciones)</div>
+  <div class="tech-item"><strong>Estaciones y precios:</strong> API publica de la CNE, <code>bencinaenlinea.cl</code> (1.821 estaciones con precio). Sustituyo a OpenStreetMap en v_03</div>
   <div class="tech-item"><strong>Bot:</strong> Twilio WhatsApp API + Telegram Bot API</div>
   <div class="tech-item"><strong>Logos:</strong> 13 SVG locales + 3 fotos JPG (<code>/static/logos/</code>)</div>
   <div class="tech-item"><strong>Deploy:</strong> VPS propio (Contabo, systemd <code>cartera.service</code> tras Caddy) &mdash; Render suspendido 2026-08-23</div>
@@ -149,15 +158,19 @@
 <h2>Archivos del Proyecto</h2>
 <table>
   <tr><th>Archivo</th><th>Lineas</th><th>Descripcion</th></tr>
-  <tr><td><code>api.py</code></td><td>~2360</td><td>FastAPI: API REST + pagina <code>/ver</code> + pagina <code>/ver/bencinas</code> + webhook WhatsApp v2</td></tr>
-  <tr><td><code>scrapers.py</code></td><td>~3600</td><td>15 scrapers restaurantes + scraper bencinas + modelo Beneficio + OrquestadorScrapers</td></tr>
+  <tr><td><code>api.py</code></td><td>~3200</td><td>FastAPI: API REST + las 4 paginas web (<code>/ver</code>, <code>/ver/beneficios</code>, <code>/ver/bencinas</code>, <code>/ver/cuotas</code>) + webhook WhatsApp + webhook Telegram</td></tr>
+  <tr><td><code>scrapers.py</code></td><td>~3800</td><td>15 scrapers restaurantes + scraper bencinas + modelo Beneficio + OrquestadorScrapers</td></tr>
+  <tr><td><code>deploy_vps.sh</code></td><td>-</td><td><strong>Despliegue al VPS (2026-09-02):</strong> pull + reinicio + <strong>verificacion</strong> de que produccion quedo al dia</td></tr>
+  <tr><td><code>revision_madrugada.py</code></td><td>-</td><td>Guardia de madrugada: cada bug conocido convertido en un chequeo automatico contra produccion y la fuente</td></tr>
   <tr><td><code>whatsapp_bot.py</code></td><td>239</td><td>Bot WhatsApp alternativo (Flask, simple, sin IA)</td></tr>
   <tr><td><code>upload_pinecone.py</code></td><td>106</td><td>Sube vectores a Pinecone para RAG (mantenido pero ya no usado en WhatsApp)</td></tr>
-  <tr><td><code>beneficios.json</code></td><td>~1.2MB</td><td>985 beneficios de restaurantes scrapeados</td></tr>
-  <tr><td><code>bencinas.json</code></td><td>~128KB</td><td>28 descuentos bencina + 367 estaciones reales de OpenStreetMap</td></tr>
+  <tr><td><code>beneficios.json</code></td><td>~1.2MB</td><td>936 beneficios de restaurantes (14 bancos) &mdash; fuente de verdad de <code>/ver</code></td></tr>
+  <tr><td><code>beneficios_otros.json</code></td><td>-</td><td>1.229 beneficios NO-restaurante (dataset separado de <code>/ver/beneficios</code>)</td></tr>
+  <tr><td><code>cuotas_sin_interes.json</code></td><td>-</td><td>32 campanas de cuotas sin interes en 12 bancos (curado a septiembre 2026)</td></tr>
+  <tr><td><code>bencinas.json</code></td><td>~1.5MB</td><td>31 descuentos bencina curados + 1.470 estaciones del mapa + 1.821 con precio de la CNE (antes eran 367 de OpenStreetMap, reemplazadas en v_03)</td></tr>
   <tr><td><code>beneficios.csv</code></td><td>~618KB</td><td>Mismo data restaurantes en CSV</td></tr>
   <tr><td><code>static/logos/</code></td><td>16 archivos</td><td>13 SVG logos + 3 fotos estaciones JPG</td></tr>
-  <tr><td><code>render.yaml</code></td><td>~30</td><td>Configuracion deploy Render</td></tr>
+  <tr><td><code>render.yaml</code></td><td>~30</td><td><strong>LEGACY</strong>: configuracion de Render, suspendido desde 2026-08-23. Sigue en git como respaldo dormido, no es la produccion actual</td></tr>
   <tr><td><code>requirements.txt</code></td><td>~25</td><td>Dependencias Python</td></tr>
 </table>
 
@@ -180,10 +193,11 @@
   <tr><td><code>v_01</code></td><td>14-Mar-2026</td><td>Version inicial. 15 scrapers, 985 beneficios restaurantes, web con filtros + mapa, bot WhatsApp 3 pasos + RAG.</td></tr>
   <tr><td><code>v_02</code></td><td>25-Mar-2026</td><td>Modulo bencinas (28 dctos + 367 estaciones), hero cards, 13 logos SVG, bot WhatsApp v2 sin IA ($0), multiples bancos URL, 11 URLs corregidas.</td></tr>
   <tr><td><code>v_03</code></td><td>03-Ago-2026</td><td>Trazabilidad de datos (confianza + fuente oficial, bencina re-curada), paginas nuevas /ver/beneficios (otros beneficios) y /ver/cuotas, filtros dinamicos por dia, guardia de madrugada automatica.</td></tr>
+  <tr><td><code>v_05</code></td><td>02-Sep-2026</td><td>Ciclo de despliegue explicito: <code>deploy_vps.sh</code> (pull + reinicio + verificacion), <code>/estadisticas</code> con <code>fecha_datos</code> y <code>version_commit</code>, guard ACID-DEPLOY. Cuotas curadas a septiembre (32 campanas / 12 bancos).</td></tr>
   <tr><td><code>v_04</code></td><td>06-Ago-2026</td><td>Datos sin errores: fix dias (BCI, 92 corregidos) + region (BCI/Falabella, 48) midiendo la fuente autoritativa; prueba acida siempre en 2 capas (guardia diaria con 7 guards en GitHub Actions + auditoria IA mensual); "Otros beneficios" ampliado a 10 bancos / ~788 ofertas; bot a 4 opciones (WhatsApp + Telegram).</td></tr>
 </table>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_05 | <strong>Ultima actualizacion:</strong> 2026-08-31 (produccion en VPS propio; auditoria acida A+B) | <strong>Autor:</strong> Fernando Estay Perez</p>
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_05 | <strong>Ultima actualizacion:</strong> 2026-09-02 (numeros re-medidos; ciclo de despliegue documentado) | <strong>Autor:</strong> Fernando Estay Perez</p>
 
 </body>
 </html>

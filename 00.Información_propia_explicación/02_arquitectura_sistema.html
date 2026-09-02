@@ -27,8 +27,8 @@
 </head>
 <body>
 
-<h1>Arquitectura del Sistema v_02</h1>
-<p class="subtitle">Diagrama general, flujos de datos y capas del sistema</p>
+<h1>Arquitectura del Sistema v_05</h1>
+<p class="subtitle">Diagrama general, flujos de datos, capas del sistema y ciclo de despliegue &mdash; actualizado 2026-09-02</p>
 
 <div class="nav">
   <a href="01_resumen_proyecto.html">Resumen</a>
@@ -36,6 +36,7 @@
   <a href="03_scrapers_detalle.html">Scrapers</a>
   <a href="04_api_y_web.html">API y Web</a>
   <a href="05_bot_whatsapp_y_bencinas.html">Bot WhatsApp</a>
+  <a href="06_precios_combustible.html">Precios Combustible</a>
 </div>
 
 <!-- ============ DIAGRAMA GENERAL ============ -->
@@ -44,36 +45,39 @@
 +-----------------------------------------------------------------------+
 |                    FUENTES DE DATOS                                     |
 +-----------------------------------+-----------------------------------+
-| RESTAURANTES (15 bancos)          | BENCINAS (3 cadenas)              |
-| Banco de Chile (API CMS)          | Copec (web scraping)              |
-| Banco Falabella (API CMS v2)      | Shell (web scraping)              |
-| BCI (HTML scraping)               | Aramco (web scraping)             |
-| Banco Itau (API JSON)             |                                   |
-| Scotiabank (JS embebido)          | ESTACIONES (OpenStreetMap)        |
-| Santander, Consorcio, BancoEstado | Overpass API: 367 estaciones      |
-| Security, Ripley, Entel, Tenpo    | reales con lat/lon                |
-| Lider BCI, BICE, Mach             |                                   |
+| RESTAURANTES (15 scrapers,        | BENCINAS (3 cadenas)              |
+|  14 bancos activos)               | Copec: curado fuente oficial      |
+| Banco de Chile (API CMS)          | Shell / Aramco: medios verific.   |
+| Banco Falabella (API CMS v2)      |                                   |
+| BCI (HTML scraping)               | ESTACIONES + PRECIOS (CNE)        |
+| Banco Itau (API JSON)             | bencinaenlinea.cl: 1.821          |
+| Scotiabank (JS embebido)          | estaciones de todo Chile con      |
+| Santander, Consorcio, Security    | precio real. Reemplazo a la       |
+| Ripley, Entel, Tenpo, Lider BCI   | Overpass API de OpenStreetMap,    |
+| BICE, Mach (BancoEstado DIFERIDO) | que caia a 0 en el cron           |
 +-----------------------------------+-----------------------------------+
                      |                           |
                      v                           v
 +-----------------------------------------------------------------------+
-|                    CAPA DE SCRAPING (scrapers.py ~3600 lineas)         |
+|                    CAPA DE SCRAPING (scrapers.py ~3800 lineas)         |
 | 15 clases Scraper restaurantes + Scraper bencinas                     |
-| OrquestadorScrapers: normaliza fechas, regiones, comunas, textos      |
-| Output: beneficios.json (985) + bencinas.json (28 dctos + 367 est.)  |
+| OrquestadorScrapers: normaliza fechas, regiones, comunas y textos,    |
+| separa seccion="otro" y preserva los bancos caidos (red de seguridad) |
+| Output: beneficios.json (936) + beneficios_otros.json (1.229)         |
+|         + bencinas.json (31 dctos + 1.470 estaciones del mapa + 1.821 con precio)      |
 +-----------------------------------------------------------------------+
                                 |
                                 v
 +-----------------------------------------------------------------------+
-|              CAPA DE APLICACION (api.py ~2360 lineas / FastAPI)        |
-|                                                                       |
+|              CAPA DE APLICACION (api.py ~3200 lineas / FastAPI)        |
+|      (carga TODOS los datos en MEMORIA al arrancar el servicio)       |
 |  +------------------+  +------------------+  +---------------------+  |
-|  | PAGINA WEB       |  | PAGINA BENCINAS  |  | BOT WHATSAPP v2     |  |
-|  | GET /ver         |  | GET /ver/bencinas|  | POST /webhook       |  |
-|  | Filtros + mapa   |  | Hero cards       |  | "Restaurantes o     |  |
-|  | Tarjetas         |  | Fotos estaciones |  |  Bencinas?"         |  |
-|  | Summary bar      |  | Logos SVG        |  | Sin IA ($0 OpenAI)  |  |
-|  | Multi-banco URL  |  | Estaciones reales|  | Link con filtros    |  |
+|  | 4 PAGINAS WEB    |  | PAGINA BENCINAS  |  | BOT EN 2 CANALES    |  |
+|  | GET /ver         |  | GET /ver/bencinas|  | POST /webhook (WA)  |  |
+|  | GET /ver/benefi. |  | Hero cards       |  | POST /telegram      |  |
+|  | GET /ver/cuotas  |  | Mapa + precios   |  | Menu de 4 opciones  |  |
+|  | Filtros + mapa   |  | Logos SVG        |  | Sin IA ($0 OpenAI)  |  |
+|  | Multi-banco URL  |  | Estaciones CNE   |  | Link con filtros    |  |
 |  +------------------+  +------------------+  +---------------------+  |
 |                                                                       |
 |  +------------------+  +------------------+                           |
@@ -81,6 +85,8 @@
 |  | GET /beneficios  |  | /static/logos/   |                           |
 |  | GET /bancos      |  | 13 SVG + 3 JPG   |                           |
 |  | GET /estadisticas|  | FastAPI mount    |                           |
+|  |  fecha_datos +   |  |                  |                           |
+|  |  version_commit  |  |                  |                           |
 |  | POST /rag        |  +------------------+                           |
 |  +------------------+                                                 |
 +-----------------------------------------------------------------------+
@@ -88,7 +94,7 @@
             v                    v                    v
     +-------------+     +--------------+      +--------------+
     | Navegador   |     | WhatsApp     |      | Integraciones|
-    | Desktop/Mob |     | via Twilio   |      | curl / apps  |
+    | Desktop/Mob |     | + Telegram   |      | curl / apps  |
     +-------------+     +--------------+      +--------------+
 </pre>
 
@@ -113,31 +119,35 @@ OrquestadorScrapers._normalizar_todos()
   |-- Descuentos: "50% de descuento" -> "50% dcto."
   |
   v
-beneficios.json (985 beneficios) + beneficios.csv
+beneficios.json (936 restaurantes) + beneficios.csv
+         + beneficios_otros.json (1.229 NO-restaurante, dataset aparte)
 </pre>
 </div>
 
 <!-- ============ FLUJO BENCINAS ============ -->
-<h2>Flujo 2: Scraping Bencinas (NUEVO v_02)</h2>
+<h2>Flujo 2: Bencinas (descuentos curados + precios de la CNE)</h2>
 <div class="card">
 <pre style="background:#fffbeb; color:var(--text);">
 scrapers.py -> ScraperBencinas
   |
-  |-- Scraping web: Copec, Shell, Aramco
-  |   Extrae: descuento por litro, dias, condiciones, tope
-  |   Output: 28 descuentos
+  |-- Descuentos: CURADOS desde la fuente oficial (no scraper automatico)
+  |   Copec desde ww2.copec.cl; Shell y Aramco desde medios verificados
+  |   Cada dato lleva "confianza" + "url_fuente"
+  |   Al guardar se PRESERVA lo curado: un re-scrape no lo pisa
+  |   Output: 31 descuentos
   |
-  |-- OpenStreetMap Overpass API
-  |   Query: amenity=fuel en Chile
-  |   Filtra: cadenas Copec, Shell, Aramco
-  |   Output: 367 estaciones con lat/lon reales
+  |-- Estaciones y precios: API publica de la CNE (bencinaenlinea.cl)
+  |   Reemplazo (v_03) a la Overpass API de OpenStreetMap, que devolvia
+  |   0 estaciones en el cron por timeouts
+  |   Output: 1.821 estaciones de todo Chile con precio real
   |
   v
 bencinas.json
   {
-    "descuentos": [28 items],
-    "estaciones": [367 items con coordenadas],
-    "meta": { vigencia, fecha_scrape, totales }
+    "descuentos":    [31 items curados],
+    "estaciones":    [1.470 de Copec / Shell / Aramco],
+    "precios_todas": [1.821 estaciones de todo Chile con precio],
+    "meta": { vigencia, fecha_scrape, totales, fuente, disclaimer }
   }
 </pre>
 </div>
@@ -197,7 +207,7 @@ Navegador recibe HTML completo
 </div>
 
 <!-- ============ FLUJO BENCINAS WEB ============ -->
-<h2>Flujo 5: Pagina Web Bencinas (/ver/bencinas) - NUEVO v_02</h2>
+<h2>Flujo 5: Pagina Web Bencinas (/ver/bencinas)</h2>
 <div class="card">
 <pre style="background:#fffbeb; color:var(--text);">
 GET /ver/bencinas?dia=lunes
@@ -207,7 +217,10 @@ api.py genera HTML con:
   |-- Hero cards: foto estacion de fondo + logo cadena SVG
   |-- Descuentos agrupados por cadena (Copec, Shell, Aramco)
   |-- Filtro por dia (pre-aplicable desde URL)
-  |-- Estaciones reales en mapa Leaflet (367 markers con lat/lon)
+  |-- Estaciones reales en mapa Leaflet: 1.470 de Copec/Shell/Aramco
+  |   con lat/lon y precio, desde la CNE (ya NO desde OpenStreetMap)
+  |-- Tercera vista "PU Bencina": comparador con las 1.821 estaciones
+  |   de todo Chile, ranking sincronizado a la zona visible del mapa
   |-- Logos servidos desde /static/logos/ (SVG locales)
 </pre>
 </div>
@@ -216,11 +229,13 @@ api.py genera HTML con:
 <h2>Almacenamiento de Datos</h2>
 <table>
   <tr><th>Archivo</th><th>Contenido</th><th>Tamano</th><th>Uso</th></tr>
-  <tr><td><code>beneficios.json</code></td><td>985 beneficios restaurantes</td><td>~1.2 MB</td><td>Carga en memoria al iniciar API</td></tr>
-  <tr><td><code>bencinas.json</code></td><td>28 descuentos + 367 estaciones</td><td>~128 KB</td><td>Carga en memoria al iniciar API</td></tr>
-  <tr><td><code>beneficios.csv</code></td><td>985 beneficios (formato tabular)</td><td>~618 KB</td><td>Backup / Excel / BI</td></tr>
+  <tr><td><code>beneficios.json</code></td><td>936 beneficios restaurantes (14 bancos)</td><td>~1.2 MB</td><td>Carga en memoria al iniciar la API</td></tr>
+  <tr><td><code>beneficios_otros.json</code></td><td>1.229 beneficios NO-restaurante</td><td>~1.5 MB</td><td>Dataset separado de <code>/ver/beneficios</code>; carga en memoria</td></tr>
+  <tr><td><code>bencinas.json</code></td><td>31 descuentos + 1.470 estaciones del mapa + 1.821 con precio (CNE)</td><td>~1.5 MB</td><td>Carga en memoria al iniciar la API</td></tr>
+  <tr><td><code>cuotas_sin_interes.json</code></td><td>32 campanas en 12 bancos (septiembre 2026)</td><td>~40 KB</td><td>Curado manual; carga en memoria</td></tr>
+  <tr><td><code>beneficios.csv</code></td><td>Los mismos restaurantes, formato tabular</td><td>~620 KB</td><td>Respaldo / Excel / BI</td></tr>
   <tr><td><code>static/logos/</code></td><td>13 SVG + 3 JPG estaciones</td><td>~330 KB</td><td>FastAPI StaticFiles mount</td></tr>
-  <tr><td>Pinecone (nube)</td><td>985 vectores embeddings</td><td>-</td><td>RAG API (mantenido, ya no usado en WhatsApp)</td></tr>
+  <tr><td>Pinecone (nube)</td><td>Un vector por restaurante (re-vectorizado 2026-08-04)</td><td>-</td><td>Solo el buscador con IA de la web (<code>/rag</code>); el bot NO lo usa</td></tr>
 </table>
 
 <!-- ============ DEPLOY ============ -->
@@ -230,7 +245,7 @@ api.py genera HTML con:
   <ul>
     <li><strong>URL:</strong> <code>https://datalab-api.duckdns.org</code> (antes Render, hoy SUSPENDIDO)</li>
     <li><strong>Servicio:</strong> <code>cartera.service</code> (systemd) &mdash; FastAPI + Uvicorn, tras Caddy (HTTPS Let's Encrypt, respuesta ~2s)</li>
-    <li><strong>Deploy:</strong> el VPS hace <code>git pull</code> + reinicio del servicio (out-of-band). Un push NO esta en produccion hasta ese pull, y NO es inmediato (regla L-44: "&iquest;pusheo? &ne; &iquest;esta sirviendo?")</li>
+    <li><strong>Deploy:</strong> el VPS hace <code>git pull</code> + reinicio del servicio, fuera del repositorio. Un push NO esta en produccion hasta ese pull, y el pull NO es inmediato. Detalle completo en la seccion de abajo.</li>
     <li><strong>Codigo:</strong> <code>~/servicios/beneficios-bancarios-chile</code> &middot; <strong>secretos:</strong> <code>~/servicios/cartera.env</code> (fuera de git)</li>
     <li><strong>Legacy:</strong> <code>render.yaml</code> sigue en git como fallback dormido (Render suspendido, no borrado; el 2&ordm; servicio inseguro se elimino en la auditoria 2026-08-31)</li>
   </ul>
@@ -241,7 +256,38 @@ api.py genera HTML con:
   </ul>
 </div>
 
-<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_05 | <strong>Ultima actualizacion:</strong> 2026-08-31 (migracion a VPS propio + auditoria acida A+B)</p>
+<!-- ============ CICLO DE DESPLIEGUE ============ -->
+<h2>Ciclo de Despliegue: por que "pushear" no es "desplegar" <span style="font-size:0.8rem;color:var(--muted);font-weight:400;">(actualizado 2026-09-02)</span></h2>
+<div class="card" style="border-left:4px solid #d97706;">
+  <p>Esta es la parte del sistema que mas veces ha enganado, asi que conviene tenerla clara. La aplicacion <strong>lee todos los archivos de datos UNA sola vez, cuando arranca</strong>, y los deja en memoria. Desde ahi responde siempre desde esa copia en memoria, sin volver a mirar el disco.</p>
+  <p>La consecuencia es directa: <strong>bajar codigo o datos nuevos al servidor no cambia nada mientras el servicio no se reinicie</strong>. El archivo en el disco ya esta al dia, pero la aplicacion sigue sirviendo la foto que cargo al arrancar.</p>
+
+  <h3>Los tres estados que hay que distinguir</h3>
+  <table>
+    <tr><th>Estado</th><th>Que significa</th><th>Como se verifica</th></tr>
+    <tr><td>1. Pusheado</td><td>El cambio esta en GitHub</td><td><code>git log origin/main</code></td></tr>
+    <tr><td>2. Bajado al servidor</td><td>El VPS ya hizo <code>git pull</code></td><td>Mirar el repositorio en el VPS</td></tr>
+    <tr><td>3. <strong>Sirviendo</strong></td><td>El servicio se reinicio y cargo los datos nuevos en memoria</td><td><code>GET /estadisticas</code> &rarr; campos <code>fecha_datos</code> y <code>version_commit</code></td></tr>
+  </table>
+  <p>Solo el estado 3 es "esta en produccion". Los estados 1 y 2 se ven bien y no sirven de nada al usuario.</p>
+
+  <h3>Que fallo, en concreto (2026-09-02)</h3>
+  <p>Se descubrio que produccion llevaba <strong>3 dias</strong> mostrando los datos del <strong>30 de agosto</strong> aunque el repositorio ya tenia los del <strong>1 de septiembre</strong>. Nadie habia roto nada: el <code>git pull</code> habia corrido, pero el servicio nunca se reinicio y seguia con la copia vieja en memoria.</p>
+
+  <h3>Como quedo resuelto</h3>
+  <ul>
+    <li><strong><code>deploy_vps.sh</code></strong> (nuevo, en el repositorio): hace el pull, reinicia el servicio y despues <strong>verifica</strong> que lo que quedo sirviendo este efectivamente al dia. No se conforma con que el reinicio "no haya fallado" &mdash; comprueba el resultado.</li>
+    <li><strong><code>GET /estadisticas</code></strong> ahora expone <code>fecha_datos</code> (de cuando es el dato que se esta sirviendo) y <code>version_commit</code> (que version del codigo corre). Con eso se responde "&iquest;esta al dia?" en un segundo, sin entrar al servidor.</li>
+    <li><strong>Trampa historica que conviene recordar:</strong> el campo <code>ultimo_scrape</code> <strong>NO</strong> es la fecha del scraping. Es la hora en que arranco la aplicacion, asi que siempre se ve reciente aunque los datos sean viejos. Para saber la fecha real del dato hay que mirar <code>fecha_datos</code>.</li>
+    <li><strong>Guard ACID-DEPLOY</strong> en la guardia de madrugada (<code>revision_madrugada.py</code>, ~03:00 Chile, GitHub Actions): avisa por correo si produccion se queda atras del repositorio, para que el desfase no vuelva a pasar tres dias sin que nadie lo note.</li>
+  </ul>
+
+  <div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:1rem;margin-top:1rem;">
+    <strong>Estado honesto al 2026-09-02:</strong> el despliegue en el VPS <strong>todavia esta pendiente</strong>. Produccion sigue sirviendo los datos del <strong>30 de agosto</strong> hasta que se corra <code>deploy_vps.sh</code> alla. Las cifras de estos documentos son las del repositorio (las medidas hoy), no las que el sitio muestra en este momento.
+  </div>
+</div>
+
+<p style="margin-top:2rem; color:var(--muted); font-size:0.85rem;"><strong>Version:</strong> v_05 | <strong>Ultima actualizacion:</strong> 2026-09-02 (numeros re-medidos + ciclo de despliegue documentado)</p>
 
 </body>
 </html>
