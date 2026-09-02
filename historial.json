@@ -1605,10 +1605,10 @@
  },
  {
   "fecha": "2026-09-02",
-  "total": 936,
+  "total": 940,
   "por_banco": {
    "Banco de Chile": 267,
-   "Banco Falabella": 94,
+   "Banco Falabella": 96,
    "BCI": 76,
    "Banco Itaú": 48,
    "Scotiabank": 80,
@@ -1619,7 +1619,7 @@
    "Entel": 29,
    "Tenpo": 7,
    "Lider BCI": 11,
-   "Banco BICE": 72,
+   "Banco BICE": 74,
    "Mach": 6
   },
   "problemas": [],
