@@ -8,7 +8,13 @@ se convierte en un guard permanente, para que NINGUNO reaparezca en silencio.
 
 Corre en el cron de madrugada (revision_madrugada.yml). Verifica dos capas:
   - RUNTIME: producción viva (curl a la URL) — página responde, JS sano, endpoints seguros.
-  - DATA: lo que se sirve (beneficios.json del checkout) — nombres, filtros, integridad.
+  - DATA: el dato del checkout (beneficios.json) — nombres, filtros, integridad.
+  - DEPLOY: que producción esté sirviendo ESE checkout y no una versión congelada (L-44).
+
+OJO (L-44): el checkout NO es automáticamente "lo que se sirve". La app carga los JSON en
+memoria al bootear, así que un git pull sin restart deja producción pegada en data vieja.
+Ese punto ciego dejó producción 3 días atrasada sin que ningún guard lo viera (2026-09-02);
+por eso existe ACID-DEPLOY, que compara lo servido contra el checkout.
 
 Si algo falla → exit 1 → el workflow manda un correo de alerta con el detalle.
 """
@@ -21,6 +27,14 @@ import tempfile
 import unicodedata
 import urllib.error
 import urllib.request
+
+# L-18: en Windows (cp1252) los emojis del reporte revientan con UnicodeEncodeError —
+# y justo en la rama que imprime los FALLOS, o sea que el crash tapaba el hallazgo.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 URL = os.getenv("PROD_URL", "https://datalab-api.duckdns.org")
 UA = {"User-Agent": "curl/8.4.0"}
@@ -183,6 +197,39 @@ try:
 except Exception:
     pass
 
+# ACID-DEPLOY: producción tiene que estar sirviendo ESTE checkout, no una versión congelada.
+# "¿pusheó?" != "¿está sirviendo?" (L-44): el VPS pullea out-of-band y la app carga los JSON
+# en MEMORIA al bootear → sin restart sigue sirviendo data vieja aunque el commit ya esté.
+# Lo que se compara es la FECHA DEL DATO SERVIDO contra la del checkout (el commit es solo
+# detalle informativo, porque un push reciente todavía no alcanzó a llegar y eso es normal).
+try:
+    from datetime import datetime as _dtd, timedelta as _tdd
+    _st_e, _body_e = http("/estadisticas")
+    if _st_e != 200:
+        fallos.append(f"[ACID-DEPLOY] /estadisticas no responde (HTTP {_st_e}) — ¿producción caída?")
+    else:
+        _est = json.loads(_body_e)
+        _prod_fecha = _est.get("fecha_datos")
+        _fs_repo = [b["fecha_scrape"] for b in d if b.get("fecha_scrape")]
+        _repo_fecha = max(_fs_repo) if _fs_repo else None
+        if _prod_fecha is None:
+            # El campo lo agregó el fix de L-44: si no viene, producción corre código ANTERIOR
+            # a ese fix — o sea lleva sin desplegar desde entonces. Eso ya es el hallazgo.
+            fallos.append(
+                f"[ACID-DEPLOY] producción no expone 'fecha_datos' → está sirviendo código "
+                f"anterior al fix L-44 (sirve {_est.get('total_beneficios')} beneficios; el "
+                f"repo tiene {len(d)}). Falta 'git pull + systemctl --user restart cartera.service' en el VPS.")
+        elif _repo_fecha:
+            _atraso = _dtd.fromisoformat(_repo_fecha) - _dtd.fromisoformat(_prod_fecha)
+            if _atraso > _tdd(days=2):
+                fallos.append(
+                    f"[ACID-DEPLOY] producción CONGELADA: sirve datos del {_prod_fecha[:10]} "
+                    f"y el repo ya tiene los del {_repo_fecha[:10]} ({_atraso.days} días de atraso, "
+                    f"commit servido {_est.get('version_commit') or '?'}). El git pull sin restart "
+                    f"no basta — la app carga los JSON en memoria al bootear (L-44).")
+except Exception:
+    pass  # nunca romper la guardia por este check
+
 # ACID-DÍAS: los bancos que publican día fijo (hoy 0% 'todos') no pueden spikear a 'todos'
 # (= se rompió el parser de días, como pasó con BCI). Falabella/Itaú/Lider/Mach traen día específico.
 for _bk in ["Banco Falabella", "Banco Itaú", "Lider BCI", "Mach"]:
@@ -278,7 +325,9 @@ except Exception:
 
 # ───────────────────── Resultado ─────────────────────
 print(f"Revisión de madrugada · {URL}")
-print(f"{n} beneficios servidos · {sum(1 for h in htmls.values() if h)} páginas alcanzadas\n")
+# "servidos" era falso: n sale del checkout, no de produccion — decirlo mal fue
+# justamente lo que dejo pasar 3 dias de atraso sin que nadie mirara (L-44).
+print(f"{n} beneficios en el repo · {sum(1 for h in htmls.values() if h)} páginas alcanzadas\n")
 if fallos:
     print(f"❌ {len(fallos)} PROBLEMA(S) DETECTADO(S) — un bug conocido reapareció:\n")
     for f in fallos:

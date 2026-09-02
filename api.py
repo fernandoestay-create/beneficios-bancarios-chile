@@ -132,13 +132,18 @@ bencinas_precios_todas: List[EstacionBencina] = []
 bencinas_meta: dict = {}
 cuotas_data: dict = {}
 timestamp_ultimo_scrape = None
+# L-44: 'pusheó' != 'está sirviendo'. La app carga los JSON en MEMORIA al bootear,
+# asi que sin restart sigue sirviendo data vieja aunque el git pull haya corrido.
+# Estas dos exponen QUE esta sirviendo realmente, para que la guardia lo pueda medir.
+fecha_datos = None       # fecha REAL del dato cargado (max fecha_scrape), no la del arranque
+version_commit = None    # commit del codigo que esta corriendo
 
 # ============================================
 # FUNCIONES AUXILIARES
 # ============================================
 
 def inicializar_datos():
-    global beneficios_db, otros_db, bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta, cuotas_data, timestamp_ultimo_scrape
+    global beneficios_db, otros_db, bencinas_descuentos, bencinas_estaciones, bencinas_precios_todas, bencinas_meta, cuotas_data, timestamp_ultimo_scrape, fecha_datos, version_commit
 
     # Resolver ruta relativa al directorio del script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -193,6 +198,23 @@ def inicializar_datos():
             print(f"💳 Cuotas: {_nc} campañas en {len(cuotas_data.get('bancos', {}))} bancos")
         except Exception as e:
             print(f"⚠️ No se pudo cargar cuotas_sin_interes.json: {e}")
+
+    # ── Identidad de lo que se está sirviendo (L-44) ──────────────────────────
+    # "¿pusheó?" != "¿está sirviendo?". Sin estos dos campos no hay forma de saber,
+    # desde afuera, si producción quedó pegada en una versión vieja: la app carga los
+    # JSON en memoria al bootear, así que un git pull sin restart no cambia nada.
+    try:
+        _fs = [b.fecha_scrape for b in beneficios_db if getattr(b, 'fecha_scrape', None)]
+        fecha_datos = max(_fs) if _fs else None
+    except Exception:
+        fecha_datos = None
+    try:
+        import subprocess as _sp
+        version_commit = _sp.run(["git", "rev-parse", "--short", "HEAD"], cwd=script_dir,
+                                 capture_output=True, text=True, timeout=10).stdout.strip() or None
+    except Exception:
+        version_commit = None
+    print(f"🏷️  Sirviendo commit {version_commit or '?'} · datos del {(fecha_datos or '?')[:10]}")
 
 
 def buscar_beneficios(
@@ -431,7 +453,11 @@ async def estadisticas():
         "descuento_promedio": round(sum(vals) / len(vals), 1) if vals else 0,
         "descuento_maximo": max(vals) if vals else 0,
         "bancos": list(set(b.banco for b in beneficios_db)),
+        # OJO: 'ultimo_scrape' es la hora de ARRANQUE de la app, no la del scrape (L-15).
+        # Se mantiene por compatibilidad; para saber de cuándo es el dato usa 'fecha_datos'.
         "ultimo_scrape": timestamp_ultimo_scrape,
+        "fecha_datos": fecha_datos,        # fecha REAL del dato servido (L-44)
+        "version_commit": version_commit,  # commit del código que está corriendo (L-44)
     }
 
 
