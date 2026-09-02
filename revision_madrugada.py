@@ -218,15 +218,17 @@ try:
             fallos.append(
                 f"[ACID-DEPLOY] producción no expone 'fecha_datos' → está sirviendo código "
                 f"anterior al fix L-44 (sirve {_est.get('total_beneficios')} beneficios; el "
-                f"repo tiene {len(d)}). Falta 'git pull + systemctl --user restart cartera.service' en el VPS.")
+                f"repo tiene {len(d)}). Corre 'bash deploy_vps.sh' en el VPS y revisa por qué su cron "
+                f"'cartera.sincronizar' (13:20) dejó de reiniciar el servicio.")
         elif _repo_fecha:
             _atraso = _dtd.fromisoformat(_repo_fecha) - _dtd.fromisoformat(_prod_fecha)
             if _atraso > _tdd(days=2):
                 fallos.append(
                     f"[ACID-DEPLOY] producción CONGELADA: sirve datos del {_prod_fecha[:10]} "
                     f"y el repo ya tiene los del {_repo_fecha[:10]} ({_atraso.days} días de atraso, "
-                    f"commit servido {_est.get('version_commit') or '?'}). El git pull sin restart "
-                    f"no basta — la app carga los JSON en memoria al bootear (L-44).")
+                    f"commit servido {_est.get('version_commit') or '?'}). Revisa el cron del VPS "
+                    f"'cartera.sincronizar' (13:20): pullea Y reinicia, pero puede morir en silencio. "
+                    f"Arreglo: bash deploy_vps.sh en el VPS (L-46).")
 except Exception:
     pass  # nunca romper la guardia por este check
 
