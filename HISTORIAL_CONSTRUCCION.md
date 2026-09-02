@@ -25,6 +25,7 @@
 | 13 | 2026-08-04 | **Cuotas a agosto + "Otros" ampliado 24→788 (10 bancos) + audit (v2.2→v2.8)**: cuotas re-curadas a agosto (11/14 bancos, 9 oficial-verificada), **"Otros beneficios" 24→788** — 8 bancos vía flip **L-32** (fuente ya traía todo y lo botaba): Banco de Chile +359, BCI +172, Banco Security +80, **Banco Falabella** +61 (páginas RSC por categoría), Entel +49, Tenpo +18, Lider +17, Mach +9. **GATE en cada banco: ningún restaurante baseline perdido** → `/ver` intacto (898/14). Trampas L-34 manejadas, **filtro de calidad DURABLE en el render** (L-40/L-41), Ripley región corregida. **Expansión "otros" COMPLETA:** los 4 restantes (Itaú, Ripley, Scotiabank, BancoEstado) NO tienen descuentos % fuera de restaurantes (usan programas de puntos / secciones vacías / campaña caída; verificado, incl. navegador para los SPA) |
 
 | 14 | 2026-08-06 | **Datos SIN errores + prueba ácida siempre (v2.11→v2.13)**: fix **días** BCI (92, `scheduling.dayRecurrence` vs tags — Gracielo salía "todos" siendo martes, L-42) + fix **región** BCI/Falabella (48, tag `R.`/nombre — Dominga Bistró/La Mulata salían en Metropolitana estando en Iquique/Valdivia, L-42b). **Auditoría ácida INTEGRAL** de los 2107 beneficios en 7 dimensiones midiendo la fuente → data de cara al usuario **SANA** (único visible: "Beneficios del mes" genérico, excluido). **Prueba ácida SIEMPRE = 2 capas (L-43):** guardia determinista (GitHub Actions, gratis, sin PC, mide la fuente, **7 guards**) + auditoría LLM cloud mensual (⚠️ sandbox sin egress → solo datos-en-reposo). Fine-tuning en TUNING_PAGINAS.md |
+| 16 | 2026-09-02 | **Producción llevaba 3 días congelada → el servicio ahora dice qué está sirviendo**: el VPS servía **903 beneficios del 30-ago** con el repo ya en el 1-sep (sin reinicio desde el 30-08 13:55; la app carga los JSON en memoria, así que `git pull` sin restart no despliega). Ningún guard lo vio porque **la guardia medía el checkout creyendo que medía producción**. Fix estructural: `/estadisticas` expone **`fecha_datos` + `version_commit`** y nace el guard **ACID-DEPLOY** (>2 días de atraso = falla). Refresco: **936 beneficios** (de 892). **`deploy_vps.sh`** versionado (el deployer vivía fuera del repo). **Cuotas a septiembre 2026**: 32 campañas / 12 bancos, 8 cubren septiembre, 4 marcados honestamente sin rotar. Itaú 18→**48** (falsa alarma, rotación de mes). **L-46** |
 | 15 | 2026-08-31 | **Auditoría ácida del sistema completo (ALCANCE B) + fixes A+B**: confirmado **prod=VPS** (Render 503 suspendido); 11 agentes por frente + verificación en vivo → **SANO en datos (9/10), frágil en deploy (4/10)**. Fixes: `beneficios_otros.json` stageado + red de seguridad por banco (**L-41 resuelto**), geo `\b` (`talca`≠`talcahuano`), firma Twilio fail-closed + guard `/webhook`, `/telegram` secret_token, `/beneficios/buscar` 404→200, O'Higgins mapa, `user_flow` TTL, deps capadas, `render.yaml` landmine eliminado. **L-44** (¿pusheó? ≠ ¿está sirviendo?). Commit `17b6a6d` |
 
 > Nota: las sesiones 1 y 2 son inferidas de fechas de archivos y metadata. No hubo cronología explícita previa a la migración.
@@ -359,6 +360,45 @@ Fernando reportó: "No me aparece los descuentos de banco falabella, revisar que
 
 ---
 
+### Sesión 16 — 2026-09-02 — Producción congelada 3 días: el servicio ahora dice qué está sirviendo + cuotas a septiembre
+
+**Contexto:** la sesión anterior (15) había dejado como pendiente #1 confirmar la cadencia del `git pull` del VPS. Al medirlo en vivo apareció algo peor de lo esperado.
+
+**Diagnóstico (el hallazgo de la sesión):**
+- El VPS (`datalab-api.duckdns.org`) servía **903 beneficios con datos del 30-ago** mientras el repo ya tenía los del **1-sep**. El proceso **no reiniciaba desde el 2026-08-30 13:55** → **3 días congelado**.
+- **Causa:** la app **carga los JSON en MEMORIA al bootear**. Un `git pull` sin `systemctl --user restart` **no despliega nada**: el disco cambia, el proceso sigue sirviendo lo viejo.
+- **Por qué ningún guard lo vio:** la guardia de madrugada medía el **CHECKOUT del repo** creyendo que medía "lo servido" — lo decía su propio docstring. Encima, en Windows la guardia **reventaba por encoding justo al imprimir los FALLOS**, tapando el hallazgo.
+- **Efecto secundario explicado:** el guard ACID-UNIDAD alertaba a diario por **4 beneficios `precio_fijo` visibles** (Uno Salud Dental $29.900, Mel Studio $84.990, Cinemark, Lipigas). El fix L-45 **ya estaba correcto en el código**: el culpable era el **deploy**, no el filtro. Una alerta persistente que se estaba leyendo como bug de datos era, en realidad, el síntoma del atraso.
+
+**Decisiones (con su porqué):**
+- **Que el servicio exponga su propia identidad, en vez de solo desplegar.** Desplegar arreglaba el día pero no el problema: el sistema seguiría sin poder responder "¿qué estoy sirviendo?". Por eso `/estadisticas` ahora devuelve **`fecha_datos`** (fecha REAL del dato servido) y **`version_commit`** (commit corriendo). `ultimo_scrape` se mantiene por compatibilidad, **documentado como lo que siempre fue: la hora de arranque** — no la fecha del scrape, confusión que ya había engañado antes (ver sesión 6).
+- **Un guard solo vale si mide lo que dice medir.** Sobre esa identidad se montó **ACID-DEPLOY**: compara lo servido contra el checkout y **falla si hay >2 días de atraso**. Es la **tercera cara de la regla cardinal del workspace**: *¿corrió? → ¿insertó? → **¿está sirviendo?***
+- **El deployer entra al repo.** `deploy_vps.sh` (pull + restart + verificación de que lo servido quedó al día) queda versionado, con su línea de cron sugerida. Antes vivía **fuera del repo, invisible a cualquier auditoría** — exactamente lo que hizo que los agentes de la sesión 15 lo dieran por inexistente.
+- **Un fallo silencioso del refresco es un fallo que se repite.** Hoy 09:42 la Tarea de Windows murió a mitad del scrape (PC suspendido, `LastTaskResult 0xC000013A`) sin dejar rastro → se agregó un **marcador de corrida en curso** para que la corrida siguiente lo avise en el log.
+- **Cuotas: marcar honesto antes que inventar.** Los bancos que no rotaron a septiembre quedan marcados como tales, no se les estira la vigencia (L-19/L-24).
+
+**Lo que se construyó (commits):**
+1. `a8778cc` — guard **ACID-DEPLOY** + `fecha_datos`/`version_commit` en la API + **salida UTF-8** en la guardia (el crash de encoding tapaba los FALLOS) + corregido el encabezado que decía "N beneficios servidos" siendo N el del checkout.
+2. `5af0b22` — **refresco local (Chile)**: scrape de los 15 bancos → **936 beneficios** (venía de **892**), 14 bancos, health check ✅.
+3. `1cc8351` — **`deploy_vps.sh`** (pull + restart + verificación), con la línea de cron sugerida. **Falta correrlo en el VPS.**
+4. `471d10b` — marcador de corrida en curso en el refresco.
+5. `5194586` — **cuotas a septiembre 2026** + lección **L-46**.
+
+**Cuotas sin interés → SEPTIEMBRE 2026:** barrido de los **14 bancos desde Chile leyendo las webs OFICIALES**. **12 bancos con campaña, 32 campañas.** **Cubren septiembre (8):** Scotiabank, **Banco de Chile** (campaña **NUEVA** de contribuciones, 3 cuotas sin interés), Itaú, BICE, Security, **Falabella** (+ Salud 12 cuotas sin interés y Automotriz a 0,89% **marcada como NO 0%**), Lider BCI y Consorcio. **NO rotaron, marcados honestamente:** **Santander** (campaña de agosto vencida), **BCI** (su web sigue mostrando vencimiento 30/06/2026), **Tenpo** y **Entel** (no legibles). Ripley y Mach no tienen campaña tipo.
+
+**Banco Itaú — falsa alarma que se resolvió sola:** el correo lo marcaba a revisar (cayó de **34 a 18** el 1-sep). Verificado en vivo hoy: trae **48** — era la rotación de campaña de mes y quedó con **más** ofertas que antes. **No se tocó ningún piso** (el sistema hizo exactamente lo que debía: alertar y esperar).
+
+**Métricas al cierre:** **936 beneficios** · **14 bancos** · **1229 otros beneficios** · **31 descuentos de bencina** · **32 campañas de cuotas en 12 bancos** · **46 lecciones formalizadas**.
+
+**Pendiente #1 (bloqueante):** **desplegar en el VPS.** No hay SSH desde este PC (las dos claves de `~/.ssh` dan `Permission denied`) → lo corre Fernando:
+`ssh root@169.58.222.109 "cd ~/servicios/beneficios-bancarios-chile && bash deploy_vps.sh"`. **Hasta entonces producción sigue con los datos del 30-ago.** Otros pendientes: dejar el cron de deploy en el VPS, re-curar Santander/BCI cuando publiquen, reapuntar el Sandbox de Twilio, rotar el token de Telegram y el hardening del VPS (repo público).
+
+**Lección nueva:** **L-46** (Deploy/QA/Meta) — un guard puede medir el repo creyendo que mide producción; un servicio que carga datos en memoria **debe exponer qué está sirviendo**. Contador del proyecto: **46 lecciones**.
+
+**Resultado:** el sistema pasó de "no puede saber si está desplegado" a **poder medirlo desde afuera** (`fecha_datos` + `version_commit` + guard ACID-DEPLOY), con el deployer versionado y las cuotas al mes en curso. Lo que falta es un comando: correr `deploy_vps.sh`.
+
+---
+
 ## 🏗️ Hitos mayores del proyecto
 
 ### M01 — Build inicial completo (~2026-03)
@@ -407,4 +447,4 @@ Resumen:
 
 ---
 
-**Última actualización:** 2026-08-03
+**Última actualización:** 2026-09-02

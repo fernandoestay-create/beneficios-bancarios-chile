@@ -1,7 +1,33 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-09-01
-**Estado general:** 🟢 producción (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido)
+**Última actualización:** 2026-09-02
+**Estado general:** 🟢 producción (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido) — ⚠️ **el VPS sirve datos del 30-ago hasta que corras el deploy (P1 abajo)**
+
+**Sesión 2026-09-02 — Producción llevaba 3 días CONGELADA (L-46) + cuotas a septiembre + Itaú falsa alarma:**
+
+- **🔴 Hallazgo principal — producción congelada 3 días (L-46, nueva):** el VPS servía **903 beneficios con datos del 30-ago** mientras el repo ya tenía los del 1-sep (892). El proceso no se reiniciaba desde el **2026-08-30 13:55**. **Causa:** la app carga los JSON **en memoria al bootear** → un `git pull` **sin** `systemctl --user restart cartera.service` deja el servicio sirviendo lo que leyó la última vez.
+  - **Lo que confundía:** el guard **ACID-UNIDAD** alertaba todos los días por 4 beneficios `precio_fijo` visibles en `/ver/beneficios` (Uno Salud Dental $29.900, Mel Studio $84.990, Cinemark, Lipigas) — pero el fix **L-45 ya estaba correcto en el código**; lo que fallaba era el **deploy**. **Señal reutilizable:** si un guard denuncia un bug que en el código ya está arreglado, la hipótesis principal es que **lo que corre NO es ese código**.
+  - **Por qué ningún guard lo vio:** la guardia (`revision_madrugada.py`) medía el **CHECKOUT del repo** creyendo que era "lo servido" — lo decía su propio docstring. **ACID-FRESH** daba verde porque en el repo la data estaba fresca.
+- **Arreglado y pusheado (4 commits):**
+  1. **`a8778cc`** — `api.py`: `/estadisticas` ahora expone **`fecha_datos`** (fecha REAL del dato servido) y **`version_commit`** (commit corriendo). `ultimo_scrape` se mantiene por compatibilidad, documentado como lo que siempre fue: la hora de **ARRANQUE** (L-15). Guard nuevo **ACID-DEPLOY** en `revision_madrugada.py`: falla si lo servido está **>2 días** atrás del checkout, o si producción **ni siquiera expone `fecha_datos`** (= corre código anterior al fix), con el comando del arreglo en el mensaje. **Verificado contra la producción congelada real: la detecta.** Además: stdout/stderr de la guardia a **UTF-8** (en Windows reventaba con `UnicodeEncodeError` justo en la rama que imprime los FALLOS, tapando el hallazgo, L-18) y corregido el encabezado que decía "N beneficios servidos" siendo N el del checkout.
+  2. **`1cc8351`** — **`deploy_vps.sh` nuevo en el repo**: pull + restart + **VERIFICACIÓN** de que lo servido quedó al día (no se da por bueno con el `exit 0` del restart). Trae la línea de cron sugerida. El deployer antes vivía **out-of-band**, invisible a cualquier auditoría. Verificado con `bash -n`; **FALTA correrlo en el VPS**.
+  3. **`471d10b`** — `refrescar_local.ps1`: **marcador de corrida en curso**. Hoy 09:42 la Tarea de Windows murió a mitad del scrape (PC suspendido / sesión cerrada, `LastTaskResult 0xC000013A`) y el fallo fue **invisible**. Ahora la corrida siguiente avisa en el log "la corrida anterior quedó INCOMPLETA".
+  4. **`5194586`** — cuotas curadas a **SEPTIEMBRE 2026** + lección **L-46**.
+- **Refresco de datos corrido a mano** (el de la mañana había abortado): commit **`5af0b22`**, scrape de los 15 bancos desde Chile → **936 beneficios** (venía de 892), 14 bancos, health check ✅. `beneficios_otros.json` = **1229** (ya se stagea solo).
+- **Banco Itaú: falsa alarma, ya resuelto.** Venía estable en 34 y cayó a 18 el 1-sep (por eso el correo decía "⚠️ REVISAR · revisar Banco Itaú", 13/14). Scrapeado **EN VIVO hoy: trae 48** — era la **rotación de campaña de inicio de mes**, y quedó con MÁS ofertas que antes. **No se tocó ningún piso ni se confirmó nivel: se resolvió solo.**
+- **💳 Cuotas sin interés → SEPTIEMBRE 2026** (barrido de los 14 bancos desde Chile, fuentes oficiales, L-24). **12 bancos con campaña, 32 campañas.** Cubren septiembre (**8**): Scotiabank (1-30 sep), Banco de Chile (hasta 30-sep + campaña **NUEVA** de contribuciones 3 CSI), Itaú (hasta 30-sep; su educación decía 31-ago, **corregido**), BICE (hasta 1-oct), Security (hasta 30-sep), Falabella (+ Salud 12 CSI y Automotriz 12 cuotas a **0,89% marcada NO 0%**), Lider BCI (contribuciones 3-6 CSI del 1 al 30-sep + JetSMART) y Consorcio (Gold 30-sep / Signature 31-dic). **NO rotaron y quedaron marcados honestamente** (L-19, no se inventa): **Santander** ("campaña de agosto VENCIDA, aún no publica septiembre"), **BCI** ("la web oficial muestra vencimiento 30/06/2026, reconfirmar"), **Tenpo** y **Entel** (no legibles hoy: modal sin vigencia / sección que no renderiza). Ripley y Mach no tienen campaña tipo. El **aviso automático de desfase de mes del correo se apagó solo** al quedar `mes_referencia` == mes actual.
+- **Verificaciones:** `py_compile` OK, boot local (**936** + **1229** + 31 descuentos de bencina + **32** campañas), las **4 páginas 200** con `node --check` sano, `verificar_salud.py` **exit 0**, **0 secrets**, guardia corrida en vivo.
+- Lección nueva **L-46**.
+
+**➡️ PRÓXIMA SESIÓN (pendientes de HOY, en este orden):**
+1. **🔴 P1 — Desplegar en el VPS (lo único que falta para que todo esto llegue al usuario).** **No hay SSH desde este PC** (se probaron las dos claves de `~/.ssh`, ambas dan `Permission denied (publickey)`; la de Contabo es del server de boletas) → **lo tienes que correr tú**:
+   `ssh root@169.58.222.109 "cd ~/servicios/beneficios-bancarios-chile && bash deploy_vps.sh"`
+   Hasta que eso pase, **producción sigue sirviendo los datos del 30-ago** y los 4 `precio_fijo` siguen visibles. **Sonda:** `curl -s https://datalab-api.duckdns.org/estadisticas` debe mostrar `fecha_datos` del día y **936** beneficios.
+2. **Dejar el deploy automático:** agregar en el VPS el cron sugerido en `deploy_vps.sh` (`30 14 * * *`), y **documentar en el repo la cadencia real del pull actual** (`crontab -l` / `systemctl --user list-timers`).
+3. **Cuotas: re-curar Santander y BCI** cuando publiquen septiembre (el correo avisa solo si el mes se desfasa); ver si **Tenpo/Entel** vuelven a ser legibles.
+4. **Twilio Sandbox** → reapuntar a `datalab-api.duckdns.org/webhook` + **rotar el token de Telegram** (BotFather `/revoke`). Siguen pendientes de sesiones anteriores.
+5. **Hardening del VPS** (repo público): deshabilitar login root por SSH, auth por clave, `fail2ban`.
+6. **P3 hygiene** ya listados en el ESTADO anterior: centralizar la `SUBSCRIPTION_KEY` de BCI, marcar BancoEstado LEGACY, `/rag` async, módulo único de geografía.
 
 **Sesión 2026-09-01 — Auditoría ácida diaria (Capa 2, cloud): bug de unidades en `descuento_valor` (L-45):**
 
@@ -311,6 +337,13 @@ Confirmado contra **fuente oficial Scotiabank + La Tercera/medios**: el descuent
 
 | Métrica | Valor | Fecha |
 |---------|-------|-------|
+| Beneficios (restaurantes) en el repo | **936** · 14 bancos (refresco a mano `5af0b22`) ⚠️ el VPS aún sirve los del 30-ago hasta el deploy | 2026-09-02 |
+| Otros beneficios (`beneficios_otros.json`) | **1229** (se stagea solo desde `17b6a6d`) | 2026-09-02 |
+| Bencinas (descuentos combustible) | **31** (curados, con `confianza` + `url_fuente`) | 2026-09-02 |
+| Cuotas sin interés | **32 campañas** en **12 bancos** · `mes_referencia` = **septiembre 2026** (8 cubren sep; Santander/BCI/Tenpo/Entel marcados honestos) | 2026-09-02 |
+| Lecciones formalizadas | **46** (L-01 → L-46) | 2026-09-02 |
+| Deploy al VPS | 🔴 **PENDIENTE** — `deploy_vps.sh` ya en el repo, falta correrlo (sin SSH desde este PC). Sonda: `fecha_datos` en `/estadisticas` | 2026-09-02 |
+| Últimos commits | `a8778cc` (fecha_datos + ACID-DEPLOY) · `1cc8351` (deploy_vps.sh) · `471d10b` (marcador refresco) · `5194586` (cuotas sep + L-46) · `5af0b22` (datos) | 2026-09-02 |
 | Beneficios en producción | **954** (14 bancos); Falabella preservado por la red de seguridad en la corrida del cron de hoy | 2026-06-22 |
 | Banco Falabella | **95** (geo-fence del cron; restaurado desde Chile + red de seguridad) | 2026-06-22 |
 | Bencinas (descuentos combustible) | 31 (no afectado) | 2026-06-22 |

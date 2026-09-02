@@ -40,6 +40,15 @@ Stack canónico del workspace con variaciones:
 - **Trazabilidad + filtros dinámicos (ago-2026):** cada dato de bencina lleva `confianza` + `url_fuente` (re-curado desde fuente oficial; agregador ≠ fuente). Los filtros de día en `/ver` y `/ver/beneficios` son **dinámicos** (atenúan/bloquean los días sin resultados). Sin data para una sección → "estamos confirmando descuentos". La **guardia de madrugada** vigila ambos (trazabilidad + bugs de página).
 - **El código vive en sub-carpeta `beneficios-bancarios-chile/`**, no en la raíz. La raíz solo tiene documentación y archivos exportados.
 - **NO regenerar `beneficios.json`** sin avisar — el scrape completo de 15 bancos tarda y puede romper si algún banco está caído.
+- **⚠️ DESPLEGAR NO ES PUSHEAR (L-44/L-46) — la regla que más caro sale olvidar.** La app carga
+  `beneficios.json`, `beneficios_otros.json`, `bencinas.json` y las cuotas **en MEMORIA al bootear**.
+  Un `git pull` en el VPS **no despliega nada** si el servicio no reinicia: el 2026-09-02 producción
+  llevaba **3 días** sirviendo datos del 30-ago con el repo ya en el 1-sep. Para desplegar se corre
+  **`deploy_vps.sh`** (pull + restart + verificación de que lo servido quedó al día). Para saber qué
+  está sirviendo producción: `curl -s https://datalab-api.duckdns.org/estadisticas` →
+  **`fecha_datos`** (de cuándo es el dato) y **`version_commit`** (qué commit corre). ⚠️ `ultimo_scrape`
+  NO es la fecha del scrape, es la hora de ARRANQUE de la app (trampa vieja, L-15). El guard
+  **ACID-DEPLOY** de la guardia avisa si producción se queda >2 días atrás del repo.
 - **`revision_madrugada.py` (guardia de madrugada):** convierte cada bug conocido en un check automático contra producción + datos; corre en `revision_madrugada.yml` (~03:00 Chile) y avisa por mail solo si algo reaparece. El catálogo de bugs de página vive en **`TUNING_PAGINAS.md`** (fine-tuning operativo); al agregar un bug ahí, agregar también su guard en `revision_madrugada.py`.
 
 ---
@@ -82,6 +91,7 @@ Stack canónico del workspace con variaciones:
 │   ├── diagnosticar.py         ← guarda el HTML de bancos caídos (2026-06)
 │   ├── refrescar_local.ps1     ← refresco diario desde Chile, Tarea Windows (2026-06)
 │   ├── revision_madrugada.py   ← guardia de madrugada: re-chequea bugs conocidos vs prod (2026-07)
+│   ├── deploy_vps.sh           ← DESPLIEGUE: pull + restart + verifica lo servido (2026-09)
 │   ├── whatsapp_bot.py         ← bot legacy Flask (sin IA)
 │   ├── upload_pinecone.py      ← vectorización a Pinecone
 │   ├── beneficios.json         ← ~885 beneficios de restaurantes (fuente de verdad de /ver)
@@ -153,7 +163,8 @@ Antes de empezar a trabajar:
 - No se creó `00.Información_propia_explicación/index.md` ni `build_html.py` porque la docs natural ya está en HTML estático. Convertir a flujo `.md → .html` queda como tarea futura si Fernando quiere editar la docs natural en `.md`.
 - El código real vive en `beneficios-bancarios-chile/`. La docs técnica ahí (`README.md`, `ARCHITECTURE.md`, etc.) NO se modificó.
 
-**Última actualización:** 2026-08-31 (auditoría ácida del sistema completo + fixes A+B, commit `17b6a6d`: prod confirmada en el **VPS** (Render 503 suspendido); `beneficios_otros.json` ahora se **auto-actualiza** (se stagea en cron+refresco) + red de seguridad por banco (L-41 resuelto); geo `\b` (talca≠talcahuano); firma Twilio **fail-closed** + guard `/webhook` en la guardia; `/telegram` secret_token opt-in; `/beneficios/buscar` 404→200; O'Higgins mapa; `user_flow` TTL; deps capadas; `render.yaml` landmine legacy eliminado; **L-44**. ⚠️ **Pendiente: confirmar en el VPS la cadencia del `git pull`+restart** — un push no está en prod hasta ese pull, que NO es inmediato, L-44)
+**Última actualización:** 2026-09-02 (producción llevaba **3 días congelada**: el VPS servía datos del 30-ago porque el `git pull` no reinicia el servicio y la app carga los JSON en memoria al bootear. Fix: `/estadisticas` ahora expone **`fecha_datos`** y **`version_commit`**, guard **ACID-DEPLOY** en la guardia, y **`deploy_vps.sh`** en el repo (pull + restart + verificación). Además: cuotas curadas a **septiembre 2026** (12 bancos / 32 campañas; Santander y BCI marcados honestos porque aún no rotan), refresco corrido a mano → **936 beneficios**, Itaú recuperado a 48 (falsa alarma, rotación de campaña), aviso de corrida incompleta en el refresco local, y **L-46**. ⚠️ **PENDIENTE: correr `deploy_vps.sh` en el VPS** — hasta que eso pase, nada de esto está en producción; no hay SSH desde el PC de Fernando)
+_(Anterior 2026-08-31: auditoría ácida + fixes A+B, commit `17b6a6d`.)_
 _(Anterior 2026-08-04, v2.1: bot multicanal WhatsApp+Telegram de 4 opciones, firma Twilio, pipeline bencina desbloqueado L-37, apartado "Otros beneficios", filtros dinámicos, RAG revectorizado, L-31→L-40.)_
 
 ---

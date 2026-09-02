@@ -1,7 +1,24 @@
 # Roadmap — MiCartera (Scrapers + Bot descuentos)
 
 > Estado real del proyecto. Se actualiza después de cada sesión de trabajo.
-> Última actualización: 2026-08-31
+> Última actualización: 2026-09-02
+
+## ✅ Hecho (sesión 2026-09-02 — producción llevaba 3 días congelada: el servicio ahora dice qué está sirviendo + cuotas a septiembre)
+
+- **🔴 Hallazgo: producción congelada hace 3 días.** El VPS (`datalab-api.duckdns.org`) servía **903 beneficios con datos del 30-ago** mientras el repo ya tenía los del 1-sep. El proceso no reiniciaba desde el **2026-08-30 13:55**. Causa: la app **carga los JSON en MEMORIA al bootear** → un `git pull` sin `systemctl --user restart` **no despliega nada**.
+- **Por qué ningún guard lo vio:** la guardia medía el **CHECKOUT del repo** creyendo que era "lo servido" — lo decía su propio docstring. Efecto secundario: el guard ACID-UNIDAD alertaba a diario por **4 beneficios `precio_fijo`** visibles (Uno Salud Dental $29.900, Mel Studio $84.990, Cinemark, Lipigas) cuyo fix (L-45) **ya estaba correcto en el código**: el culpable era el deploy, no el filtro.
+- **Decisión: que el servicio exponga su propia identidad** (en vez de solo desplegar, que arreglaba el día pero no el problema). `/estadisticas` ahora devuelve **`fecha_datos`** (fecha REAL del dato servido) y **`version_commit`** (commit corriendo); `ultimo_scrape` queda por compatibilidad, documentado como lo que siempre fue: la hora de arranque. Sobre eso se montó el guard **ACID-DEPLOY**, que compara lo servido contra el checkout y **falla si hay >2 días de atraso**. Es la tercera cara de la regla cardinal: **¿corrió? → ¿insertó? → ¿está sirviendo?**
+- **Commits:**
+  - `a8778cc` guard **ACID-DEPLOY** + `fecha_datos`/`version_commit` + guardia con **salida UTF-8** (en Windows reventaba justo al imprimir los FALLOS, tapando el hallazgo) + corregido el encabezado que decía "N beneficios servidos" siendo N el del checkout.
+  - `5af0b22` **refresco local (Chile)**: scrape de los 15 bancos → **936 beneficios** (venía de 892), 14 bancos, health check ✅.
+  - `1cc8351` **`deploy_vps.sh`**: pull + restart + verificación de que lo servido quedó al día. El deployer antes vivía **fuera del repo, invisible a cualquier auditoría**; ahora está versionado, con la línea de cron sugerida. **Falta correrlo en el VPS.**
+  - `471d10b` **marcador de corrida en curso** en el refresco: hoy 09:42 la Tarea de Windows murió a mitad del scrape (PC suspendido, `LastTaskResult 0xC000013A`) y el fallo fue **invisible**; ahora la corrida siguiente lo avisa en el log.
+  - `5194586` **cuotas a septiembre 2026** + lección **L-46**.
+- **💳 Cuotas sin interés → SEPTIEMBRE 2026:** barrido de los 14 bancos desde Chile leyendo las **webs oficiales**. **12 bancos con campaña, 32 campañas.** Cubren septiembre (8): **Scotiabank, Banco de Chile** (con campaña NUEVA de contribuciones 3 cuotas sin interés)**, Itaú, BICE, Security, Falabella** (+ Salud 12 cuotas sin interés y Automotriz a 0,89% marcada como **NO 0%**)**, Lider BCI y Consorcio**. **NO rotaron y quedaron marcados honestamente en vez de inventar:** Santander (su campaña de agosto está vencida), BCI (su web sigue mostrando vencimiento 30/06/2026), Tenpo y Entel (no legibles). Ripley y Mach no tienen campaña tipo.
+- **Banco Itaú — falsa alarma resuelta sola:** el correo lo marcaba a revisar (cayó de 34 a 18 el 1-sep). Verificado en vivo hoy: trae **48** — era la rotación de campaña de mes y quedó con **más** ofertas. **No se tocó ningún piso.**
+- Lección nueva **L-46** (Deploy/QA/Meta): un guard puede medir el repo creyendo que mide producción; un servicio que carga datos en memoria debe **exponer qué está sirviendo**.
+
+**⏳ Pendiente inmediato:** **desplegar en el VPS** (sin SSH desde este PC) → `ssh root@169.58.222.109 "cd ~/servicios/beneficios-bancarios-chile && bash deploy_vps.sh"`; dejar el **cron de deploy** en el VPS; re-curar Santander/BCI cuando publiquen; Twilio Sandbox + token Telegram; hardening del VPS.
 
 ## ✅ Hecho (sesión 2026-08-31 — auditoría ácida del sistema completo (ALCANCE B) + fixes A+B)
 
@@ -161,6 +178,13 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 
 ## ⏳ Pendiente priorizado
 
+0. **🔴 #1 — DESPLEGAR EN EL VPS (bloqueante):** producción sigue con los datos del **30-ago** hasta que se corra el deploy. **No hay SSH desde este PC** (las dos claves de `~/.ssh` dan `Permission denied`) → lo corre Fernando:
+   `ssh root@169.58.222.109 "cd ~/servicios/beneficios-bancarios-chile && bash deploy_vps.sh"`.
+   Sonda de que quedó al día: `/estadisticas` → `fecha_datos` con la fecha del scrape de hoy.
+0b. **Dejar el cron de deploy en el VPS** (la línea sugerida viene dentro de `deploy_vps.sh`) para que un push no vuelva a quedarse sin desplegar. Mientras no exista, cada push depende de correr el deploy a mano.
+0c. **Cuotas — re-curar Santander y BCI cuando publiquen septiembre** (hoy marcados honestamente: Santander con la campaña de agosto vencida, BCI mostrando vencimiento 30/06/2026). Tenpo y Entel siguen no legibles. Barrer SIEMPRE los 14.
+0d. **Twilio Sandbox → reapuntar a `datalab-api.duckdns.org/webhook`** + **rotar el token de Telegram** (BotFather `/revoke`, quedó visible en pantalla durante la migración).
+0e. **Hardening del VPS (repo público):** deshabilitar login root por SSH (usuario sudo), auth por clave y `fail2ban`. El IP y el usuario ya figuran en los docs; lo que protege de verdad es el hardening (L-44).
 1. **Bencina — re-curar Shell/Aramco desde sus apps oficiales** (hoy vienen de medios verificados, no de la fuente primaria; solo Copec es 100% oficial). Objetivo: que los 2 quedan con `confianza="oficial"` como Copec.
 2. ~~Extender los filtros dinámicos a región/comuna y a bencinas/cuotas~~ ✅ **HECHO (2026-08-04)**: `/ver` y `/ver/beneficios` atenúan región+comuna; `/ver/bencinas` día; `/ver/cuotas` categorías. (Opcional restante: faceteado del filtro de banco en bencinas.)
 3. **Apartado "Otros beneficios" — cubrir más bancos:** hoy solo Santander/Consorcio (24 beneficios verificables mostrados, de 228 capturados). Faltan ~12 bancos: scrapear sus páginas de beneficios generales, mismo enfoque (dataset separado, `seccion="otro"`, filtro de verificabilidad L-33/L-35).
@@ -187,6 +211,10 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 
 ## 🐛 Issues conocidos
 
+- **🔴 ABIERTO — producción sin desplegar (2026-09-02):** el VPS sirve los datos del **30-ago**; el proceso no reinicia desde el 2026-08-30 13:55. Un `git pull` **no basta**: la app carga los JSON en memoria al bootear, hay que reiniciar (`deploy_vps.sh`). **Sin SSH desde este PC** → lo corre Fernando. Sonda: `fecha_datos` en `/estadisticas`.
+- ~~**La guardia medía el repo creyendo que medía producción**~~ ✅ RESUELTO (2026-09-02): `/estadisticas` expone `fecha_datos` + `version_commit` y el guard **ACID-DEPLOY** falla si lo servido tiene >2 días de atraso (L-46).
+- ~~**ACID-UNIDAD alertaba a diario por 4 `precio_fijo` visibles**~~ ✅ EXPLICADO (2026-09-02): el fix L-45 ya estaba correcto en el código; lo que fallaba era el **deploy**, no el filtro. Se cierra solo al desplegar.
+- **Refresco local frágil ante el PC suspendido:** hoy 09:42 la Tarea de Windows murió a mitad del scrape (`LastTaskResult 0xC000013A`) sin dejar rastro. Mitigado con el marcador de corrida en curso (`471d10b`), que lo avisa en la corrida siguiente — no lo evita.
 - ~~**Card BICE vacía**~~ ✅ RESUELTO (2026-06-02): fix durable en `ScraperBICE` (cadena `or` + `return None`, L-10) + cleanup + guard `restaurante=''` en health check.
 - ~~**6 cards "vacías" de contenido**~~ ✅ RESUELTO (2026-06-02): híbrido — Security recupera `field_titulo_caluga` ("Menú Priceless", 4 cards), Itaú+Falabella reciben etiqueta genérica "Beneficio exclusivo" vía `Beneficio.__post_init__` (2 cards). Cleanup data-at-rest + guard `descuento_texto=''` en health check. Tag `v1.6-cards-completas`. (L-14)
 - **BancoEstado**: la URL de campaña devuelve un soft-404 de Akamai Edge a TODO cliente (incluso UA de browser real), en todos los endpoints AEM. No es solo anti-bot: la campaña estacional ya no existe. Diferido hasta relanzamiento (L-09).
@@ -194,7 +222,13 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 
 ## 📊 Métricas relevantes
 
-- Beneficios de restaurantes en producción: **~887** (14 bancos; fluctúa por corrida — Itaú en observación, bajó a ~23)
+- **Al cierre 2026-09-02:** **936 beneficios de restaurantes** · **14 bancos** · **1229 otros beneficios** · **31 descuentos de bencina** · **32 campañas de cuotas en 12 bancos** · **46 lecciones formalizadas**
+- ⚠️ **Esas cifras son las del repo, no las servidas:** el VPS sigue en **903 beneficios con datos del 30-ago** hasta que se corra `deploy_vps.sh`
+- **Cuotas sin interés: septiembre 2026** — 32 campañas / 12 bancos; **8 cubren septiembre** (Scotiabank, Banco de Chile, Itaú, BICE, Security, Falabella, Lider BCI, Consorcio); Santander/BCI/Tenpo/Entel **marcados honestamente** sin rotar
+- **Identidad del servicio (nuevo):** `/estadisticas` expone `fecha_datos` (fecha REAL del dato servido) + `version_commit` (commit corriendo); `ultimo_scrape` = hora de arranque (compatibilidad)
+- **Guard ACID-DEPLOY:** falla si lo servido tiene **>2 días** de atraso respecto del checkout
+- **Itaú:** 48 restaurantes (2026-09-02) — se recuperó solo tras la rotación de mes; sin tocar pisos
+- Beneficios de restaurantes en producción (histórico): **~887** (14 bancos; fluctúa por corrida)
 - **Apartado "Otros beneficios" (DESPLEGADO):** `/ver/beneficios` muestra **788 beneficios verificables (10 bancos)** — **Banco de Chile 359 + BCI 172 + Security 80 + Falabella 61 + Entel 49 + Santander 21 + Tenpo 18 + Lider BCI 17 + Mach 9 + Consorcio 2** — de `beneficios_otros.json` (`seccion="otro"`, 790 en el archivo; el render oculta los sin % real, L-40/L-41). Financiamiento/servicios/CAE/cuotas/puntos no se muestran (L-33/L-34/L-35). 8 bancos agregados hoy vía flip L-32 con gate de restaurantes (2→10 bancos; 24→788)
 - **Cuotas sin interés: 28 campañas** en `cuotas_sin_interes.json` (curado + trazable; varios bancos aún muestran meses anteriores — ver pendientes)
 - **Bencinas (descuentos combustible): 31**, RE-CURADAS desde fuente oficial — Copec 100% oficial (`ww2.copec.cl`); Aramco/Shell desde medios verificados (pendiente pasar a oficial); campo `confianza` por dato
@@ -209,8 +243,8 @@ Directiva de Fernando: **"mejora la calidad al 100% — incluir TODO"** + **"haz
 - **Filtros dinámicos** (2026-08-04): `/ver` y `/ver/beneficios` atenúan/bloquean **día + región + comuna** sin resultados; `/ver/bencinas` día; `/ver/cuotas` categorías. El apartado "Otros beneficios" filtra a verificables (`descuento_valor>0`) **en código** (sobrevive re-scrapes)
 - **Falabella:** 95 ofertas con local específico (mall preservado) + restricción trazable "Comprueba en la página oficial"
 - **Seguridad:** endpoints `/scrape/*` destructivos eliminados · `/rag` con `ADMIN_TOKEN` · CORS restringido · webhook Twilio con **validación de firma opt-in** (activar con `TWILIO_AUTH_TOKEN` + probar en vivo)
-- Lecciones formalizadas: **35** (L-01 a L-35)
-- Deploy verificado en vivo el **2026-08-03**
+- Lecciones formalizadas: **46** (L-01 a L-46)
+- Deploy verificado en vivo el **2026-09-02** (resultado: **atrasado 3 días** — pendiente de correr `deploy_vps.sh`)
 - Último tag: **`v2.0-otros-trazabilidad-filtros`** (trazabilidad + filtros dinámicos) · anterior `v1.9-otros-beneficios` (apartado desplegado) · anterior `v1.8-estable-pre-beneficios` (punto de retorno)
 
 ---
