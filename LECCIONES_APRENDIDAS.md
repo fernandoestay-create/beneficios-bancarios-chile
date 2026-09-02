@@ -56,6 +56,7 @@
 | L-43 | Prueba ácida SIEMPRE = 2 capas + un loop. **Capa 1 = guardia determinista** (`revision_madrugada.py` en GitHub Actions, cada bug → un guard permanente, gratis, sin PC, **CON egress** → mide la fuente); **Capa 2 = auditoría LLM periódica** (rutina cloud, busca bugs NUEVOS). **El loop:** cada hallazgo de la Capa 2 → un guard de la Capa 1. ⚠️ **El sandbox cloud (rutina agendada/CCR) NO tiene egress** → NO alcanza APIs de bancos ni producción → solo audita datos-en-reposo; la verificación-CONTRA-FUENTE debe correr donde HAY egress (GitHub Actions o local), NO en el cloud. Bajar la cloud a mensual (gasta uso de Claude por corrida); la guardia gratis es la protección real diaria | Meta / Infraestructura | 2026-08-06 |
 | L-44 | "¿Pusheó?" ≠ "¿Está sirviendo?" a nivel DEPLOY: Render quedó suspendido (503), prod real es el VPS que pullea git out-of-band → un push no está en prod hasta el pull+restart; verificar con `curl` a la URL real, no los docs; combinar auditoría estática (agentes) con verificación en vivo | Deploy / Meta | 2026-08-31 |
 | L-45 | `descuento_valor` no siempre es un %: `precio_fijo`/`monto` guardan ahí un PESO crudo ($84.990) en el MISMO campo que usan sort/filtro/hero-stat como si fuera %; el guard ACID-% no lo pilla porque mira `%` en el TEXTO, no el campo numérico → el hero "Mejor descuento" de `/ver/beneficios` mostraba "84990%" | Datos y calidad / UX | 2026-09-01 |
+| L-46 | La guardia medía el CHECKOUT creyendo que medía producción (lo decía su propio docstring) → punto ciego: el VPS quedó 3 días sirviendo data vieja y ningún guard lo vio. Un servicio que carga datos en memoria debe EXPONER su identidad (`fecha_datos` + `version_commit`) para que se pueda medir desde afuera | Deploy / QA / Meta | 2026-09-02 |
 
 ---
 
@@ -1004,6 +1005,33 @@ Cuando un campo numérico es **polisémico** (a veces %, a veces $, según un ca
 
 ---
 
+### L-46 · Un guard puede medir el repo creyendo que mide producción — el servicio tiene que exponer qué está sirviendo (2026-09-02) · Deploy / QA / Meta
+
+**Problema**
+Producción llevaba **3 días congelada**: el VPS servía 903 beneficios del 30-ago mientras el repo ya tenía los del 1-sep. Nadie se enteró. Peor: el fix de L-45 (excluir `precio_fijo` del filtro de %) estaba commiteado y correcto, pero los 4 ítems seguían visibles en `/ver/beneficios` — el guard ACID-UNIDAD alertaba todos los días de un bug **que ya estaba arreglado en el código**, apuntando al culpable equivocado (`¿el filtro _es_verificable dejó de excluir tipos no-%?`). El síntoma llevaba a auditar un fix sano en vez del deploy.
+
+**Causa raíz**
+La guardia tiene dos capas —RUNTIME (curl a producción) y DATA— y la de DATA leía `beneficios.json` **del checkout del repo**. Su propio docstring lo declaraba: *"DATA: lo que se sirve (beneficios.json del checkout)"*. Esa equivalencia era verdad cuando se escribió y **dejó de serlo** al migrar a un VPS que pullea out-of-band: la app carga los JSON en **memoria** al bootear, así que un `git pull` sin `restart` deja el proceso sirviendo lo que leyó la última vez. Por eso ACID-FRESH (que mide `max(fecha_scrape)` del checkout) daba verde: en el repo la data estaba fresca. **Ningún check miraba de cuándo era el dato SERVIDO**, porque desde afuera no había forma de saberlo: `/estadisticas` solo exponía `ultimo_scrape`, que es `datetime.now()` del arranque (trampa vieja, L-15).
+
+**Fix**
+1. **Que el servicio diga qué está sirviendo:** `/estadisticas` ahora expone `fecha_datos` (el `max(fecha_scrape)` real de lo cargado) y `version_commit` (`git rev-parse --short HEAD` al bootear). `ultimo_scrape` se mantiene por compatibilidad, ya documentado como lo que siempre fue: la hora de arranque.
+2. **Guard ACID-DEPLOY**: compara la fecha del dato **servido** contra la del checkout y falla si hay >2 días de atraso; si producción ni siquiera expone `fecha_datos`, eso mismo prueba que corre código anterior al fix. El mensaje trae el comando del arreglo. Verificado contra la producción congelada real: la detecta.
+3. **`deploy_vps.sh`** en el repo (el deployer vivía out-of-band, invisible a cualquier auditoría): pull + restart + **verificación** de que lo servido quedó al día; no se da por bueno con el exit 0 del restart.
+4. Corregidos el docstring y el encabezado (`"N beneficios servidos"` siendo N el del checkout): la afirmación falsa **era** el punto ciego.
+
+**Lección**
+Un guard sirve solo si mide **el artefacto que ve el usuario**, no una copia que se le parece. La suposición "el repo es lo que se sirve" es correcta en un PaaS que redespliega en cada push (Render) y **se vuelve falsa** al mudarse a un servidor que pullea aparte — y nada avisa del cambio, porque el guard sigue en verde. Para poder medirlo desde afuera, **el servicio tiene que exponer su propia identidad**: qué versión corre y de cuándo es el dato que tiene en memoria. Sin eso, "¿está al día?" no es verificable, solo creíble. Es la tercera cara de la regla cardinal: **¿corrió? → ¿insertó? → ¿está sirviendo?** (L-W20 → L-44 → L-46).
+
+**Señal de alarma reutilizable:** cuando un guard denuncia un bug que revisando el código **ya está arreglado**, la hipótesis principal NO es que el fix esté malo — es que **lo que corre no es ese código**. Verificar el deploy antes de re-auditar el fix.
+
+**Evitar a futuro**
+- Todo servicio que cargue datos en memoria al bootear debe exponer `fecha_datos` + `version_commit`; sin eso el deploy es una caja negra.
+- Al migrar de plataforma (PaaS → VPS, o cambiar el deployer), **releer los guards**: los que asumían "push = deploy" quedan ciegos en silencio, y su docstring te dice cuál es la suposición a auditar.
+- Un `git pull` en un cron NO es un deploy si el proceso no reinicia. El deployer se verifica preguntándole a producción, no leyendo su log.
+- Todo deployer out-of-band debe vivir en el repo (L-44), o la próxima auditoría lo dará por inexistente.
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -1056,8 +1084,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 45 lecciones formalizadas (L-01 a L-45; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-45 (2026-09-01)
-**Última actualización:** 2026-09-01
+**Contador:** 46 lecciones formalizadas (L-01 a L-46; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-46 (2026-09-02)
+**Última actualización:** 2026-09-02
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.
