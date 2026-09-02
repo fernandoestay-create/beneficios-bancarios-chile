@@ -40,6 +40,17 @@ function Enviar-Mail($asunto, $cuerpoHtml) {
     } catch { Log "Error enviando mail: $($_.Exception.Message)" }
 }
 
+# Un corte a mitad (PC suspendido, sesion cerrada) mata la tarea sin dejar rastro:
+# el log queda truncado y nadie se entera. Este marcador hace que la corrida SIGUIENTE
+# lo diga en voz alta. Paso el 2026-09-02: la tarea murio durante el scrape y el unico
+# indicio era el LastTaskResult de Windows, que nadie mira.
+$MARCA = "$env:USERPROFILE\micartera_refresco.encurso"
+if (Test-Path $MARCA) {
+    $previa = (Get-Content $MARCA -Raw -EA SilentlyContinue).Trim()
+    Log "AVISO: la corrida anterior ($previa) quedo INCOMPLETA (se corto a mitad: PC suspendido o sesion cerrada). Ese dia no se actualizo produccion desde Chile."
+}
+Get-Date -Format 'yyyy-MM-dd HH:mm:ss' | Set-Content $MARCA -Encoding UTF8
+
 Log "===== Inicio refresco local (Chile) ====="
 $asunto = ""; $cuerpo = ""
 
@@ -96,6 +107,7 @@ try {
     # 7. Armar el mail con el reporte por banco que genero scrapers.py
     $asunto = (Get-Content "$CLONE\asunto_email.txt" -Raw -Encoding UTF8).Trim()
     $cuerpo = Get-Content "$CLONE\reporte_email.html" -Raw -Encoding UTF8
+    Remove-Item $MARCA -EA SilentlyContinue   # corrida completa: se borra el marcador
     Log "===== Fin refresco OK ====="
 }
 catch {
