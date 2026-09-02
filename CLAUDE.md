@@ -43,8 +43,9 @@ Stack canónico del workspace con variaciones:
 - **⚠️ DESPLEGAR NO ES PUSHEAR (L-44/L-46) — la regla que más caro sale olvidar.** La app carga
   `beneficios.json`, `beneficios_otros.json`, `bencinas.json` y las cuotas **en MEMORIA al bootear**.
   Un `git pull` en el VPS **no despliega nada** si el servicio no reinicia: el 2026-09-02 producción
-  llevaba **3 días** sirviendo datos del 30-ago con el repo ya en el 1-sep. Para desplegar se corre
-  **`deploy_vps.sh`** (pull + restart + verificación de que lo servido quedó al día). Para saber qué
+  llevaba **3 días** sirviendo datos del 30-ago con el repo ya en el 1-sep. El VPS **tiene** un cron propio para esto (`cartera.sincronizar`, **13:20**, pullea y reinicia), pero
+  **puede morir en silencio**: es justo lo que pasó (y ya había pasado 6 días en 24-ago). Para desplegar
+  a mano se corre **`deploy_vps.sh`** (pull + restart + verificación de que lo servido quedó al día). Para saber qué
   está sirviendo producción: `curl -s https://datalab-api.duckdns.org/estadisticas` →
   **`fecha_datos`** (de cuándo es el dato) y **`version_commit`** (qué commit corre). ⚠️ `ultimo_scrape`
   NO es la fecha del scrape, es la hora de ARRANQUE de la app (trampa vieja, L-15). El guard

@@ -1022,6 +1022,8 @@ La guardia tiene dos capas —RUNTIME (curl a producción) y DATA— y la de DAT
 **Lección**
 Un guard sirve solo si mide **el artefacto que ve el usuario**, no una copia que se le parece. La suposición "el repo es lo que se sirve" es correcta en un PaaS que redespliega en cada push (Render) y **se vuelve falsa** al mudarse a un servidor que pullea aparte — y nada avisa del cambio, porque el guard sigue en verde. Para poder medirlo desde afuera, **el servicio tiene que exponer su propia identidad**: qué versión corre y de cuándo es el dato que tiene en memoria. Sin eso, "¿está al día?" no es verificable, solo creíble. Es la tercera cara de la regla cardinal: **¿corrió? → ¿insertó? → ¿está sirviendo?** (L-W20 → L-44 → L-46).
 
+**Matiz que apareció al cerrar (y que hace la lección más dura):** el deployer del VPS **no faltaba**. Existe un cron de sistema, `cartera.sincronizar` (13:20), que pullea **y reinicia el servicio** — y que ya había dejado la web 6 días pegada en agosto. O sea el problema no era la ausencia del mecanismo sino que **un automatismo que existe puede morir en silencio**, y nadie se entera si ningún check mide su RESULTADO. Un deployer sin verificación posterior es indistinguible de un deployer muerto. Por eso el arreglo correcto no era "montar el deploy" sino (a) hacer medible lo servido y (b) un guard que compare — más `deploy_vps.sh`, que es la versión que sí verifica.
+
 **Señal de alarma reutilizable:** cuando un guard denuncia un bug que revisando el código **ya está arreglado**, la hipótesis principal NO es que el fix esté malo — es que **lo que corre no es ese código**. Verificar el deploy antes de re-auditar el fix.
 
 **Evitar a futuro**

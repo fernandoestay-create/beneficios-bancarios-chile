@@ -19,8 +19,10 @@
 - **Verificaciones:** `py_compile` OK, boot local (**936** + **1229** + 31 descuentos de bencina + **32** campañas), las **4 páginas 200** con `node --check` sano, `verificar_salud.py` **exit 0**, **0 secrets**, guardia corrida en vivo.
 - Lección nueva **L-46**.
 
+- **⚠️ CORRECCIÓN del diagnóstico (encontrada al cerrar, en el registro de crons del CLAUDE global):** el VPS **SÍ tiene** un deployer — `cartera.sincronizar`, cron de sistema a las **13:20**, que trae del repo lo que dejó el scraper **y reinicia el servicio**. O sea el mecanismo no falta: **lleva desde el 30-ago fallando (o sin correr) en silencio**, y ya había pasado antes (6 días pegado en 24-ago). Eso cambia el pendiente: no es "montar el deploy", es **averiguar por qué ese cron dejó de reiniciar** (`crontab -l`, `journalctl --user -u cartera`, y revisar si el pull falla por cambios locales en el VPS). Y refuerza la lección: **un automatismo que existe puede morir en silencio; sin un guard que mida el RESULTADO, nadie se entera** — que es justo lo que hace ACID-DEPLOY desde hoy. `deploy_vps.sh` sirve igual: es la versión que **verifica** lo que quedó sirviendo, y puede reemplazar al cron actual.
+
 **➡️ PRÓXIMA SESIÓN (pendientes de HOY, en este orden):**
-1. **🔴 P1 — Desplegar en el VPS (lo único que falta para que todo esto llegue al usuario).** **No hay SSH desde este PC** (se probaron las dos claves de `~/.ssh`, ambas dan `Permission denied (publickey)`; la de Contabo es del server de boletas) → **lo tienes que correr tú**:
+1. **🔴 P1 — Desplegar en el VPS Y averiguar por qué su cron `cartera.sincronizar` (13:20) dejó de reiniciar el servicio.** **No hay SSH desde este PC** (se probaron las dos claves de `~/.ssh`, ambas dan `Permission denied (publickey)`; la de Contabo es del server de boletas) → **lo tienes que correr tú**:
    `ssh root@169.58.222.109 "cd ~/servicios/beneficios-bancarios-chile && bash deploy_vps.sh"`
    Hasta que eso pase, **producción sigue sirviendo los datos del 30-ago** y los 4 `precio_fijo` siguen visibles. **Sonda:** `curl -s https://datalab-api.duckdns.org/estadisticas` debe mostrar `fecha_datos` del día y **936** beneficios.
 2. **Dejar el deploy automático:** agregar en el VPS el cron sugerido en `deploy_vps.sh` (`30 14 * * *`), y **documentar en el repo la cadencia real del pull actual** (`crontab -l` / `systemctl --user list-timers`).
