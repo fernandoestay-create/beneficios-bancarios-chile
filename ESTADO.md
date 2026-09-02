@@ -1,9 +1,28 @@
 # Estado del proyecto
 
 **Última actualización:** 2026-09-02
-**Estado general:** 🟢 producción (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido) — ⚠️ **el VPS sirve datos del 30-ago hasta que corras el deploy (P1 abajo)**
+**Estado general:** 🟢 producción AL DÍA y sana (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido) — sirviendo **940 beneficios** con `fecha_datos: 2026-09-02` / `version_commit: ff3f1bf`; auto-deploy reparado y acceso SSH desde el PC (`ssh micartera-vps`)
 
-**Sesión 2026-09-02 — Producción llevaba 3 días CONGELADA (L-46) + cuotas a septiembre + Itaú falsa alarma:**
+---
+
+**🟢 INCIDENTE RESUELTO (2026-09-02, tarde) — el VPS estaba COLGADO por falta de memoria (OOM); revivido, desplegado y auto-deploy reparado (L-47):**
+
+- **🔴 Hallazgo grave:** al ir a desplegar (el pendiente P1 de la mañana), se descubrió que el **VPS Contabo estaba COLGADO por falta de memoria (OOM)** hacía ~4 días. La consola VNC mostraba `soft lockup`, `rcu_preempt detected stalls`, `"OOM is now expected behavior"` y `systemd-logind Watchdog timeout`. La web **seguía respondiendo** (servía los datos del 30-ago que tenía en memoria) pero el sistema **no podía correr NADA nuevo** — por eso ni el cron de sincronización ni el reinicio del servicio funcionaban. **Ese era el verdadero motivo de los "días congelado"**, además del deploy pendiente.
+- **✅ Se reinició la máquina** desde el panel de Contabo (new.contabo.com → instancia `vmi3527171` → Reiniciar). **Revivió:** pasó de servir 903 (30-ago) a 892 (1-sep) al recargar de disco. Ahora responde en **0,7s**, memoria holgada (**1 GB usado de 7,8 GB**).
+- **🔍 Diagnóstico de memoria (ya sano, corrige hipótesis previa):** el servidor **YA tenía swap de 2 GB**, y `cartera.service` **YA tenía** `Restart=always` + tope `MemoryMax=1GB`. O sea estaba razonablemente protegido; el OOM fue un **pico puntual** tras ~8 días de uptime con muchos servicios conviviendo (Hermes, Centinela, Cartera, Docker, mcps, rclone). **Se corrige la hipótesis previa de que "faltaba swap": no faltaba.**
+- **🔑 Acceso SSH instalado (para no depender nunca más del VNC):** la consola VNC de QEMU fue un calvario (teclado alemán mal mapeado: no salía `/`, Shift+7 daba `?`, sin copiar/pegar). Se instaló a mano (tecleada en `nano` por la consola) una **llave SSH del PC** en `/home/fernando/.ssh/authorized_keys` (una `ed25519` generada **sin símbolos `+` ni `/`** para poder tipearla). Ahora desde el PC: **`ssh micartera-vps`** entra directo como `fernando` (llave `~/.ssh/micartera_vps2_ed25519`, atajo dejado en `~/.ssh/config` del PC).
+- **🚀 Despliegue del código de hoy:** con acceso SSH se subieron los archivos y se reinició el servicio. **Producción quedó en 940 beneficios** (commit `ff3f1bf`, el scraper de GitHub Actions de hoy), exponiendo **`fecha_datos: 2026-09-02`** y **`version_commit: ff3f1bf`**. **Cuotas de septiembre sirviendo.** Guardia (`revision_madrugada.py`) corrida en el server: **✅ TODO OK** (incluidos ACID-DEPLOY y el de los `precio_fijo`, L-45/L-46).
+- **🔧 El OTRO motivo del atraso, reparado — el auto-deploy estaba roto:** el cron `~/bin/sincronizar-cartera.sh` (13:20) hacía `git fetch/pull` por **HTTPS**, pero **GitHub responde `www-authenticate: Basic realm="GitHub"` al git**, aunque el repo es público (`curl` a la web da 200, pero el endpoint `git-upload-pack` exige auth). Por eso el fetch pedía usuario y **el cron nunca actualizaba**. **Fix:** se generó una **deploy key SSH read-only** en el server (`~/.ssh/github_deploy`), se agregó al repo de GitHub (**id 162101731, read_only**), se cambió el remote a `git@github.com:` con `core.sshCommand` apuntando a la deploy key, y se agregó `github.com` a `known_hosts`. **Validado corriendo el cron a mano:** `git fetch+merge` OK ("sin cambios"). **El cron de las 13:20 vuelve a actualizar solo.**
+- **🟢 Resultado:** producción **al día y sana**; el **auto-deploy reparado** (no se volverá a quedar atrás); si igual pasara, el guard **ACID-DEPLOY** avisa por correo (vigía externo en GitHub Actions, que mide `fecha_datos` desde afuera — funciona aunque la máquina esté medio colgada). Lección nueva **L-47**.
+
+**➡️ PENDIENTES para próxima sesión (de este incidente):**
+1. **(Opcional) Instalar también la llave del Mac** para acceso desde ahí (el usuario da su pública, se agrega desde el PC).
+2. **Vigilar si el OOM se repite:** si la web se vuelve a atrasar (el guard avisa), investigar **fuga de memoria** en los servicios que conviven en el VPS.
+3. **Pendientes viejos que siguen vigentes:** Twilio Sandbox (reapuntar a `datalab-api.duckdns.org/webhook`), rotar el token de Telegram (BotFather `/revoke`), hardening del VPS (deshabilitar login root por SSH, auth por clave, `fail2ban`).
+
+---
+
+**Sesión 2026-09-02 (mañana) — Producción llevaba 3 días CONGELADA (L-46) + cuotas a septiembre + Itaú falsa alarma:**
 
 - **🔴 Hallazgo principal — producción congelada 3 días (L-46, nueva):** el VPS servía **903 beneficios con datos del 30-ago** mientras el repo ya tenía los del 1-sep (892). El proceso no se reiniciaba desde el **2026-08-30 13:55**. **Causa:** la app carga los JSON **en memoria al bootear** → un `git pull` **sin** `systemctl --user restart cartera.service` deja el servicio sirviendo lo que leyó la última vez.
   - **Lo que confundía:** el guard **ACID-UNIDAD** alertaba todos los días por 4 beneficios `precio_fijo` visibles en `/ver/beneficios` (Uno Salud Dental $29.900, Mel Studio $84.990, Cinemark, Lipigas) — pero el fix **L-45 ya estaba correcto en el código**; lo que fallaba era el **deploy**. **Señal reutilizable:** si un guard denuncia un bug que en el código ya está arreglado, la hipótesis principal es que **lo que corre NO es ese código**.
@@ -339,13 +358,15 @@ Confirmado contra **fuente oficial Scotiabank + La Tercera/medios**: el descuent
 
 | Métrica | Valor | Fecha |
 |---------|-------|-------|
-| Beneficios (restaurantes) en el repo | **936** · 14 bancos (refresco a mano `5af0b22`) ⚠️ el VPS aún sirve los del 30-ago hasta el deploy | 2026-09-02 |
+| Beneficios en producción (VPS) | **940** · 14 bancos · commit **`ff3f1bf`** · `fecha_datos: 2026-09-02` (desplegado con SSH tras revivir el VPS) | 2026-09-02 |
 | Otros beneficios (`beneficios_otros.json`) | **1229** (se stagea solo desde `17b6a6d`) | 2026-09-02 |
 | Bencinas (descuentos combustible) | **31** (curados, con `confianza` + `url_fuente`) | 2026-09-02 |
-| Cuotas sin interés | **32 campañas** en **12 bancos** · `mes_referencia` = **septiembre 2026** (8 cubren sep; Santander/BCI/Tenpo/Entel marcados honestos) | 2026-09-02 |
-| Lecciones formalizadas | **46** (L-01 → L-46) | 2026-09-02 |
-| Deploy al VPS | 🔴 **PENDIENTE** — `deploy_vps.sh` ya en el repo, falta correrlo (sin SSH desde este PC). Sonda: `fecha_datos` en `/estadisticas` | 2026-09-02 |
-| Últimos commits | `a8778cc` (fecha_datos + ACID-DEPLOY) · `1cc8351` (deploy_vps.sh) · `471d10b` (marcador refresco) · `5194586` (cuotas sep + L-46) · `5af0b22` (datos) | 2026-09-02 |
+| Cuotas sin interés | **32 campañas** en **12 bancos** · `mes_referencia` = **septiembre 2026** (8 cubren sep; Santander/BCI/Tenpo/Entel marcados honestos) · sirviendo en prod | 2026-09-02 |
+| Lecciones formalizadas | **47** (L-01 → L-47) | 2026-09-02 |
+| Deploy al VPS | 🟢 **AL DÍA** — desplegado por SSH; **auto-deploy reparado** (deploy key SSH read-only, cron 13:20 vuelve a actualizar solo). Sonda: `fecha_datos` en `/estadisticas` | 2026-09-02 |
+| Acceso al VPS | 🟢 **SSH desde el PC**: `ssh micartera-vps` (usuario `fernando`, llave `~/.ssh/micartera_vps2_ed25519`). Se acabó el VNC | 2026-09-02 |
+| Salud del VPS | 🟢 revivido tras **OOM** (colgado ~4 días); reiniciado desde Contabo; **1 GB usado de 7,8 GB**, responde en 0,7s | 2026-09-02 |
+| Últimos commits | `ff3f1bf` (scraper GH Actions, sirviendo en prod) · `a8778cc` (fecha_datos + ACID-DEPLOY) · `1cc8351` (deploy_vps.sh) · `471d10b` (marcador refresco) · `5194586` (cuotas sep + L-46) | 2026-09-02 |
 | Beneficios en producción | **954** (14 bancos); Falabella preservado por la red de seguridad en la corrida del cron de hoy | 2026-06-22 |
 | Banco Falabella | **95** (geo-fence del cron; restaurado desde Chile + red de seguridad) | 2026-06-22 |
 | Bencinas (descuentos combustible) | 31 (no afectado) | 2026-06-22 |

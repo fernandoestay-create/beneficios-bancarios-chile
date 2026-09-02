@@ -164,7 +164,7 @@ Antes de empezar a trabajar:
 - No se creó `00.Información_propia_explicación/index.md` ni `build_html.py` porque la docs natural ya está en HTML estático. Convertir a flujo `.md → .html` queda como tarea futura si Fernando quiere editar la docs natural en `.md`.
 - El código real vive en `beneficios-bancarios-chile/`. La docs técnica ahí (`README.md`, `ARCHITECTURE.md`, etc.) NO se modificó.
 
-**Última actualización:** 2026-09-02 (producción llevaba **3 días congelada**: el VPS servía datos del 30-ago porque el `git pull` no reinicia el servicio y la app carga los JSON en memoria al bootear. Fix: `/estadisticas` ahora expone **`fecha_datos`** y **`version_commit`**, guard **ACID-DEPLOY** en la guardia, y **`deploy_vps.sh`** en el repo (pull + restart + verificación). Además: cuotas curadas a **septiembre 2026** (12 bancos / 32 campañas; Santander y BCI marcados honestos porque aún no rotan), refresco corrido a mano → **936 beneficios**, Itaú recuperado a 48 (falsa alarma, rotación de campaña), aviso de corrida incompleta en el refresco local, y **L-46**. ⚠️ **PENDIENTE: correr `deploy_vps.sh` en el VPS** — hasta que eso pase, nada de esto está en producción; no hay SSH desde el PC de Fernando)
+**Última actualización:** 2026-09-02 (VPS **colgado ~4 días por OOM**, no solo el deploy pendiente: al entrar por la consola VNC se vio el kernel en `soft lockup`/OOM — la web servía de memoria y ningún check interno lo veía. Fix: **reinicio de la VM** desde Contabo + se instaló **acceso SSH desde el PC** (`ssh micartera-vps`) para no depender del VNC + **auto-deploy reparado con deploy key SSH read-only** (GitHub exige auth al git aun en repo público). Refuerza que el vigía real (ACID-DEPLOY) corre **AFUERA**, en GitHub Actions. **L-47**. Contexto previo del mismo día: producción llevaba **3 días congelada**, `/estadisticas` ahora expone **`fecha_datos`** y **`version_commit`**, guard **ACID-DEPLOY**, **`deploy_vps.sh`** en el repo, cuotas a **septiembre 2026** (12 bancos / 32 campañas), refresco a mano → **936 beneficios**, Itaú recuperado a 48, **L-46**.)
 _(Anterior 2026-08-31: auditoría ácida + fixes A+B, commit `17b6a6d`.)_
 _(Anterior 2026-08-04, v2.1: bot multicanal WhatsApp+Telegram de 4 opciones, firma Twilio, pipeline bencina desbloqueado L-37, apartado "Otros beneficios", filtros dinámicos, RAG revectorizado, L-31→L-40.)_
 
@@ -183,6 +183,19 @@ _(Anterior 2026-08-04, v2.1: bot multicanal WhatsApp+Telegram de 4 opciones, fir
 - **Código:** `~/servicios/beneficios-bancarios-chile` · **entorno:** `~/.venvs/cartera`
 - **Secretos:** `~/servicios/cartera.env`, permisos 600, fuera de git
 - **Registros:** `journalctl --user -u cartera`
+
+### 🔑 Acceso SSH + deploy (2026-09-02, L-47)
+
+- **Acceso SSH desde el PC:** `ssh micartera-vps` entra como `fernando@169.58.222.109`
+  (llave `~/.ssh/micartera_vps2_ed25519`, atajo en `~/.ssh/config`). Con esto se puede
+  desplegar/mantener **sin la consola VNC** (que tiene el teclado roto).
+- **Deploy manual:**
+  `ssh micartera-vps "cd ~/servicios/beneficios-bancarios-chile && git pull && systemctl --user restart cartera.service"`
+  (o `ssh micartera-vps "cd ~/servicios/beneficios-bancarios-chile && bash deploy_vps.sh"`).
+- **Auto-deploy:** el cron `~/bin/sincronizar-cartera.sh` (13:20) hace `git pull` + restart.
+  Usa una **deploy key SSH read-only** (el remote del server es `git@github.com:`), porque
+  **GitHub exige auth al protocolo git aunque el repo sea público**. Si el auto-deploy vuelve
+  a fallar, revisar esa deploy key (`~/.ssh/github_deploy` en el server).
 
 ⚠️ **El webhook de Telegram se registró a mano.** La app lo hace al arrancar, pero no lo
 hizo; se forzó con `setWebhook`. Verificado: apunta a `/telegram` y sin errores. Si algún

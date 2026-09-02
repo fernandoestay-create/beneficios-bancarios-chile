@@ -57,6 +57,7 @@
 | L-44 | "¿Pusheó?" ≠ "¿Está sirviendo?" a nivel DEPLOY: Render quedó suspendido (503), prod real es el VPS que pullea git out-of-band → un push no está en prod hasta el pull+restart; verificar con `curl` a la URL real, no los docs; combinar auditoría estática (agentes) con verificación en vivo | Deploy / Meta | 2026-08-31 |
 | L-45 | `descuento_valor` no siempre es un %: `precio_fijo`/`monto` guardan ahí un PESO crudo ($84.990) en el MISMO campo que usan sort/filtro/hero-stat como si fuera %; el guard ACID-% no lo pilla porque mira `%` en el TEXTO, no el campo numérico → el hero "Mejor descuento" de `/ver/beneficios` mostraba "84990%" | Datos y calidad / UX | 2026-09-01 |
 | L-46 | La guardia medía el CHECKOUT creyendo que medía producción (lo decía su propio docstring) → punto ciego: el VPS quedó 3 días sirviendo data vieja y ningún guard lo vio. Un servicio que carga datos en memoria debe EXPONER su identidad (`fecha_datos` + `version_commit`) para que se pueda medir desde afuera | Deploy / QA / Meta | 2026-09-02 |
+| L-47 | Un OOM colgó el VPS 4 días (la web servía de memoria y ningún check lo vio); el auto-deploy estaba roto porque GitHub exige auth al `git` aun en repo público → deploy key SSH read-only; instalar una llave SSH temprano evita el infierno del VNC; y un vigía que vive en el mismo host que vigila es ciego cuando el host se cuelga → el check corre AFUERA | Deploy / Infraestructura / Meta | 2026-09-02 |
 
 ---
 
@@ -1034,6 +1035,35 @@ Un guard sirve solo si mide **el artefacto que ve el usuario**, no una copia que
 
 ---
 
+### L-47 · Un OOM colgó el VPS 4 días + auto-deploy roto por auth de GitHub → deploy key + SSH temprano (2026-09-02) · Deploy / Infraestructura / Meta
+
+**Problema**
+Producción llevaba ~4 días sirviendo datos del 30-ago. La hipótesis inicial era que solo faltaba correr el deploy (pendiente de L-46). Pero al entrar por la consola VNC del panel de Contabo se vio que el VPS estaba **colgado por OOM** (out of memory): `soft lockup`, `rcu_preempt stalls`, mensajes de kernel del tipo "OOM is now expected behavior", `systemd-logind Watchdog timeout`. La web seguía respondiendo (servía lo que ya tenía cargado en memoria) pero el sistema no podía correr nada nuevo — ni el cron de sincronización ni un reinicio del servicio. Un cuelgue **parcial y engañoso**: parece vivo por fuera, tieso por dentro.
+
+**Causa raíz (varias, encadenadas)**
+1. Tras ~8 días de uptime, un pico de memoria con muchos servicios conviviendo (Hermes, Centinela, Cartera, Docker, mcps, rclone) colgó el kernel — pese a que ya había swap de 2GB, `Restart=always` y `MemoryMax=1GB` en `cartera`.
+2. El auto-deploy (cron `~/bin/sincronizar-cartera.sh`, 13:20) hacía `git fetch` por **HTTPS**, y **GitHub responde `www-authenticate: Basic realm="GitHub"` al protocolo git aunque el repo sea público** (un `curl` a la página web da 200, pero el endpoint `git-upload-pack` exige auth) → el fetch pedía usuario/clave y fallaba en silencio → el deploy nunca actualizaba.
+3. Un cron que vive DENTRO del host no puede curar el host cuando este se cuelga (no puede reiniciarse a sí mismo).
+
+**Fix**
+- **(a)** Reinicio de la VM desde el panel de Contabo → descuelga la máquina y recarga los datos frescos.
+- **(b)** Se instaló una llave SSH del PC en el server, tecleándola a mano en `nano` por la consola VNC — se usó una `ed25519` **sin símbolos `+`/`/`** justamente para poder tipearla con el mapeo de teclado roto → ahora se entra con `ssh micartera-vps` como `fernando`, sin depender del VNC.
+- **(c)** Auto-deploy reparado con una **deploy key SSH read-only**: generada en el server, agregada al repo en GitHub, con el remote cambiado a `git@github.com:` + `core.sshCommand` → el `git fetch` del cron vuelve a funcionar sin pedir credenciales.
+- **(d)** El vigía real es **EXTERNO**: el guard ACID-DEPLOY (L-46) corre en GitHub Actions y mide `fecha_datos` desde afuera, así avisa aunque la máquina esté medio colgada y no pueda correr sus propios checks.
+
+**Lección**
+1. Un OOM se manifiesta como "la web responde pero el sistema está tieso" — confirmarlo con `uptime` / `free`, y el reinicio de la VM es la cura.
+2. "Repo público" en la API/web de GitHub NO garantiza que el `git clone/fetch` sea anónimo: GitHub puede exigir Basic auth al endpoint git. La solución limpia es una **deploy key read-only** por repo, no un token personal.
+3. La consola VNC de QEMU con teclado Mac tiene el mapeo roto (no sale `/`, sin copy/paste) → **instala una llave SSH cuanto antes y sal de ahí**. Trucos para sobrevivir mientras tanto: navegar con `cd ..` / `cd nombre` evita tener que escribir `/`, y `Shift`+guion da `_`.
+4. Un vigía que vive en el mismo host que vigila es **ciego cuando el host se cuelga** → el check que de verdad importa corre AFUERA. Es la tercera cara de L-46: **¿corrió? → ¿insertó? → ¿está sirviendo?**, medido desde afuera.
+
+**Evitar a futuro**
+- Documentar el acceso SSH y el deploy manual (`ssh micartera-vps` + `git pull` + `systemctl --user restart cartera.service`, o `bash deploy_vps.sh`).
+- Si el OOM se repite, investigar fuga de memoria (qué servicio crece con el uptime).
+- Nunca depender de un cron interno como ÚNICO mecanismo de recuperación: el guard externo (GitHub Actions) es el que avisa cuando el host no puede.
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -1086,8 +1116,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 46 lecciones formalizadas (L-01 a L-46; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-46 (2026-09-02)
+**Contador:** 47 lecciones formalizadas (L-01 a L-47; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-47 (2026-09-02)
 **Última actualización:** 2026-09-02
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.
