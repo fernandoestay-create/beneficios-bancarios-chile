@@ -1250,7 +1250,7 @@
       "precio_97": 1599,
       "precio_diesel": 1395,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_49",
@@ -1301,7 +1301,7 @@
       "precio_97": 1604,
       "precio_diesel": 1410,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_69",
@@ -1947,7 +1947,7 @@
       "precio_97": 1628,
       "precio_diesel": 1462,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_93",
@@ -1998,7 +1998,7 @@
       "precio_97": 1628,
       "precio_diesel": 1462,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_96",
@@ -2049,7 +2049,7 @@
       "precio_97": 1628,
       "precio_diesel": 1477,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:56"
     },
     {
       "id": "bel_115",
@@ -2488,10 +2488,10 @@
       "servicios": [],
       "precio_93": 1549,
       "precio_95": 1581,
-      "precio_97": 1614,
+      "precio_97": 1615,
       "precio_diesel": 1459,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-17 07:33:12"
+      "precio_fecha": "2026-09-22 17:52:23"
     },
     {
       "id": "bel_149",
@@ -3200,12 +3200,12 @@
       "latitud": -31.909498766255837,
       "longitud": -71.4921087026596,
       "servicios": [],
-      "precio_93": 1496,
-      "precio_95": 1537,
-      "precio_97": 1578,
+      "precio_93": 1495,
+      "precio_95": 1536,
+      "precio_97": 1577,
       "precio_diesel": 1409,
       "precio_kerosene": 1031,
-      "precio_fecha": "2026-09-10 09:37:41"
+      "precio_fecha": "2026-09-22 20:05:43"
     },
     {
       "id": "bel_243",
@@ -3749,7 +3749,7 @@
       "precio_97": 1612,
       "precio_diesel": 1448,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_199",
@@ -3817,7 +3817,7 @@
       "precio_97": 1611,
       "precio_diesel": 1453,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_226",
@@ -4106,7 +4106,7 @@
       "precio_97": 1613,
       "precio_diesel": 1448,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_2159",
@@ -5376,12 +5376,12 @@
       "latitud": -33.3670542,
       "longitud": -71.673851,
       "servicios": [],
-      "precio_93": 1489,
-      "precio_95": 1530,
-      "precio_97": 1573,
-      "precio_diesel": 1406,
+      "precio_93": 1491,
+      "precio_95": 1532,
+      "precio_97": 1574,
+      "precio_diesel": 1400,
       "precio_kerosene": 1068,
-      "precio_fecha": "2026-09-10 11:23:50"
+      "precio_fecha": "2026-09-22 17:39:09"
     },
     {
       "id": "bel_433",
@@ -5908,7 +5908,7 @@
       "precio_97": 1544,
       "precio_diesel": 1378,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_299",
@@ -6044,7 +6044,7 @@
       "precio_97": 1568,
       "precio_diesel": 1403,
       "precio_kerosene": 1063,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_317",
@@ -6180,7 +6180,7 @@
       "precio_97": 1568,
       "precio_diesel": 1403,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_351",
@@ -6282,7 +6282,7 @@
       "precio_97": 1562,
       "precio_diesel": 1380,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_373",
@@ -6350,7 +6350,7 @@
       "precio_97": 1570,
       "precio_diesel": 1403,
       "precio_kerosene": 1078,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_383",
@@ -6418,7 +6418,7 @@
       "precio_97": 1569,
       "precio_diesel": 1390,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_412",
@@ -6537,7 +6537,7 @@
       "precio_97": 1573,
       "precio_diesel": 1402,
       "precio_kerosene": 1073,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_448",
@@ -7603,12 +7603,12 @@
       "latitud": -34.50889951183059,
       "longitud": -70.92298686504364,
       "servicios": [],
-      "precio_93": 1513,
-      "precio_95": 1545,
+      "precio_93": 1515,
+      "precio_95": 1548,
       "precio_97": 1573,
-      "precio_diesel": 1431,
+      "precio_diesel": 1434,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-10 00:17:14"
+      "precio_fecha": "2026-09-22 21:00:02"
     },
     {
       "id": "bel_620",
@@ -7756,12 +7756,12 @@
       "latitud": -34.453151823945916,
       "longitud": -71.5429875254631,
       "servicios": [],
-      "precio_93": 1487,
-      "precio_95": 1523,
+      "precio_93": 1488,
+      "precio_95": 1524,
       "precio_97": 1570,
       "precio_diesel": 1389,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-18 08:42:55"
+      "precio_fecha": "2026-09-23 08:12:37"
     },
     {
       "id": "bel_649",
@@ -8118,7 +8118,7 @@
       "precio_97": 1584,
       "precio_diesel": 1434,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_534",
@@ -8169,7 +8169,7 @@
       "precio_97": 1571,
       "precio_diesel": 1419,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_589",
@@ -9546,7 +9546,7 @@
       "precio_97": 1544,
       "precio_diesel": 1378,
       "precio_kerosene": 1081,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_692",
@@ -9614,7 +9614,7 @@
       "precio_97": 1574,
       "precio_diesel": 1395,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_731",
@@ -9784,7 +9784,7 @@
       "precio_97": 1578,
       "precio_diesel": 1434,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_786",
@@ -9949,12 +9949,12 @@
       "latitud": -36.17871,
       "longitud": -71.82253400000002,
       "servicios": [],
-      "precio_93": 1499,
+      "precio_93": 1497,
       "precio_95": 1532,
-      "precio_97": 1566,
+      "precio_97": 1564,
       "precio_diesel": 1402,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 10:50:43"
+      "precio_fecha": "2026-09-22 15:35:51"
     },
     {
       "id": "bel_848",
@@ -10034,12 +10034,12 @@
       "latitud": -35.449134661151646,
       "longitud": -71.59792508497964,
       "servicios": [],
-      "precio_93": 1479,
-      "precio_95": 1506,
-      "precio_97": 1542,
+      "precio_93": 1480,
+      "precio_95": 1507,
+      "precio_97": 1545,
       "precio_diesel": 1378,
       "precio_kerosene": 1079,
-      "precio_fecha": "2026-09-21 15:25:32"
+      "precio_fecha": "2026-09-22 16:56:22"
     },
     {
       "id": "bel_2244",
@@ -11450,7 +11450,7 @@
       "precio_97": 1550,
       "precio_diesel": 1395,
       "precio_kerosene": 1060,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_888",
@@ -11484,7 +11484,7 @@
       "precio_97": 1551,
       "precio_diesel": 1397,
       "precio_kerosene": 1062,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_890",
@@ -11501,7 +11501,7 @@
       "precio_97": 1546,
       "precio_diesel": 1369,
       "precio_kerosene": 1061,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_891",
@@ -11518,7 +11518,7 @@
       "precio_97": 1554,
       "precio_diesel": 1398,
       "precio_kerosene": 1056,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_892",
@@ -11535,7 +11535,7 @@
       "precio_97": 1546,
       "precio_diesel": 1369,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_894",
@@ -11552,7 +11552,7 @@
       "precio_97": 1548,
       "precio_diesel": 1391,
       "precio_kerosene": 1061,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_909",
@@ -11637,7 +11637,7 @@
       "precio_97": 1550,
       "precio_diesel": 1395,
       "precio_kerosene": 1060,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_940",
@@ -11671,7 +11671,7 @@
       "precio_97": 1542,
       "precio_diesel": 1378,
       "precio_kerosene": 1023,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_951",
@@ -11700,12 +11700,12 @@
       "latitud": -36.77473157233628,
       "longitud": -73.08014074384153,
       "servicios": [],
-      "precio_93": 1463,
-      "precio_95": 1504,
-      "precio_97": 1545,
+      "precio_93": 1462,
+      "precio_95": 1503,
+      "precio_97": 1544,
       "precio_diesel": 1383,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_961",
@@ -13452,11 +13452,11 @@
       "longitud": -72.58692741394043,
       "servicios": [],
       "precio_93": 1499,
-      "precio_95": 1533,
+      "precio_95": 1532,
       "precio_97": 1567,
       "precio_diesel": 1409,
       "precio_kerosene": 1074,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1211",
@@ -13486,11 +13486,11 @@
       "longitud": -72.64380097389221,
       "servicios": [],
       "precio_93": 1504,
-      "precio_95": 1539,
-      "precio_97": 1571,
+      "precio_95": 1540,
+      "precio_97": 1570,
       "precio_diesel": 1417,
       "precio_kerosene": 1087,
-      "precio_fecha": "2026-09-22 10:50:45"
+      "precio_fecha": "2026-09-22 15:35:52"
     },
     {
       "id": "bel_1172",
@@ -13592,7 +13592,7 @@
       "precio_97": 1565,
       "precio_diesel": 1414,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1174",
@@ -13949,7 +13949,7 @@
       "precio_97": 1566,
       "precio_diesel": 1403,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_2175",
@@ -14454,12 +14454,12 @@
       "latitud": -40.57307135948806,
       "longitud": -73.14491271972656,
       "servicios": [],
-      "precio_93": 1531,
+      "precio_93": 1530,
       "precio_95": 1560,
       "precio_97": 1589,
       "precio_diesel": 1438,
       "precio_kerosene": 1108,
-      "precio_fecha": "2026-09-21 09:43:55"
+      "precio_fecha": "2026-09-23 09:04:47"
     },
     {
       "id": "bel_1445",
@@ -15083,12 +15083,12 @@
       "latitud": -40.57311006902236,
       "longitud": -73.14221978187561,
       "servicios": [],
-      "precio_93": 1532,
+      "precio_93": 1531,
       "precio_95": 1561,
       "precio_97": 1590,
       "precio_diesel": 1439,
-      "precio_kerosene": 1110,
-      "precio_fecha": "2026-09-10 18:29:43"
+      "precio_kerosene": 1108,
+      "precio_fecha": "2026-09-22 14:39:33"
     },
     {
       "id": "bel_1455",
@@ -15360,7 +15360,7 @@
       "precio_97": 1591,
       "precio_diesel": 1441,
       "precio_kerosene": 1112,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1461",
@@ -15411,7 +15411,7 @@
       "precio_97": 1591,
       "precio_diesel": 1441,
       "precio_kerosene": 1112,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_1464",
@@ -15479,7 +15479,7 @@
       "precio_97": 1573,
       "precio_diesel": 1442,
       "precio_kerosene": 1106,
-      "precio_fecha": "2026-09-22 11:05:42"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1383",
@@ -15547,7 +15547,7 @@
       "precio_97": 1586,
       "precio_diesel": 1444,
       "precio_kerosene": 1105,
-      "precio_fecha": "2026-09-22 11:05:43"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_1388",
@@ -16701,9 +16701,9 @@
       "precio_93": 1443,
       "precio_95": 1484,
       "precio_97": 1528,
-      "precio_diesel": 1391,
+      "precio_diesel": 1390,
       "precio_kerosene": 1081,
-      "precio_fecha": "2026-09-10 06:37:22"
+      "precio_fecha": "2026-09-22 21:31:23"
     },
     {
       "id": "bel_1544",
@@ -16872,8 +16872,8 @@
       "precio_95": 1484,
       "precio_97": 1528,
       "precio_diesel": 1362,
-      "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-10 19:07:41"
+      "precio_kerosene": 1065,
+      "precio_fecha": "2026-09-22 18:03:14"
     },
     {
       "id": "bel_1554",
@@ -20373,9 +20373,9 @@
       "precio_93": 1426,
       "precio_95": 1480,
       "precio_97": 1521,
-      "precio_diesel": 1359,
+      "precio_diesel": 1364,
       "precio_kerosene": 1079,
-      "precio_fecha": "2026-09-17 15:48:30"
+      "precio_fecha": "2026-09-22 15:48:06"
     },
     {
       "id": "bel_1692",
@@ -21310,7 +21310,7 @@
       "precio_97": 1573,
       "precio_diesel": 1370,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1569",
@@ -21344,7 +21344,7 @@
       "precio_97": 1571,
       "precio_diesel": 1369,
       "precio_kerosene": 1080,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1571",
@@ -21395,7 +21395,7 @@
       "precio_97": 1561,
       "precio_diesel": 1399,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1588",
@@ -21429,7 +21429,7 @@
       "precio_97": 1531,
       "precio_diesel": 1338,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1590",
@@ -21565,7 +21565,7 @@
       "precio_97": 1537,
       "precio_diesel": 1361,
       "precio_kerosene": 1081,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1651",
@@ -21633,7 +21633,7 @@
       "precio_97": 1548,
       "precio_diesel": 1355,
       "precio_kerosene": 1083,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1702",
@@ -21650,7 +21650,7 @@
       "precio_97": 1573,
       "precio_diesel": 1381,
       "precio_kerosene": 1077,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1721",
@@ -21667,7 +21667,7 @@
       "precio_97": 1611,
       "precio_diesel": 1420,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1722",
@@ -21735,7 +21735,7 @@
       "precio_97": 1606,
       "precio_diesel": 1413,
       "precio_kerosene": 989,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1726",
@@ -21752,7 +21752,7 @@
       "precio_97": 1609,
       "precio_diesel": 1415,
       "precio_kerosene": 1075,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1736",
@@ -21769,7 +21769,7 @@
       "precio_97": 1613,
       "precio_diesel": 1419,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1737",
@@ -21820,7 +21820,7 @@
       "precio_97": 1613,
       "precio_diesel": 1420,
       "precio_kerosene": 1084,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_1741",
@@ -21837,7 +21837,7 @@
       "precio_97": 1613,
       "precio_diesel": 1420,
       "precio_kerosene": 1084,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_1745",
@@ -21854,7 +21854,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 1059,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1747",
@@ -21956,7 +21956,7 @@
       "precio_97": 1504,
       "precio_diesel": 1344,
       "precio_kerosene": 1131,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1780",
@@ -21973,7 +21973,7 @@
       "precio_97": 1501,
       "precio_diesel": 1363,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1781",
@@ -22058,7 +22058,7 @@
       "precio_97": 1535,
       "precio_diesel": 1364,
       "precio_kerosene": 1072,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1817",
@@ -22092,7 +22092,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 1076,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1832",
@@ -22177,7 +22177,7 @@
       "precio_97": 1564,
       "precio_diesel": 1394,
       "precio_kerosene": 1077,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1858",
@@ -22466,7 +22466,7 @@
       "precio_97": 1604,
       "precio_diesel": 1394,
       "precio_kerosene": 1075,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1971",
@@ -22483,7 +22483,7 @@
       "precio_97": 1612,
       "precio_diesel": 1418,
       "precio_kerosene": 1073,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1972",
@@ -22806,7 +22806,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_2064",
@@ -22823,7 +22823,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 1058,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_2065",
@@ -22840,7 +22840,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_2066",
@@ -22857,7 +22857,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_2082",
@@ -23027,7 +23027,7 @@
       "precio_97": 1591,
       "precio_diesel": 1408,
       "precio_kerosene": 1068,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_2127",
@@ -23146,7 +23146,7 @@
       "precio_97": 1544,
       "precio_diesel": 1356,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1602",
@@ -23163,7 +23163,7 @@
       "precio_97": 1536,
       "precio_diesel": 1368,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1603",
@@ -23214,7 +23214,7 @@
       "precio_97": 1528,
       "precio_diesel": 1390,
       "precio_kerosene": 1117,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1636",
@@ -23265,7 +23265,7 @@
       "precio_97": 1551,
       "precio_diesel": 1377,
       "precio_kerosene": 1097,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1681",
@@ -23299,7 +23299,7 @@
       "precio_97": 1568,
       "precio_diesel": 1312,
       "precio_kerosene": 1116,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1683",
@@ -23537,7 +23537,7 @@
       "precio_97": 1551,
       "precio_diesel": 1392,
       "precio_kerosene": 1060,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1811",
@@ -23588,7 +23588,7 @@
       "precio_97": 1590,
       "precio_diesel": 1381,
       "precio_kerosene": 1078,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_1860",
@@ -23622,7 +23622,7 @@
       "precio_97": 1542,
       "precio_diesel": 1359,
       "precio_kerosene": 1090,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1907",
@@ -23724,7 +23724,7 @@
       "precio_97": 1568,
       "precio_diesel": 1312,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_2000",
@@ -24030,7 +24030,7 @@
       "precio_97": 1614,
       "precio_diesel": 1420,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_2206",
@@ -24591,7 +24591,7 @@
       "precio_97": 1588,
       "precio_diesel": 1439,
       "precio_kerosene": 1076,
-      "precio_fecha": "2026-09-22 10:50:42"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1307",
@@ -24608,7 +24608,7 @@
       "precio_97": 1590,
       "precio_diesel": 1439,
       "precio_kerosene": 1088,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1308",
@@ -25747,7 +25747,7 @@
       "precio_97": 1538,
       "precio_diesel": 1378,
       "precio_kerosene": 1066,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1108",
@@ -25798,7 +25798,7 @@
       "precio_97": 1562,
       "precio_diesel": 1401,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1075",
@@ -26344,7 +26344,7 @@
       "precio_97": 1599,
       "precio_diesel": 1395,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_49",
@@ -26395,7 +26395,7 @@
       "precio_97": 1604,
       "precio_diesel": 1410,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_68",
@@ -27058,7 +27058,7 @@
       "precio_97": 1628,
       "precio_diesel": 1462,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_93",
@@ -27109,7 +27109,7 @@
       "precio_97": 1628,
       "precio_diesel": 1462,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_96",
@@ -27160,7 +27160,7 @@
       "precio_97": 1628,
       "precio_diesel": 1477,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:56"
     },
     {
       "id": "bel_115",
@@ -27633,10 +27633,10 @@
       "servicios": [],
       "precio_93": 1549,
       "precio_95": 1581,
-      "precio_97": 1614,
+      "precio_97": 1615,
       "precio_diesel": 1459,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-17 07:33:12"
+      "precio_fecha": "2026-09-22 17:52:23"
     },
     {
       "id": "bel_149",
@@ -28413,12 +28413,12 @@
       "latitud": -31.909498766255837,
       "longitud": -71.4921087026596,
       "servicios": [],
-      "precio_93": 1496,
-      "precio_95": 1537,
-      "precio_97": 1578,
+      "precio_93": 1495,
+      "precio_95": 1536,
+      "precio_97": 1577,
       "precio_diesel": 1409,
       "precio_kerosene": 1031,
-      "precio_fecha": "2026-09-10 09:37:41"
+      "precio_fecha": "2026-09-22 20:05:43"
     },
     {
       "id": "bel_243",
@@ -29064,7 +29064,7 @@
       "precio_97": 1612,
       "precio_diesel": 1448,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_199",
@@ -29132,7 +29132,7 @@
       "precio_97": 1611,
       "precio_diesel": 1453,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_226",
@@ -29421,7 +29421,7 @@
       "precio_97": 1613,
       "precio_diesel": 1448,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_2159",
@@ -30725,12 +30725,12 @@
       "latitud": -33.3670542,
       "longitud": -71.673851,
       "servicios": [],
-      "precio_93": 1489,
-      "precio_95": 1530,
-      "precio_97": 1573,
-      "precio_diesel": 1406,
+      "precio_93": 1491,
+      "precio_95": 1532,
+      "precio_97": 1574,
+      "precio_diesel": 1400,
       "precio_kerosene": 1068,
-      "precio_fecha": "2026-09-10 11:23:50"
+      "precio_fecha": "2026-09-22 17:39:09"
     },
     {
       "id": "bel_433",
@@ -31614,7 +31614,7 @@
       "precio_97": 1544,
       "precio_diesel": 1378,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_299",
@@ -31750,7 +31750,7 @@
       "precio_97": 1568,
       "precio_diesel": 1403,
       "precio_kerosene": 1063,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_317",
@@ -31886,7 +31886,7 @@
       "precio_97": 1568,
       "precio_diesel": 1403,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_351",
@@ -31988,7 +31988,7 @@
       "precio_97": 1562,
       "precio_diesel": 1380,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_373",
@@ -32056,7 +32056,7 @@
       "precio_97": 1570,
       "precio_diesel": 1403,
       "precio_kerosene": 1078,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_383",
@@ -32124,7 +32124,7 @@
       "precio_97": 1569,
       "precio_diesel": 1390,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_408",
@@ -32260,7 +32260,7 @@
       "precio_97": 1573,
       "precio_diesel": 1402,
       "precio_kerosene": 1073,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_448",
@@ -33445,12 +33445,12 @@
       "latitud": -34.50889951183059,
       "longitud": -70.92298686504364,
       "servicios": [],
-      "precio_93": 1513,
-      "precio_95": 1545,
+      "precio_93": 1515,
+      "precio_95": 1548,
       "precio_97": 1573,
-      "precio_diesel": 1431,
+      "precio_diesel": 1434,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-10 00:17:14"
+      "precio_fecha": "2026-09-22 21:00:02"
     },
     {
       "id": "bel_620",
@@ -33598,12 +33598,12 @@
       "latitud": -34.453151823945916,
       "longitud": -71.5429875254631,
       "servicios": [],
-      "precio_93": 1487,
-      "precio_95": 1523,
+      "precio_93": 1488,
+      "precio_95": 1524,
       "precio_97": 1570,
       "precio_diesel": 1389,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-18 08:42:55"
+      "precio_fecha": "2026-09-23 08:12:37"
     },
     {
       "id": "bel_649",
@@ -34334,7 +34334,7 @@
       "precio_97": 1584,
       "precio_diesel": 1434,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_577",
@@ -34402,7 +34402,7 @@
       "precio_97": 1571,
       "precio_diesel": 1419,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_578",
@@ -34754,12 +34754,12 @@
       "latitud": -34.68668804757798,
       "longitud": -71.02419677857557,
       "servicios": [],
-      "precio_93": 1516,
-      "precio_95": 1549,
+      "precio_93": 1515,
+      "precio_95": 1548,
       "precio_97": 0,
       "precio_diesel": 1434,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-21 17:12:00"
+      "precio_fecha": "2026-09-22 15:18:24"
     },
     {
       "id": "bel_2184",
@@ -36833,7 +36833,7 @@
       "precio_97": 1544,
       "precio_diesel": 1378,
       "precio_kerosene": 1081,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_690",
@@ -36918,7 +36918,7 @@
       "precio_97": 1574,
       "precio_diesel": 1395,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_731",
@@ -37122,7 +37122,7 @@
       "precio_97": 1578,
       "precio_diesel": 1434,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_778",
@@ -37491,12 +37491,12 @@
       "latitud": -36.17871,
       "longitud": -71.82253400000002,
       "servicios": [],
-      "precio_93": 1499,
+      "precio_93": 1497,
       "precio_95": 1532,
-      "precio_97": 1566,
+      "precio_97": 1564,
       "precio_diesel": 1402,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 10:50:43"
+      "precio_fecha": "2026-09-22 15:35:51"
     },
     {
       "id": "bel_847",
@@ -37712,12 +37712,12 @@
       "latitud": -35.449134661151646,
       "longitud": -71.59792508497964,
       "servicios": [],
-      "precio_93": 1479,
-      "precio_95": 1506,
-      "precio_97": 1542,
+      "precio_93": 1480,
+      "precio_95": 1507,
+      "precio_97": 1545,
       "precio_diesel": 1378,
       "precio_kerosene": 1079,
-      "precio_fecha": "2026-09-21 15:25:32"
+      "precio_fecha": "2026-09-22 16:56:22"
     },
     {
       "id": "bel_2244",
@@ -37769,6 +37769,23 @@
       "precio_diesel": 1372,
       "precio_kerosene": 0,
       "precio_fecha": "2026-09-17 18:55:33"
+    },
+    {
+      "id": "bel_2265",
+      "nombre": "Facaz RUTA J-40 KM 13.5 COMALLE",
+      "cadena": "Facaz",
+      "direccion": "RUTA J-40 KM 13.5 COMALLE",
+      "comuna": "Rauco",
+      "region": "Del Maule",
+      "latitud": -34.871723735627135,
+      "longitud": -71.26586508065951,
+      "servicios": [],
+      "precio_93": 0,
+      "precio_95": 0,
+      "precio_97": 0,
+      "precio_diesel": 0,
+      "precio_kerosene": 0,
+      "precio_fecha": ""
     },
     {
       "id": "bel_854",
@@ -39519,7 +39536,7 @@
       "precio_97": 1550,
       "precio_diesel": 1395,
       "precio_kerosene": 1060,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_888",
@@ -39553,7 +39570,7 @@
       "precio_97": 1551,
       "precio_diesel": 1397,
       "precio_kerosene": 1062,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_890",
@@ -39570,7 +39587,7 @@
       "precio_97": 1546,
       "precio_diesel": 1369,
       "precio_kerosene": 1061,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_891",
@@ -39587,7 +39604,7 @@
       "precio_97": 1554,
       "precio_diesel": 1398,
       "precio_kerosene": 1056,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_892",
@@ -39604,7 +39621,24 @@
       "precio_97": 1546,
       "precio_diesel": 1369,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
+    },
+    {
+      "id": "bel_893",
+      "nombre": "Serviautos Manuel Gutierrez 2313",
+      "cadena": "Serviautos",
+      "direccion": "Manuel Gutierrez 2313",
+      "comuna": "Concepción",
+      "region": "Del Biobío",
+      "latitud": -36.801832623712755,
+      "longitud": -73.04058820009232,
+      "servicios": [],
+      "precio_93": 1262,
+      "precio_95": 1288,
+      "precio_97": 1325,
+      "precio_diesel": 995,
+      "precio_kerosene": 1070,
+      "precio_fecha": "2025-11-20 09:54:29"
     },
     {
       "id": "bel_894",
@@ -39621,7 +39655,7 @@
       "precio_97": 1548,
       "precio_diesel": 1391,
       "precio_kerosene": 1061,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_909",
@@ -39757,7 +39791,7 @@
       "precio_97": 1550,
       "precio_diesel": 1395,
       "precio_kerosene": 1060,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_940",
@@ -39791,7 +39825,7 @@
       "precio_97": 1542,
       "precio_diesel": 1378,
       "precio_kerosene": 1023,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_951",
@@ -39820,12 +39854,12 @@
       "latitud": -36.77473157233628,
       "longitud": -73.08014074384153,
       "servicios": [],
-      "precio_93": 1463,
-      "precio_95": 1504,
-      "precio_97": 1545,
+      "precio_93": 1462,
+      "precio_95": 1503,
+      "precio_97": 1544,
       "precio_diesel": 1383,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_961",
@@ -42184,11 +42218,11 @@
       "longitud": -72.58692741394043,
       "servicios": [],
       "precio_93": 1499,
-      "precio_95": 1533,
+      "precio_95": 1532,
       "precio_97": 1567,
       "precio_diesel": 1409,
       "precio_kerosene": 1074,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1211",
@@ -42218,11 +42252,11 @@
       "longitud": -72.64380097389221,
       "servicios": [],
       "precio_93": 1504,
-      "precio_95": 1539,
-      "precio_97": 1571,
+      "precio_95": 1540,
+      "precio_97": 1570,
       "precio_diesel": 1417,
       "precio_kerosene": 1087,
-      "precio_fecha": "2026-09-22 10:50:45"
+      "precio_fecha": "2026-09-22 15:35:52"
     },
     {
       "id": "bel_1172",
@@ -42341,7 +42375,7 @@
       "precio_97": 1565,
       "precio_diesel": 1414,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1174",
@@ -42783,7 +42817,7 @@
       "precio_97": 1566,
       "precio_diesel": 1403,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_2175",
@@ -43322,12 +43356,12 @@
       "latitud": -40.57307135948806,
       "longitud": -73.14491271972656,
       "servicios": [],
-      "precio_93": 1531,
+      "precio_93": 1530,
       "precio_95": 1560,
       "precio_97": 1589,
       "precio_diesel": 1438,
       "precio_kerosene": 1108,
-      "precio_fecha": "2026-09-21 09:43:55"
+      "precio_fecha": "2026-09-23 09:04:47"
     },
     {
       "id": "bel_1445",
@@ -44070,12 +44104,12 @@
       "latitud": -40.57311006902236,
       "longitud": -73.14221978187561,
       "servicios": [],
-      "precio_93": 1532,
+      "precio_93": 1531,
       "precio_95": 1561,
       "precio_97": 1590,
       "precio_diesel": 1439,
-      "precio_kerosene": 1110,
-      "precio_fecha": "2026-09-10 18:29:43"
+      "precio_kerosene": 1108,
+      "precio_fecha": "2026-09-22 14:39:33"
     },
     {
       "id": "bel_1455",
@@ -44347,7 +44381,7 @@
       "precio_97": 1591,
       "precio_diesel": 1441,
       "precio_kerosene": 1112,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1461",
@@ -44398,7 +44432,7 @@
       "precio_97": 1591,
       "precio_diesel": 1441,
       "precio_kerosene": 1112,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_1464",
@@ -44466,7 +44500,7 @@
       "precio_97": 1573,
       "precio_diesel": 1442,
       "precio_kerosene": 1106,
-      "precio_fecha": "2026-09-22 11:05:42"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1383",
@@ -44534,7 +44568,7 @@
       "precio_97": 1586,
       "precio_diesel": 1444,
       "precio_kerosene": 1105,
-      "precio_fecha": "2026-09-22 11:05:43"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_1388",
@@ -45926,9 +45960,9 @@
       "precio_93": 1443,
       "precio_95": 1484,
       "precio_97": 1528,
-      "precio_diesel": 1391,
+      "precio_diesel": 1390,
       "precio_kerosene": 1081,
-      "precio_fecha": "2026-09-10 06:37:22"
+      "precio_fecha": "2026-09-22 21:31:23"
     },
     {
       "id": "bel_1544",
@@ -46097,8 +46131,8 @@
       "precio_95": 1484,
       "precio_97": 1528,
       "precio_diesel": 1362,
-      "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-10 19:07:41"
+      "precio_kerosene": 1065,
+      "precio_fecha": "2026-09-22 18:03:14"
     },
     {
       "id": "bel_1554",
@@ -50278,9 +50312,9 @@
       "precio_93": 1426,
       "precio_95": 1480,
       "precio_97": 1521,
-      "precio_diesel": 1359,
+      "precio_diesel": 1364,
       "precio_kerosene": 1079,
-      "precio_fecha": "2026-09-17 15:48:30"
+      "precio_fecha": "2026-09-22 15:48:06"
     },
     {
       "id": "bel_1692",
@@ -51215,7 +51249,7 @@
       "precio_97": 1573,
       "precio_diesel": 1370,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1569",
@@ -51249,7 +51283,7 @@
       "precio_97": 1571,
       "precio_diesel": 1369,
       "precio_kerosene": 1080,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1571",
@@ -51317,7 +51351,7 @@
       "precio_97": 1561,
       "precio_diesel": 1399,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1588",
@@ -51351,7 +51385,7 @@
       "precio_97": 1531,
       "precio_diesel": 1338,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1590",
@@ -51487,7 +51521,7 @@
       "precio_97": 1537,
       "precio_diesel": 1361,
       "precio_kerosene": 1081,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1651",
@@ -51555,7 +51589,7 @@
       "precio_97": 1548,
       "precio_diesel": 1355,
       "precio_kerosene": 1083,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1702",
@@ -51572,7 +51606,7 @@
       "precio_97": 1573,
       "precio_diesel": 1381,
       "precio_kerosene": 1077,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1721",
@@ -51589,7 +51623,7 @@
       "precio_97": 1611,
       "precio_diesel": 1420,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1722",
@@ -51657,7 +51691,7 @@
       "precio_97": 1606,
       "precio_diesel": 1413,
       "precio_kerosene": 989,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1726",
@@ -51674,7 +51708,7 @@
       "precio_97": 1609,
       "precio_diesel": 1415,
       "precio_kerosene": 1075,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1736",
@@ -51691,7 +51725,7 @@
       "precio_97": 1613,
       "precio_diesel": 1419,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1737",
@@ -51742,7 +51776,7 @@
       "precio_97": 1613,
       "precio_diesel": 1420,
       "precio_kerosene": 1084,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_1741",
@@ -51759,7 +51793,7 @@
       "precio_97": 1613,
       "precio_diesel": 1420,
       "precio_kerosene": 1084,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:02"
     },
     {
       "id": "bel_1745",
@@ -51776,7 +51810,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 1059,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1747",
@@ -51878,7 +51912,7 @@
       "precio_97": 1504,
       "precio_diesel": 1344,
       "precio_kerosene": 1131,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1780",
@@ -51895,7 +51929,7 @@
       "precio_97": 1501,
       "precio_diesel": 1363,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1781",
@@ -51997,7 +52031,7 @@
       "precio_97": 1535,
       "precio_diesel": 1364,
       "precio_kerosene": 1072,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1808",
@@ -52048,7 +52082,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 1076,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1832",
@@ -52150,7 +52184,7 @@
       "precio_97": 1564,
       "precio_diesel": 1394,
       "precio_kerosene": 1077,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1858",
@@ -52439,7 +52473,7 @@
       "precio_97": 1604,
       "precio_diesel": 1394,
       "precio_kerosene": 1075,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1971",
@@ -52456,7 +52490,7 @@
       "precio_97": 1612,
       "precio_diesel": 1418,
       "precio_kerosene": 1073,
-      "precio_fecha": "2026-09-22 04:05:45"
+      "precio_fecha": "2026-09-23 09:05:57"
     },
     {
       "id": "bel_1972",
@@ -52779,7 +52813,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_2064",
@@ -52796,7 +52830,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 1058,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_2065",
@@ -52813,7 +52847,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_2066",
@@ -52830,7 +52864,7 @@
       "precio_97": 1594,
       "precio_diesel": 1359,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_2082",
@@ -53000,7 +53034,7 @@
       "precio_97": 1591,
       "precio_diesel": 1408,
       "precio_kerosene": 1068,
-      "precio_fecha": "2026-09-22 04:05:50"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_2127",
@@ -53136,7 +53170,7 @@
       "precio_97": 1544,
       "precio_diesel": 1356,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1602",
@@ -53153,7 +53187,7 @@
       "precio_97": 1536,
       "precio_diesel": 1368,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1603",
@@ -53204,7 +53238,7 @@
       "precio_97": 1528,
       "precio_diesel": 1390,
       "precio_kerosene": 1117,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1636",
@@ -53255,7 +53289,7 @@
       "precio_97": 1551,
       "precio_diesel": 1377,
       "precio_kerosene": 1097,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1681",
@@ -53289,7 +53323,7 @@
       "precio_97": 1568,
       "precio_diesel": 1312,
       "precio_kerosene": 1116,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1683",
@@ -53527,7 +53561,7 @@
       "precio_97": 1551,
       "precio_diesel": 1392,
       "precio_kerosene": 1060,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1811",
@@ -53578,7 +53612,7 @@
       "precio_97": 1590,
       "precio_diesel": 1381,
       "precio_kerosene": 1078,
-      "precio_fecha": "2026-09-22 04:05:49"
+      "precio_fecha": "2026-09-23 09:06:01"
     },
     {
       "id": "bel_1860",
@@ -53612,7 +53646,7 @@
       "precio_97": 1542,
       "precio_diesel": 1359,
       "precio_kerosene": 1090,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_1888",
@@ -53765,7 +53799,7 @@
       "precio_97": 1568,
       "precio_diesel": 1312,
       "precio_kerosene": 1082,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_2000",
@@ -54173,7 +54207,7 @@
       "precio_97": 1614,
       "precio_diesel": 1420,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:48"
+      "precio_fecha": "2026-09-23 09:06:00"
     },
     {
       "id": "bel_2206",
@@ -54904,7 +54938,7 @@
       "precio_97": 1588,
       "precio_diesel": 1439,
       "precio_kerosene": 1076,
-      "precio_fecha": "2026-09-22 10:50:42"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1307",
@@ -54921,7 +54955,7 @@
       "precio_97": 1590,
       "precio_diesel": 1439,
       "precio_kerosene": 1088,
-      "precio_fecha": "2026-09-22 04:05:47"
+      "precio_fecha": "2026-09-23 09:05:59"
     },
     {
       "id": "bel_1308",
@@ -55255,6 +55289,23 @@
       "region": "De los Ríos",
       "latitud": -39.83331109319209,
       "longitud": -73.27085190162539,
+      "servicios": [],
+      "precio_93": 0,
+      "precio_95": 0,
+      "precio_97": 0,
+      "precio_diesel": 0,
+      "precio_kerosene": 0,
+      "precio_fecha": ""
+    },
+    {
+      "id": "bel_2266",
+      "nombre": "Colun Balmaceda SN, esquina pasaje María Deogracia",
+      "cadena": "Colun",
+      "direccion": "Balmaceda SN, esquina pasaje María Deogracia",
+      "comuna": "Futrono",
+      "region": "De los Ríos",
+      "latitud": -40.12705918421167,
+      "longitud": -72.39482061893969,
       "servicios": [],
       "precio_93": 0,
       "precio_95": 0,
@@ -56621,7 +56672,7 @@
       "precio_97": 1538,
       "precio_diesel": 1378,
       "precio_kerosene": 1066,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1073",
@@ -56706,7 +56757,7 @@
       "precio_97": 1562,
       "precio_diesel": 1401,
       "precio_kerosene": 0,
-      "precio_fecha": "2026-09-22 04:05:46"
+      "precio_fecha": "2026-09-23 09:05:58"
     },
     {
       "id": "bel_1075",
@@ -56914,12 +56965,12 @@
     }
   ],
   "meta": {
-    "fecha_scrape": "2026-09-22T17:23:54.896788",
-    "fecha_precios": "2026-09-22T17:23:54.896797",
+    "fecha_scrape": "2026-09-23T09:31:50.194768",
+    "fecha_precios": "2026-09-23T09:31:50.194768",
     "vigencia_mes": "2026-09",
     "total_descuentos": 31,
     "total_estaciones": 1472,
-    "total_con_precios": 1824,
+    "total_con_precios": 1827,
     "fuente_precios": "Bencinas en Línea - Comisión Nacional de Energía",
     "fuente_descuentos": "Curado desde fuente oficial (Copec ww2.copec.cl + medios); campo confianza por dato",
     "disclaimer": "Los precios publicados son de exclusiva responsabilidad de las estaciones de servicio informantes"
