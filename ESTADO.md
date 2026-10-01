@@ -1,7 +1,59 @@
 # Estado del proyecto
 
-**Última actualización:** 2026-09-02
-**Estado general:** 🟢 producción AL DÍA y sana (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido) — sirviendo **940 beneficios** con `fecha_datos: 2026-09-02` / `version_commit: ff3f1bf`; auto-deploy reparado y acceso SSH desde el PC (`ssh micartera-vps`)
+**Última actualización:** 2026-10-01
+**Estado general:** 🟢 producción AL DÍA y sana (en **VPS propio** `datalab-api.duckdns.org`; Render quedó suspendido) — sirviendo **965 beneficios** con `fecha_datos: 2026-10-01` / `version_commit: f1f1dd8` (medido contra la URL pública el 1-oct a las 17:30). La sincronización pasó a **cada 2 h**: hasta hoy corría una sola vez a las 13:20 y la web iba un día atrás casi siempre (ver el bloque del 2026-10-01). Acceso SSH desde el PC (`ssh micartera-vps`)
+
+---
+
+## 2026-10-01 — La web servía los datos de AYER, casi todos los días (resuelto)
+
+**Lo que se vio:** un beneficio de Banco Falabella decía *«Vigencia: hasta 30-Sep-2026»* en `/ver`
+mientras el banco ya publicaba **30 de octubre**. Ese mismo día el correo del scraper decía OK.
+
+**Lo que se midió, antes de tocar nada:**
+
+| Punto de la cadena | Qué decía |
+|---|---|
+| Banco Falabella (fuente) | 31-Oct-2026 ✅ |
+| Commit del scraper de hoy (`931b027`, 15:37) | **31-Oct-2026** ✅ el scraper nunca falló |
+| La web (`/ver`) | **30-Sep-2026** 🔴 servía el commit de ayer |
+
+**Causa:** `cartera.sincronizar` corría a las **13:20** y el scrape de GitHub Actions llega entre
+las **12:37 y las 16:53** de Chile (GitHub retrasa los `schedule`; Hermes L-93). **18 de las
+últimas 20 corridas llegaron después del sync** → la web iba un día atrás de forma sistemática.
+Invisible el resto del mes; el día 1 se nota de golpe, porque todas las vigencias de fin de mes
+aparecen vencidas.
+
+**Alcance del daño:** 204 de 942 beneficios se mostraban con fecha ya pasada, entre ellos
+**100 de los 102 de Banco Falabella**.
+
+**Lo que se hizo:**
+
+1. **Sincronizado al instante** → la web pasó de 942 a **965 beneficios**, Mamma Mia quedó en
+   `31-Oct-2026` y los vencidos cayeron de 204 a 33. Verificado contra la URL pública, no contra
+   el log.
+2. **Cron de 13:20 → cada 2 h** (`20 */2 * * *`). El script ya era idempotente: probado en el
+   entorno pelado del cron (`env -i`), sin cambios sale en 1 s sin reiniciar. Peor desfase posible:
+   **2 h en vez de 24 h**. Respaldo del crontab anterior en `~/crontab.bak-20261001-cartera-cada2h`.
+3. **Los vencidos se marcan, no se ocultan** (`api.py`, commit `f1f1dd8`): gris, etiqueta `VENCIDO`
+   junto a la fecha y al final del listado en cualquier orden. Se eligió marcar y no ocultar porque
+   un banco puede publicar mal la fecha — Falabella acababa de hacerlo.
+
+**Verificación por efecto, no por lectura:** la función `_venc()` se probó con 14 casos en Node
+(incluidos los controles negativos: lo vigente, el texto libre como *«Todos los sábados de agosto»*
+y lo que vence hoy **no** se marcan) y después se corrió sobre los **965 beneficios reales de la
+página**: 33 marcados, **0 vigentes con fecha pasada**, Banco Falabella 0 de 82.
+
+**🔴 Queda pendiente, y es de datos, no de publicación:** los **33 de Banco Security** están
+vencidos de verdad en la fuente (30-Sep). O el banco no ha actualizado su página, o su scraper lee
+una fecha que ya no corresponde. Hay que mirar el sitio de Security antes de decidir cuál de las
+dos es.
+
+**Observación menor:** Banco Falabella pasó de 102 a 82 beneficios con el scrape del 1-oct. Es
+coherente con el cambio de mes (los de septiembre terminaron), pero conviene mirar el conteo en
+unos días por si fuera pérdida de extracción y no rotación.
+
+Lección: **L-49**.
 
 ---
 

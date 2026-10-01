@@ -1097,6 +1097,64 @@ Al revisar la documentación existente del proyecto, hay observaciones que podr�
 5. **Coordenadas aproximadas por región** en el mapa: decisión deliberada (no geocoding real). Documentar.
 6. **Componente extra de combustibles** (`bencinas.json`, `06_precios_combustible.html`): aparece en la docs natural pero no en el README técnico. Documentar su estado.
 
+### L-49 · El correo decía OK y la web mostraba lo de ayer: el sync corría ANTES que el scrape (2026-10-01) · Operación / Publicación
+
+**Problema**
+Fernando vio en `/ver` un beneficio de Banco Falabella con *«Vigencia: hasta 30-Sep-2026»* y, al
+abrir la ficha del banco, el banco decía **30 de octubre**. Ese mismo día había llegado el correo
+diario del scraper diciendo que todo estaba OK. Las dos cosas eran ciertas a la vez, y esa es la
+trampa.
+
+Al medirlo: **204 de 942 beneficios** se mostraban con fecha ya vencida, entre ellos **100 de los
+102 de Banco Falabella** y 70 de 87 de Banco Security.
+
+**Causa raíz**
+El scraper nunca falló: el commit de ese día traía Mamma Mia con `31-Oct-2026`, correcto. Lo que
+falló fue **la publicación**. El cron `cartera.sincronizar` del VPS corría a las **13:20** de Chile,
+y el scrape de GitHub Actions llega entre las **12:37 y las 16:53** porque GitHub trata los
+`schedule` como *mejor esfuerzo* y los retrasa de forma variable (Hermes L-93: mediana 3,3 h, hasta
+5,7 h sobre la hora programada).
+
+Medido sobre las últimas 20 corridas: **18 llegaron después de que el VPS ya había sincronizado**.
+O sea que la web servía los datos del día anterior **casi todos los días**, y nadie lo notaba
+porque un día de desfase es invisible… hasta el día 1 de cada mes, cuando todas las vigencias de
+«fin de mes» aparecen vencidas de golpe.
+
+**Fix**
+1. El cron pasó de `20 13 * * *` a **`20 */2 * * *`** (cada 2 h). El script ya era idempotente:
+   si no hay nada nuevo sale en 1 segundo sin reiniciar el servicio, así que 12 corridas diarias
+   cuestan prácticamente nada y el peor desfase baja de 24 h a 2 h. Se eligió esto por encima de
+   «mover el cron más tarde» justamente porque el retraso de GitHub **es variable**: cualquier hora
+   fija es una apuesta que algún día se pierde en silencio.
+2. La web ahora **marca** los vencidos (gris, etiqueta `VENCIDO`, al final del listado) en vez de
+   mostrarlos como si estuvieran vigentes. No los oculta: si un banco publica mal la fecha, el
+   beneficio sigue a la vista con su dato para que se pueda juzgar.
+
+**Lección**
+**Un correo de éxito del productor no dice nada sobre el producto.** El workflow comprueba que el
+scrape corrió y cuántos beneficios trajo — y eso era verdad. Lo que no comprueba, y nadie
+comprobaba, es **lo que ve quien abre la página**. Entre el dato correcto y el usuario había un
+eslabón (el cron de publicación) que llevaba semanas llegando tarde sin que ninguna alarma lo
+mirara.
+
+Y el corolario sobre el calendario: **una cadena programada no se diseña contra la hora nominal del
+productor, sino contra su hora real medida.** `0 13 * * *` en GitHub Actions no significa las 13:00.
+
+**Evitar a futuro**
+- Ante «el dato está mal en la web», medir en **tres puntos** antes de tocar nada: qué dice la
+  fuente, qué dice el último artefacto del productor (`git show origin/main:beneficios.json`) y qué
+  sirve la web. El punto donde se rompe la cadena aparece solo.
+- Cuando un cron consume lo que produce otro sistema, **medir a qué hora llega de verdad el
+  producto** (aquí, la hora de los commits) en vez de confiar en el horario programado.
+- Preferir **sincronizar seguido con un script idempotente** antes que adivinar una hora: un
+  proceso barato que no hace nada cuando no hay trabajo es más robusto que uno bien agendado.
+- Un cambio de código hecho en `~/servicios` **tiene que quedar commiteado y pusheado el mismo
+  día**: el cron hace `git merge --ff-only`, y un commit local sin subir lo rompe y deja la web
+  congelada. (El push desde el VPS exige `GIT_SSH_COMMAND` con `~/.ssh/hermes_github`: el repo
+  fuerza con `core.sshCommand` una deploy key de **solo lectura** — Hermes L-67.)
+
+---
+
 ---
 
 ## 🔄 Cómo agregar una nueva lección
@@ -1138,8 +1196,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 48 lecciones formalizadas (L-01 a L-48; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-48 (2026-10-01)
+**Contador:** 49 lecciones formalizadas (L-01 a L-49; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-49 (2026-10-01)
 **Última actualización:** 2026-10-01
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.
