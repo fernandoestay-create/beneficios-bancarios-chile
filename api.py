@@ -1067,6 +1067,8 @@ padding:8px 20px;border-radius:10px;font-weight:700;font-size:13px;transition:op
 .link:hover{{opacity:.85}}
 .deal-footer{{background:#f8f7f5;border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:3px}}
 .deal-footer .validity{{color:var(--muted);font-size:11px}}
+.deal.vencido{{opacity:.55;filter:grayscale(.8)}}
+.vencido-tag{{display:inline-block;background:#9ca3af;color:#fff;font-weight:700;font-size:10px;letter-spacing:.3px;padding:1px 6px;border-radius:999px;margin-right:6px}}
 .deal-footer .disclaimer{{color:#aaa;font-size:10px;font-style:italic}}
 .deal-footer .deal-cond{{color:#6b7280;font-size:10px;line-height:1.35}}
 .empty{{display:none;text-align:center;padding:40px;color:var(--muted);border:2px dashed var(--line);border-radius:var(--radius)}}
@@ -1390,7 +1392,7 @@ const _regOK=new Set();deals.forEach(d=>{{if(d.ubicacion&&_mm(d,'r'))_regOK.add(
 regionMS.el.querySelectorAll('.ms-option').forEach(l=>{{const i=l.querySelector('input'),off=_regOK.size>0&&!_regOK.has(i.value)&&!regionMS.sel.has(i.value);l.classList.toggle('ms-off',off);i.disabled=off}});
 const _comOK=new Set();deals.forEach(d=>{{if(d.comuna&&_mm(d,'c'))_comOK.add(d.comuna)}});
 comunaMS.el.querySelectorAll('.ms-option').forEach(l=>{{const i=l.querySelector('input'),off=_comOK.size>0&&!_comOK.has(i.value)&&!comunaMS.sel.has(i.value);l.classList.toggle('ms-off',off);i.disabled=off}});
-f.sort((a,b)=>{{switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
+f.sort((a,b)=>{{const _av=_venc(a),_bv=_venc(b);if(_av!==_bv)return _av?1:-1;switch(sort){{case'desc-asc':return a.descuento_valor-b.descuento_valor;
 case'name':return a.restaurante.localeCompare(b.restaurante);
 case'bank':return a.banco.localeCompare(b.banco);
 default:return b.descuento_valor-a.descuento_valor}}}});
@@ -1415,7 +1417,16 @@ if(cb){{cb.checked=!cb.checked;if(cb.checked)bankMS.sel.add(banco);else bankMS.s
 grid.innerHTML='';
 if(!f.length){{empty.innerHTML=deals.length?'No hay descuentos con esos filtros 🤷':'⏳ Estamos confirmando los descuentos de esta sección';empty.style.display='block';countEl.textContent='0 encontrados';return}}
 empty.style.display='none';countEl.textContent=f.length+' encontrados';
-f.forEach(d=>{{const el=document.createElement('article');el.className='deal';el.innerHTML=dealCardHTML(d);grid.appendChild(el)}})}}
+f.forEach(d=>{{const el=document.createElement('article');el.className='deal'+(_venc(d)?' vencido':'');el.innerHTML=dealCardHTML(d);grid.appendChild(el)}})}}
+function _venc(d){{
+const s=((d&&d.valido_hasta)||'').trim();if(!s)return false;
+const p=s.split('-');if(p.length!==3)return false;
+const M={{ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago:8,sep:9,oct:10,nov:11,dic:12,jan:1,apr:4,aug:8,dec:12}};
+const dia=parseInt(p[0],10),yy=parseInt(p[2],10);
+let mm=parseInt(p[1],10);if(isNaN(mm))mm=M[p[1].toLowerCase().slice(0,3)];
+if(!dia||!mm||!yy||yy<2000||dia>31||mm>12)return false;
+const hoy=new Date();hoy.setHours(0,0,0,0);
+return new Date(yy,mm-1,dia)<hoy;}}
 function dealCardHTML(d){{
 const imgSrc=d.imagen_url||d.logo_url;
 const imgHtml=imgSrc?`<img src="${{imgSrc}}" alt="${{d.restaurante}}" loading="lazy">`
@@ -1439,7 +1450,7 @@ ${{d.direccion?`<div class="deal-info-row"><span class="info-icon">🏠</span>${
 </div>
 <div class="cta-row">${{linkHtml}}</div></div>
 <div class="deal-footer">
-<div class="validity">⏳ Vigencia: ${{d.valido_hasta?'hasta '+d.valido_hasta:'Sin fecha'}}</div>
+<div class="validity">${{_venc(d)?'<span class="vencido-tag">VENCIDO</span>':''}}⏳ Vigencia: ${{d.valido_hasta?'hasta '+d.valido_hasta:'Sin fecha'}}</div>
 ${{d.restricciones_texto?`<div class="deal-cond">📋 ${{d.restricciones_texto}}</div>`:''}}
 <div class="disclaimer">⚠️ Siempre revisar condiciones especiales en el banco</div></div>`;
 }}
