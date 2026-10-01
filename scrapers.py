@@ -66,6 +66,26 @@ class Beneficio:
                 d.strip().lower().translate(_t)
                 for d in self.dias_validos if (d or '').strip()
             ]
+        # L-48: 'ubicacion' debe ser una REGIÓN de Chile (api.py la usa para el filtro de
+        # Zona y el mapa). Varios scrapers meten ahí texto que NO es una región: el field
+        # crudo 'field_ubicacion_caluga' de Security (dominios, apps de delivery, pisos de
+        # edificio), el fallback sin validar de sucursales de Banco de Chile (direcciones,
+        # typos como "Región Metropolinada"), o un apóstrofe tipográfico de BICE
+        # ("O’Higgins" ≠ "O'Higgins" para el filtro). El dato queda invisible al filtro real
+        # o, peor, visible como basura. Chokepoint único (patrón L-14): normaliza apóstrofe +
+        # prefijo "Región "/"Region ", y si sigue sin ser una región válida, intenta
+        # RECUPERARLA vía ciudad conocida en ubicacion/dirección/nombre; si no se puede, se
+        # deja vacío — honesto (L-19: no inventar), nunca basura.
+        ub = (self.ubicacion or '').strip()
+        if ub:
+            ub_norm = ub.replace('’', "'").replace('´', "'")
+            if ub_norm.lower().startswith(('región ', 'region ')):
+                ub_norm = ub_norm.split(' ', 1)[1].strip()
+            if ub_norm in REGIONES_VALIDAS:
+                self.ubicacion = ub_norm
+            else:
+                self.ubicacion = region_desde_texto(
+                    ' '.join([ub, self.direccion or '', self.restaurante or '']))
 
     def to_dict(self):
         return asdict(self)
@@ -136,13 +156,28 @@ class EstacionBencina:
 CIUDAD_REGION = {
     'arica': 'Arica y Parinacota', 'iquique': 'Tarapacá', 'antofagasta': 'Antofagasta',
     'calama': 'Antofagasta', 'copiapo': 'Atacama', 'la serena': 'Coquimbo', 'coquimbo': 'Coquimbo',
+    'vicuna': 'Coquimbo',
     'valparaiso': 'Valparaíso', 'vina del mar': 'Valparaíso', 'quilpue': 'Valparaíso',
-    'rancagua': "O'Higgins", 'santa cruz': "O'Higgins", 'talca': 'Maule', 'curico': 'Maule',
+    'concon': 'Valparaíso', 'puchuncavi': 'Valparaíso',
+    'rancagua': "O'Higgins", 'santa cruz': "O'Higgins", 'san fernando': "O'Higgins",
+    'talca': 'Maule', 'curico': 'Maule',
     'chillan': 'Ñuble', 'concepcion': 'Biobío', 'talcahuano': 'Biobío',
+    'los angeles': 'Biobío', 'san pedro de la paz': 'Biobío',
     'temuco': 'Araucanía', 'pucon': 'Araucanía', 'villarrica': 'Araucanía',
     'valdivia': 'Los Ríos', 'osorno': 'Los Lagos', 'puerto varas': 'Los Lagos', 'puerto montt': 'Los Lagos',
-    'coyhaique': 'Aysén', 'punta arenas': 'Magallanes',
+    'cochamo': 'Los Lagos',
+    'coyhaique': 'Aysén', 'punta arenas': 'Magallanes', 'puerto natales': 'Magallanes',
 }
+
+# Las 16 regiones de Chile. 'ubicacion' DEBE ser una de estas (o vacío = nacional/sin
+# región publicada) — api.py filtra/mapea el mapa contra este mismo set (duplicado ahí,
+# fuente de verdad geográfica única aquí). Usado por __post_init__ para sanear 'ubicacion'
+# (L-48): varios scrapers meten ahí texto que NO es una región (ver más abajo).
+REGIONES_VALIDAS = frozenset({
+    'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
+    'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble', 'Biobío',
+    'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
+})
 
 
 def region_desde_texto(texto: str) -> str:

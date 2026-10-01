@@ -58,6 +58,7 @@
 | L-45 | `descuento_valor` no siempre es un %: `precio_fijo`/`monto` guardan ahí un PESO crudo ($84.990) en el MISMO campo que usan sort/filtro/hero-stat como si fuera %; el guard ACID-% no lo pilla porque mira `%` en el TEXTO, no el campo numérico → el hero "Mejor descuento" de `/ver/beneficios` mostraba "84990%" | Datos y calidad / UX | 2026-09-01 |
 | L-46 | La guardia medía el CHECKOUT creyendo que medía producción (lo decía su propio docstring) → punto ciego: el VPS quedó 3 días sirviendo data vieja y ningún guard lo vio. Un servicio que carga datos en memoria debe EXPONER su identidad (`fecha_datos` + `version_commit`) para que se pueda medir desde afuera | Deploy / QA / Meta | 2026-09-02 |
 | L-47 | Un OOM colgó el VPS 4 días (la web servía de memoria y ningún check lo vio); el auto-deploy estaba roto porque GitHub exige auth al `git` aun en repo público → deploy key SSH read-only; instalar una llave SSH temprano evita el infierno del VNC; y un vigía que vive en el mismo host que vigila es ciego cuando el host se cuelga → el check corre AFUERA | Deploy / Infraestructura / Meta | 2026-09-02 |
+| L-48 | `ubicacion` debe ser una REGIÓN de Chile pero varios scrapers metían ahí texto que NO lo es (dominio, app de delivery, piso de edificio, dirección completa, apóstrofe tipográfico, typo) → 80 beneficios invisibles al filtro de Zona o, peor, visibles como basura; fix en el chokepoint `__post_init__`: recuperar vía ciudad conocida o dejar vacío, nunca basura | Datos y calidad / Scraping | 2026-10-01 |
 
 ---
 
@@ -1064,6 +1065,27 @@ Producción llevaba ~4 días sirviendo datos del 30-ago. La hipótesis inicial e
 
 ---
 
+### L-48 · `ubicacion` no siempre es una región — varios scrapers meten ahí basura (2026-10-01) · Datos y calidad / Scraping
+
+**Problema**
+Auditoría ácida mensual (Capa 2, cloud, sin egress — L-43). Barrido de datos-en-reposo: el campo `ubicacion` (que `api.py` usa para el filtro de Zona y el mapa, validándolo contra un set cerrado de 16 regiones chilenas) tenía **80 beneficios** con texto que NO es una región: `"Roof, Nivel 4"`, `"Nivel 1"` (Consorcio, piso del edificio), `"Rappi app"`, `"streetwrap.cl"`, `"ryge.cl"`, `"travelsecurity.cl/clientes-bice"` (Security/BICE, dominio o app de delivery), `"Sta Rosa N°131, Puerto Varas."` truncado a solo `"Puerto Varas."` (Security, dirección completa), `"San Pedro de la Paz"` / `"San Fernando"` (Banco de Chile, nombre de COMUNA, no de región), un apóstrofe tipográfico `"O’Higgins"` (U+2019) que no calza con el `"O'Higgins"` (recto) del set válido, y un typo aislado `"Región Metropolinada"`.
+
+**Causa raíz**
+Cuatro scrapers (Security, Banco de Chile, Consorcio, BICE) alimentan `ubicacion` con el valor crudo de un campo-fuente que NO es una región: Security usa literalmente `field_ubicacion_caluga` (un campo de sub-ubicación/canal del CMS, no geográfico); Banco de Chile cae a `regiones[0]` del parseo HTML de sucursales cuando el tag no matchea un keyword de región conocido (sin validar lo que sale); Consorcio/BICE heredan el mismo patrón de "lo que venga del campo, sin chequear contra el set válido". Ninguno de los 80 casos rompía el health check (`restaurante`/`descuento_texto` no vacíos) ni el guard `ACID-REGIÓN` existente (que solo mira región **VACÍA** con ciudad en el **nombre** — L-42b), porque acá la región no estaba vacía, estaba **mal** — un hueco que ningún guard cubría.
+
+**Fix**
+Chokepoint único (`Beneficio.__post_init__`, patrón L-14): si `ubicacion` no está vacía, se normaliza (apóstrofe tipográfico → recto, se quita el prefijo "Región "/"Region ") y se valida contra `REGIONES_VALIDAS` (nuevo set canónico en `scrapers.py`, antes solo vivía duplicado en `api.py`); si no es válida, se intenta **recuperar** vía `region_desde_texto()` (el mismo helper de L-42b) sobre `ubicacion + direccion + restaurante`; si tampoco hay ciudad conocida, se deja **vacío** — honesto (L-19: no inventar), nunca basura visible. Se amplió `CIUDAD_REGION` con 8 comunas/ciudades de alta confianza que aparecían en los 80 casos (Los Ángeles, San Fernando, San Pedro de la Paz, Puerto Natales, Concón, Puchuncaví, Vicuña, Cochamó — mismo patrón ya usado para las ~30 ciudades existentes). Verificado con round-trip sobre la data real: **23 recuperadas a una región real** (ej. Puerto Varas→Los Lagos, Los Ángeles→Biobío, San Fernando→O'Higgins, el apóstrofe de BICE), **57 quedaron vacías honestamente** (dominios/apps/pisos de edificio sin ciudad recuperable) — **0 ids perdidos, 0 ids nuevos** en `beneficios.json` (gate sagrado intacto) ni en `beneficios_otros.json`. `verificar_salud.py` exit 0, mismos 14 bancos con mismo conteo. Guard nuevo **ACID-REGIÓN-VÁLIDA** en `revision_madrugada.py` (chequeo de DATA, no necesita egress): falla si `ubicacion` no vacía no está en el set de 16 regiones.
+
+**Lección**
+Un campo con un dominio CERRADO y conocido (16 regiones de Chile) debe **validarse contra ese dominio en el chokepoint único**, no confiar en que cada scraper entregue algo razonable. El guard existente (`ACID-REGIÓN`) cubría "vacío cuando debería tener dato" (L-28/L-42b) pero NO "con dato pero el dato es basura" — son dos modos de falla distintos y un guard que cubre uno no cubre el otro. Cuando el dominio válido es cerrado y pequeño, "¿es uno de los N valores permitidos?" es un check barato y potente que generaliza a CUALQUIER scraper futuro (no solo a los 4 ya encontrados).
+
+**Evitar a futuro**
+- Todo campo cuyo frontend valide contra un set cerrado (región, categoría, tipo de tarjeta) debe sanearse en el chokepoint (`__post_init__`), no solo confiar en que el scraper entregue algo del set — el guard de "vacío" no detecta "con valor pero inválido".
+- Antes de usar un campo crudo del CMS/API de un banco como si fuera un campo semántico (región, categoría), verificar que REALMENTE lo sea — un nombre de campo como `field_ubicacion_caluga` no garantiza que su contenido sea una ubicación geográfica.
+- Esta auditoría corrió sin egress (sandbox cloud, L-43): el hallazgo fue 100% data-en-reposo (comparar un campo contra un enum cerrado ya conocido del propio código, sin necesitar la fuente del banco) — recuerda que esta clase de bug (validar contra un dominio cerrado) SÍ es auditable desde el cloud, a diferencia de "¿el día/región que publica el banco hoy sigue siendo el mismo?" que sí requiere medir la fuente (Capa 1).
+
+---
+
 ## 🎯 Lecciones candidatas a documentar (detectadas durante migración)
 
 Al revisar la documentación existente del proyecto, hay observaciones que podrían formalizarse como lecciones L-XX en futuras sesiones:
@@ -1116,8 +1138,8 @@ Si sí → escribir lección con formato de abajo.
 
 ---
 
-**Contador:** 47 lecciones formalizadas (L-01 a L-47; 6 candidatas legacy aún pendientes)
-**Última lección agregada:** L-47 (2026-09-02)
-**Última actualización:** 2026-09-02
+**Contador:** 48 lecciones formalizadas (L-01 a L-48; 6 candidatas legacy aún pendientes)
+**Última lección agregada:** L-48 (2026-10-01)
+**Última actualización:** 2026-10-01
 
 > **Candidata a promover a workspace (L-W):** L-15 (geo-fence del runner) y L-16 (preservar banco caído + alerta) aplican a cualquier scraper agregador del workspace (02.Compras_Mayoristas, 03.Compras_supermercado). L-16 refuerza la regla cardinal **L-W20** ("proceso estéril") con un patrón concreto a nivel sub-fuente.

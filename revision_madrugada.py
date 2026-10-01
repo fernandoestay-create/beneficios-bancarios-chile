@@ -254,6 +254,28 @@ if len(_sin_reg) > 2:
     fallos.append(f"[ACID-REGIÓN] {len(_sin_reg)} beneficios con ciudad en el nombre pero región VACÍA "
                   f"(ej. {_sin_reg[0].get('restaurante','?')}) — aparecen en zonas equivocadas")
 
+# ACID-REGIÓN-VÁLIDA (L-48): 'ubicacion', cuando no está vacía, DEBE ser una de las 16
+# regiones de Chile — es lo que api.py usa para el filtro de Zona y el mapa. Varios
+# scrapers metieron ahí texto que NO es una región (dominios, apps de delivery, pisos de
+# edificio, direcciones completas, un apóstrofe tipográfico, un typo de "Metropolitana"):
+# 80 beneficios (Security 64, Banco de Chile 8, Consorcio 7, BICE 1) quedaban invisibles
+# al filtro real o, peor, visibles como basura ("Roof, Nivel 4" como si fuera una región).
+# El fix vive en Beneficio.__post_init__ (chokepoint, L-14): recupera vía ciudad conocida
+# o deja vacío (honesto). Este guard vigila que ningún scraper vuelva a colar basura ahí.
+_REGIONES_VALIDAS = {
+    'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
+    'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble', 'Biobío',
+    'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
+}
+_region_basura = [b for b in _todo
+                  if (b.get("ubicacion") or "").strip()
+                  and b.get("ubicacion") not in _REGIONES_VALIDAS]
+if _region_basura:
+    fallos.append(f"[ACID-REGIÓN-VÁLIDA] {len(_region_basura)} beneficios con 'ubicacion' que NO es "
+                  f"una región chilena válida (ej. {_region_basura[0].get('banco','?')}="
+                  f"{_region_basura[0].get('ubicacion','?')!r}) — un scraper está metiendo basura "
+                  f"(dominio/app/dirección/typo) en el campo de región, L-48")
+
 # ACID-GENÉRICO: la vista /ver/beneficios no puede mostrar nombres genéricos de categoría
 # (Falabella "Beneficios del mes"/"Beneficio en <x>"/cuponera no son un comercio → engañoso).
 try:
