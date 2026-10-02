@@ -53,7 +53,7 @@ dos es.
 coherente con el cambio de mes (los de septiembre terminaron), pero conviene mirar el conteo en
 unos días por si fuera pérdida de extracción y no rotación.
 
-Lección: **L-49**.
+Lección: **L-49**. Versión: **`v3.1-publicacion-al-dia`** (commit `76574e0`).
 
 ---
 
