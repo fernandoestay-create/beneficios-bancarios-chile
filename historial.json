@@ -2421,5 +2421,32 @@
     84
    ]
   ]
+ },
+ {
+  "fecha": "2026-10-09",
+  "total": 969,
+  "por_banco": {
+   "Banco de Chile": 273,
+   "Banco Falabella": 108,
+   "BCI": 64,
+   "Banco Itaú": 58,
+   "Scotiabank": 105,
+   "Santander": 68,
+   "Banco Consorcio": 6,
+   "Banco Security": 91,
+   "Banco Ripley": 62,
+   "Entel": 27,
+   "Tenpo": 7,
+   "Lider BCI": 11,
+   "Mach": 5,
+   "Banco BICE": 84
+  },
+  "problemas": [],
+  "preservados": [
+   [
+    "Banco BICE",
+    84
+   ]
+  ]
  }
 ]
