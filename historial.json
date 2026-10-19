@@ -2694,12 +2694,11 @@
  },
  {
   "fecha": "2026-10-19",
-  "total": 974,
+  "total": 973,
   "por_banco": {
    "Banco de Chile": 273,
-   "Banco Falabella": 110,
+   "Banco Falabella": 109,
    "BCI": 63,
-   "Banco Itaú": 58,
    "Scotiabank": 107,
    "Santander": 68,
    "Banco Consorcio": 6,
@@ -2709,13 +2708,18 @@
    "Tenpo": 7,
    "Lider BCI": 11,
    "Mach": 5,
-   "Banco BICE": 84
+   "Banco BICE": 84,
+   "Banco Itaú": 58
   },
   "problemas": [],
   "preservados": [
    [
     "Banco BICE",
     84
+   ],
+   [
+    "Banco Itaú",
+    58
    ]
   ]
  }
